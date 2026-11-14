@@ -6,14 +6,16 @@
 export interface SanitizedAnalysisRecord {
   id: string;               // Cryptographically generated UUID
   timestamp: string;        // ISO 8601 string
-  passwordLength: number;   // Length only
-  entropyBits: number;      // Calculated entropy
+  passwordLength: number;   // Character length only
+  entropyBits: number;      // Estimated guess-work difficulty in bits: log2(guesses)
   score: number;            // 0 (Very Weak) to 4 (Very Strong)
   hasLowercase: boolean;
   hasUppercase: boolean;
   hasNumbers: boolean;
   hasSymbols: boolean;
-  crackTimeDisplay: string;
+  crackTimeDisplay: string; // Human-readable crack time under standard offline slow hashing
+  strengthLabel?: string;   // "Very Weak" | "Weak" | "Fair" | "Strong" | "Very Strong"
+  warning?: string | null;  // Actionable feedback warning from estimator
 }
 
 // Sanitized record for breach checks (k-anonymity results)

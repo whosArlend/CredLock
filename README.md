@@ -140,12 +140,14 @@ Read [Security Design](docs/security-design.md) for more information.
 
 CredLock is currently under active development as an academic project.
 
-Phase 2.1 (Project Foundation & Design System) and Phase 2.2 (Application Shell & Navigation) are complete and verified. The application shell features 9 discrete routes, persistent location-aware bottom navigation, accessible focus states, and robust list-to-detail error handling.
+- **Phase 2.1:** Project Foundation & Design System — Completed & Verified.
+- **Phase 2.2:** Application Shell & Navigation — Completed & Verified.
+- **Phase 2.3:** Password Strength Analyzer — Completed & Verified (Local evaluation via `@zxcvbn-ts/core`, multi-scenario crack modeling, heuristic pattern feedback, sanitized archival).
 
-**Planned core features (Upcoming subphases):**
-- Password Strength Analyzer (Phase 2.3)
+**Upcoming subphases:**
 - Secure Password Generator (Phase 2.4)
 - Password Breach Checker (Phase 2.5)
+- IndexedDB Persistence & PWA Offline Pipeline (Phase 2.6)
 
 ## Academic Information
 

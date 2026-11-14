@@ -17,6 +17,7 @@ CredLock provides a client-side cryptographic security utility empowering users 
 | **Styling & Design Tokens** | Tailwind CSS 3.4 | Utility-first architecture, consistent spacing, and custom dark navy palette. |
 | **Routing** | React Router 7 | Declarative routing supporting persistent layout shells and parameterized `:id` routes. |
 | **Icons** | Lucide React | High-performance, tree-shakable SVG iconography. |
+| **Password Estimator** | @zxcvbn-ts/core (v4.2.0) | Local heuristic strength estimation, pattern detection, and guess-difficulty modeling. |
 
 ## 3. Strict Scope Enforcement
 

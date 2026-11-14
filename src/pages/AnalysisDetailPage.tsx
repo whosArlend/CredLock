@@ -94,7 +94,7 @@ export function AnalysisDetailPage() {
               <span className="font-mono text-foreground">{record.timestamp}</span>
             </div>
             <div className="flex justify-between py-1.5 border-b border-border/50">
-              <span className="text-foreground-muted">Calculated Entropy</span>
+              <span className="text-foreground-muted">Estimated Guess-Work Difficulty</span>
               <span className="font-mono text-cyber-emerald font-semibold">{record.entropyBits} bits</span>
             </div>
             <div className="flex justify-between py-1.5 border-b border-border/50">
@@ -107,6 +107,12 @@ export function AnalysisDetailPage() {
               </span>
               <span className="font-mono text-foreground">{record.crackTimeDisplay}</span>
             </div>
+            {record.warning && (
+              <div className="flex justify-between py-1.5 border-b border-border/50 text-cyber-rose">
+                <span>Vulnerability Note</span>
+                <span className="font-semibold text-right">{record.warning}</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 

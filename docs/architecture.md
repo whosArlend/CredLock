@@ -12,14 +12,14 @@ CredLock is structured around a **Client-Side Zero-Knowledge Architecture**:
   │     ├── Content Outlet (9 discrete routed views)
   │     └── Bottom Navigation Bar (5 primary tabs with location-aware sub-route tracking)
   │
-  ├── Core Cryptographic Engines (Local Browser Sandbox — Upcoming Phases)
-  │     ├── Analyzer Engine (Shannon entropy & pattern heuristics — Phase 2.3)
+  ├── Core Cryptographic Engines (Local Browser Sandbox)
+  │     ├── Analyzer Engine (@zxcvbn-ts/core heuristic estimation & guess difficulty — Phase 2.3 Implemented)
   │     ├── Generator Engine (window.crypto.getRandomValues CSPRNG — Phase 2.4)
   │     └── Breach Engine (SubtleCrypto SHA-1 & k-anonymity parser — Phase 2.5)
   │
-  ├── Sanitized History State (In-Memory Abstraction in Phase 2.2; IndexedDB in Phase 2.6)
+  ├── Sanitized History State (In-Memory Abstraction in Phase 2.2/2.3; IndexedDB in Phase 2.6)
   │     ├── historyStorage.ts (Sanitized query service with empty-state & invalid ID protection)
-  │     └── Stores ONLY: Record UUID, timestamp, length, entropy score, and breach occurrence count
+  │     └── Stores ONLY: Record UUID, timestamp, length, score, entropy bits, and breach occurrence count
   │
   └── Module 1 REST API Integration Layer
         ├── IModule1Service (TypeScript Contract)
@@ -29,9 +29,9 @@ CredLock is structured around a **Client-Side Zero-Knowledge Architecture**:
 ## 2. Page & Routing Architecture
 
 1. **`HomePage` (`/`)**: High-level security center, primary feature shortcuts, and design system verification.
-2. **`AnalyzerPage` (`/analyzer`)**: Real-time password strength and entropy inspection shell.
-3. **`GeneratorPage` (`/generator`)**: Cryptographically sound password generation interface shell.
-4. **`BreachCheckerPage` (`/breach-checker`)**: k-Anonymity breach detection client shell.
+2. **`AnalyzerPage` (`/analyzer`)**: Real-time password strength, pattern detection, and guess-difficulty analysis powered by zxcvbn-ts (Implemented in Phase 2.3).
+3. **`GeneratorPage` (`/generator`)**: Cryptographically sound password generation interface shell (Phase 2.4).
+4. **`BreachCheckerPage` (`/breach-checker`)**: k-Anonymity breach detection client shell (Phase 2.5).
 5. **`ProfilePage` (`/profile`)**: Academic credentials, project scope, and local privacy management.
 6. **`AnalysisHistoryPage` (`/analysis-history`)**: List Page 1 displaying sanitized analysis audit logs with empty-state handling and back-link to `/analyzer`.
 7. **`AnalysisDetailPage` (`/analysis-history/:id`)**: Detail Page 1 displaying deep algorithmic breakdown, with graceful fallback if `:id` is invalid or missing.
@@ -47,7 +47,7 @@ The persistent `BottomNav` maintains user orientation by highlighting:
 ## 3. History Storage Architecture
 
 `src/services/historyStorage.ts` manages sanitized history operations:
-* **Current Mechanism (Phase 2.2):** Module-scoped in-memory storage initialized to an empty state (`[]`). No fabricated or mock security results are pre-populated.
+* **Current Mechanism (Phase 2.3):** Module-scoped in-memory storage initialized to an empty state (`[]`). User-initiated saves from `/analyzer` append sanitized evaluation records.
 * **Security Guard:** Never retains plaintext passwords, full hashes, suffixes, prefixes, or password-derived tokens.
 * **Extensibility:** The abstraction defines asynchronous/synchronous methods (`getAnalysisRecords`, `getAnalysisRecordById`, `getBreachRecords`, `getBreachRecordById`, `addAnalysisRecord`, `addBreachRecord`, `clearAllHistory`) designed for seamless replacement with IndexedDB in Phase 2.6 without changing view components.
 

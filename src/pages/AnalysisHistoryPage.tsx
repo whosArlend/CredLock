@@ -81,7 +81,7 @@ export function AnalysisHistoryPage() {
                           </Badge>
                         </div>
                         <CardDescription className="mt-0.5">
-                          Length: {record.passwordLength} chars • Entropy: {record.entropyBits} bits • Crack time: {record.crackTimeDisplay}
+                          Length: {record.passwordLength} chars • Crack Difficulty: {record.entropyBits} bits • Crack time: {record.crackTimeDisplay}
                         </CardDescription>
                       </div>
                     </div>
