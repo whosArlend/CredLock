@@ -4,8 +4,8 @@
 
 CredLock operates under a zero-trust model regarding credential data:
 * **No Plaintext Persistence:** The browser never writes plaintext passwords to `localStorage`, `sessionStorage`, `IndexedDB`, cookies, or temporary files.
-* **No Full Hash Persistence:** Hashes of passwords are never saved. Only 5-character SHA-1 prefixes generated during active k-anonymity checks are retained for audit log tracking.
-* **Transient Memory Scoping:** Passwords remain in memory solely during active user interaction and are dereferenced upon unmounting.
+* **No Hash or Prefix Persistence:** Full password hashes, hash suffixes, and SHA-1 prefixes are never stored or retained in history logs. The k-anonymity range lookup occurs entirely in transient memory during query execution.
+* **Transient Memory Scoping:** Passwords and cryptographic digests remain in memory solely during active user interaction and are dereferenced upon unmounting.
 * **No Telemetry Leakage:** Passwords or credentials are strictly excluded from console logging, analytics payloads, or error monitoring tools.
 
 ## 2. Cryptographic Randomness (CSPRNG)
@@ -23,17 +23,24 @@ To determine if a password has been compromised without disclosing it to an exte
 1. The client computes the SHA-1 digest locally:
    $$\text{Digest} = \text{SHA-1}(\text{password})$$
    (Example: `5BAA61E4C9B93F3F0682250B6CF8331B7EE68FD8`)
-2. The client extracts the 5-character prefix:
+2. The client extracts the 5-character prefix in transient memory:
    $$\text{Prefix} = \text{Digest}[0..4] = \text{"5BAA6"}$$
    $$\text{Suffix} = \text{Digest}[5..39] = \text{"1E4C9B93F3F0682250B6CF8331B7EE68FD8"}$$
 3. The client queries the Pwned Passwords range endpoint:
    `GET https://api.pwnedpasswords.com/range/5BAA6`
 4. The API returns the list of all matching suffixes and their breach frequencies.
 5. The client performs an exact match comparison against the local suffix.
-6. **Result:** Neither the external API nor any network observer learns the original password or the full hash.
+6. Once the evaluation completes, all hash fragments are discarded from memory.
+7. **Result:** Neither the external API nor any network observer learns the original password or the full hash.
 
 ## 4. Sanitized History Boundary
 
-The persistent history model isolates analytical metrics from credentials:
-* **Permitted:** `id` (UUID), `timestamp`, `passwordLength`, `entropyBits`, `score`, `hasSymbols`, `crackTimeDisplay`, `hashPrefix`, `breachCount`.
-* **Prohibited:** Plaintext passwords, complete hashes, masked password strings, or character hints.
+The history model strictly isolates non-reversible metadata from credentials:
+* **Permitted in Analysis History:** `id` (random UUID), `timestamp` (ISO 8601), `passwordLength`, `entropyBits`, `score` (0-4), character composition flags (`hasLowercase`, `hasUppercase`, `hasNumbers`, `hasSymbols`), `crackTimeDisplay`.
+* **Permitted in Breach History:** `id` (random UUID), `timestamp` (ISO 8601), `isBreached` (boolean), `breachCount` (numeric occurrence count).
+* **Strictly Prohibited from Persistence:**
+  - Plaintext passwords
+  - Full SHA-1 hashes
+  - SHA-1 suffixes
+  - SHA-1 prefixes
+  - Password-derived identifiers or masked password strings

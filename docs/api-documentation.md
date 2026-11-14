@@ -49,7 +49,6 @@ When the Module 1 REST API is integrated, the data transmitted will be strictly 
 {
   "id": "7b89d421-2a1e-45e3-9821-6b83f0923f11",
   "timestamp": "2026-11-14T14:45:00Z",
-  "hashPrefix": "5BAA6",
   "isBreached": true,
   "breachCount": 38241
 }

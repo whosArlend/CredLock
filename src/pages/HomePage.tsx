@@ -16,8 +16,8 @@ import {
   ArrowRight,
   Sparkles,
   Lock,
-  Search,
   CheckCircle,
+  HelpCircle,
 } from 'lucide-react';
 
 export function HomePage() {
@@ -29,7 +29,7 @@ export function HomePage() {
     showToast({
       type,
       title: `${type.toUpperCase()} Notification`,
-      message: 'Design system toast foundation verified. Ready for Phase 2.',
+      message: 'Design system toast feedback triggered successfully.',
     });
   };
 
@@ -42,7 +42,7 @@ export function HomePage() {
         title: 'Action Completed',
         message: 'Async micro-interaction state verified successfully.',
       });
-    }, 1200);
+    }, 1000);
   };
 
   return (
@@ -52,7 +52,7 @@ export function HomePage() {
         description="CredLock: A Progressive Web Application for Password Strength Analysis, Secure Password Generation, and Data Breach Detection."
         badge={
           <Badge variant="emerald" size="sm" dot>
-            Phase 2.1 Ready
+            Phase 2.2 Verified
           </Badge>
         }
       />
@@ -64,7 +64,7 @@ export function HomePage() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card isInteractive className="group">
-            <Link to="/analyzer" className="block">
+            <Link to="/analyzer" className="block focus:outline-none" aria-label="Launch Password Analyzer">
               <CardHeader>
                 <div className="flex items-center justify-between mb-2">
                   <div className="p-2 rounded-lg bg-cyber-emerald-muted text-cyber-emerald border border-cyber-emerald/30 group-hover:scale-105 transition-transform">
@@ -85,7 +85,7 @@ export function HomePage() {
           </Card>
 
           <Card isInteractive className="group">
-            <Link to="/generator" className="block">
+            <Link to="/generator" className="block focus:outline-none" aria-label="Configure Secure Password Generator">
               <CardHeader>
                 <div className="flex items-center justify-between mb-2">
                   <div className="p-2 rounded-lg bg-cyber-cyan-muted text-cyber-cyan border border-cyber-cyan/30 group-hover:scale-105 transition-transform">
@@ -106,7 +106,7 @@ export function HomePage() {
           </Card>
 
           <Card isInteractive className="group">
-            <Link to="/breach-checker" className="block">
+            <Link to="/breach-checker" className="block focus:outline-none" aria-label="Check Password Exposures">
               <CardHeader>
                 <div className="flex items-center justify-between mb-2">
                   <div className="p-2 rounded-lg bg-cyber-rose-muted text-cyber-rose border border-cyber-rose/30 group-hover:scale-105 transition-transform">
@@ -134,8 +134,8 @@ export function HomePage() {
           Audit Logs & Profile Workflows
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card isInteractive>
-            <Link to="/analysis-history" className="block">
+          <Card isInteractive className="group">
+            <Link to="/analysis-history" className="block focus:outline-none" aria-label="View Analysis History">
               <CardHeader>
                 <div className="flex items-center gap-2 mb-1">
                   <History className="w-4 h-4 text-cyber-emerald" />
@@ -148,8 +148,8 @@ export function HomePage() {
             </Link>
           </Card>
 
-          <Card isInteractive>
-            <Link to="/breach-history" className="block">
+          <Card isInteractive className="group">
+            <Link to="/breach-history" className="block focus:outline-none" aria-label="View Breach Check History">
               <CardHeader>
                 <div className="flex items-center gap-2 mb-1">
                   <History className="w-4 h-4 text-cyber-rose" />
@@ -162,8 +162,8 @@ export function HomePage() {
             </Link>
           </Card>
 
-          <Card isInteractive>
-            <Link to="/profile" className="block">
+          <Card isInteractive className="group">
+            <Link to="/profile" className="block focus:outline-none" aria-label="View Profile and About">
               <CardHeader>
                 <div className="flex items-center gap-2 mb-1">
                   <User className="w-4 h-4 text-cyber-cyan" />
@@ -229,10 +229,10 @@ export function HomePage() {
                 helperText="Protected field demonstration (no persistent storage)"
                 leftElement={<Lock className="w-4 h-4" />}
                 rightElement={
-                  <Tooltip content="Tooltip foundation verified" position="top">
-                    <button type="button" className="hover:text-foreground">
-                      <Search className="w-4 h-4" />
-                    </button>
+                  <Tooltip content="Informational indicator verifying input slot accessibility" position="top">
+                    <span className="cursor-help text-foreground-dim hover:text-foreground">
+                      <HelpCircle className="w-4 h-4" />
+                    </span>
                   </Tooltip>
                 }
               />
@@ -253,15 +253,15 @@ export function HomePage() {
             <div className="rounded-lg bg-background-elevated/50 p-4 border border-border/80">
               <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
                 <CheckCircle className="w-3.5 h-3.5 text-cyber-emerald" />
-                Phase 2.1 Technical Compliance
+                Phase 2.2 Shell & Navigation Compliance
               </h4>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-foreground-muted">
                 <li>• Pure Dark Navy & Charcoal palette (#0a0e17 base)</li>
                 <li>• Strict TypeScript enabled (ESNext, Bundler, Strict Checks)</li>
-                <li>• Modern Tailwind CSS tokens with accessible contrast</li>
-                <li>• 9 Discrete routes configured in React Router v7</li>
-                <li>• Persistent 5-tab Bottom Navigation bar</li>
-                <li>• Zero-knowledge client-side privacy foundation</li>
+                <li>• 9 Discrete routes configured with persistent layout shell</li>
+                <li>• Persistent 5-tab Bottom Navigation bar with sub-route awareness</li>
+                <li>• Graceful fallback handling for non-existent or invalid detail IDs</li>
+                <li>• Accessible Skip-to-Content link and WCAG-compliant landmarks</li>
               </ul>
             </div>
           </CardContent>

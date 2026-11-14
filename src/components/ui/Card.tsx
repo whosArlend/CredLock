@@ -11,7 +11,7 @@ export function Card({ className, isInteractive = false, ...props }: CardProps) 
       className={cn(
         'rounded-card border border-border bg-background-surface/80 p-5 shadow-card transition-all duration-200',
         isInteractive &&
-          'cursor-pointer hover:border-border-focus hover:bg-background-surface active:scale-[0.99]',
+          'cursor-pointer hover:border-border-focus hover:bg-background-surface focus-within:border-cyber-emerald focus-within:ring-1 focus-within:ring-cyber-emerald active:scale-[0.99]',
         className
       )}
       {...props}

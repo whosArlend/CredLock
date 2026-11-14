@@ -44,7 +44,7 @@ Check whether a password appears in known data breaches through the Have I Been 
 | Tailwind CSS | Styling |
 | React Router | Application routing |
 | Web Crypto API | Cryptographically secure operations |
-| IndexedDB | Local sanitized history storage |
+| In-Memory Service | Local sanitized history storage (IndexedDB scheduled for Phase 2.6) |
 | PWA | Installable web application |
 
 ## Project Architecture
@@ -62,6 +62,7 @@ CredLock/
 │   ├── hooks/
 │   ├── lib/
 │   ├── pages/
+│   ├── services/
 │   ├── styles/
 │   └── types/
 ├── .env.example
@@ -119,9 +120,9 @@ npm run lint     # Run ESLint
 CredLock is designed with a privacy-oriented approach:
 
 - Password analysis and generation are performed locally.
-- Plaintext passwords are not intentionally stored in application history.
-- History records contain sanitized security metrics rather than actual passwords.
-- Breach checking uses the k-anonymity protocol.
+- Plaintext passwords, full hashes, and SHA-1 prefixes/suffixes are never stored in application history.
+- History records contain strictly sanitized security metrics (UUID, timestamp, score, length, breach count) rather than actual passwords or cryptographic digests.
+- Breach checking uses the k-anonymity protocol in transient memory.
 - Sensitive API responses and password inputs must not be cached by the PWA.
 
 Read [Security Design](docs/security-design.md) for more information.
@@ -139,12 +140,12 @@ Read [Security Design](docs/security-design.md) for more information.
 
 CredLock is currently under active development as an academic project.
 
-The project is being developed incrementally, with each feature implemented and verified in separate development phases.
+Phase 2.1 (Project Foundation & Design System) and Phase 2.2 (Application Shell & Navigation) are complete and verified. The application shell features 9 discrete routes, persistent location-aware bottom navigation, accessible focus states, and robust list-to-detail error handling.
 
-**Planned core features:**
-- Password Strength Analyzer
-- Secure Password Generator
-- Password Breach Checker
+**Planned core features (Upcoming subphases):**
+- Password Strength Analyzer (Phase 2.3)
+- Secure Password Generator (Phase 2.4)
+- Password Breach Checker (Phase 2.5)
 
 ## Academic Information
 

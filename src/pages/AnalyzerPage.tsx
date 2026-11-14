@@ -28,7 +28,7 @@ export function AnalyzerPage() {
             <CardTitle>Core Feature 1 Engine Shell</CardTitle>
           </div>
           <CardDescription>
-            The analyzer engine implementation is scheduled for Phase 2.2.
+            The analyzer engine implementation is scheduled for Phase 2.3.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-xs text-foreground-muted">

@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Home, ShieldCheck, KeyRound, AlertTriangle, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +17,22 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export function BottomNav() {
+  const location = useLocation();
+
+  const isItemActive = (to: string): boolean => {
+    const currentPath = location.pathname;
+    if (to === '/') {
+      return currentPath === '/';
+    }
+    if (to === '/analyzer') {
+      return currentPath === '/analyzer' || currentPath.startsWith('/analysis-history');
+    }
+    if (to === '/breach-checker') {
+      return currentPath === '/breach-checker' || currentPath.startsWith('/breach-history');
+    }
+    return currentPath === to || currentPath.startsWith(`${to}/`);
+  };
+
   return (
     <nav
       aria-label="Primary Navigation"
@@ -25,42 +41,38 @@ export function BottomNav() {
       <div className="max-w-lg mx-auto flex items-center justify-around h-16 px-2">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
+          const isActive = isItemActive(item.to);
+
           return (
-            <NavLink
+            <Link
               key={item.to}
               to={item.to}
-              end={item.to === '/'}
-              className={({ isActive }) =>
-                cn(
-                  'flex flex-col items-center justify-center flex-1 py-1 px-2 text-xs font-medium transition-all duration-150 select-none relative group',
-                  isActive
-                    ? 'text-cyber-emerald'
-                    : 'text-foreground-dim hover:text-foreground-muted active:scale-95'
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <div
-                    className={cn(
-                      'p-1 rounded-md transition-all duration-150',
-                      isActive ? 'bg-cyber-emerald-muted' : 'group-hover:bg-background-elevated'
-                    )}
-                  >
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <span className="text-[11px] mt-0.5 tracking-tight font-medium">
-                    {item.name}
-                  </span>
-                  {isActive && (
-                    <span
-                      className="absolute -top-[1px] w-8 h-[2px] bg-cyber-emerald rounded-full"
-                      aria-hidden="true"
-                    />
-                  )}
-                </>
+              aria-current={isActive ? 'page' : undefined}
+              className={cn(
+                'flex flex-col items-center justify-center flex-1 py-1 px-2 text-xs font-medium transition-all duration-150 select-none relative group rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyber-emerald',
+                isActive
+                  ? 'text-cyber-emerald'
+                  : 'text-foreground-dim hover:text-foreground-muted active:scale-95'
               )}
-            </NavLink>
+            >
+              <div
+                className={cn(
+                  'p-1 rounded-md transition-all duration-150',
+                  isActive ? 'bg-cyber-emerald-muted' : 'group-hover:bg-background-elevated'
+                )}
+              >
+                <Icon className="w-5 h-5" />
+              </div>
+              <span className="text-[11px] mt-0.5 tracking-tight font-medium">
+                {item.name}
+              </span>
+              {isActive && (
+                <span
+                  className="absolute -top-[1px] w-8 h-[2px] bg-cyber-emerald rounded-full"
+                  aria-hidden="true"
+                />
+              )}
+            </Link>
           );
         })}
       </div>

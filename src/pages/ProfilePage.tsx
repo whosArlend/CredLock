@@ -3,12 +3,14 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
+import { clearAllHistory } from '@/services/historyStorage';
 import { User, Shield, BookOpen, Trash2, CheckCircle2 } from 'lucide-react';
 
 export function ProfilePage() {
   const { showToast } = useToast();
 
   const handleClearLocalData = () => {
+    clearAllHistory();
     localStorage.clear();
     showToast({
       type: 'info',

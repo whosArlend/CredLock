@@ -17,10 +17,10 @@ export interface SanitizedAnalysisRecord {
 }
 
 // Sanitized record for breach checks (k-anonymity results)
+// Notice: ZERO plaintext passwords, full hashes, prefixes, or suffixes are ever persisted.
 export interface SanitizedBreachRecord {
   id: string;               // Cryptographically generated UUID
   timestamp: string;        // ISO 8601 string
-  hashPrefix: string;       // First 5 characters of SHA-1 hash ONLY
   isBreached: boolean;      // Exposure status
   breachCount: number;      // Frequency of exposure found in breaches
 }
