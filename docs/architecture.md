@@ -14,7 +14,7 @@ CredLock is structured around a **Client-Side Zero-Knowledge Architecture**:
   │
   ├── Core Cryptographic Engines (Local Browser Sandbox)
   │     ├── Analyzer Engine (@zxcvbn-ts/core heuristic estimation & guess difficulty — Phase 2.3 Implemented)
-  │     ├── Generator Engine (window.crypto.getRandomValues CSPRNG — Phase 2.4)
+  │     ├── Generator Engine (window.crypto.getRandomValues CSPRNG with rejection sampling — Phase 2.4 Implemented)
   │     └── Breach Engine (SubtleCrypto SHA-1 & k-anonymity parser — Phase 2.5)
   │
   ├── Sanitized History State (In-Memory Abstraction in Phase 2.2/2.3; IndexedDB in Phase 2.6)
@@ -62,3 +62,22 @@ Located in `src/components/ui/` and `src/components/layout/`:
 * **`Toast`**: Context-driven notification queue for non-blocking asynchronous user feedback (`useToast`, `ToastViewport`).
 * **`LoadingIndicator`**: Accessible SVG spinner with animated shield icon.
 * **`Container`**: Responsive horizontal layout boundary.
+
+## 5. Generator Engine & Feature Components (Phase 2.4)
+
+### Core Service (`src/services/passwordGenerator.ts`)
+- **`getSecureRandomInt(max: number): number`**: Draws 32-bit unsigned integers from `crypto.getRandomValues()`. Implements rejection sampling using threshold $\text{limit} = 2^{32} - (2^{32} \pmod{\text{max}})$, completely eliminating modulo bias.
+- **`secureShuffle<T>(array: T[]): T[]`**: Unbiased Fisher-Yates shuffle utilizing `getSecureRandomInt` at every index step.
+- **`generatePassword(options: GeneratorOptions): GeneratorResult`**: Multi-stage generation that:
+  1. Validates options ($8 \le \text{length} \le 64$, at least 1 category, length $\ge$ active category count).
+  2. Guarantees inclusion of at least 1 character from each selected category.
+  3. Fills remaining positions uniformly from the combined active character pool.
+  4. Shuffles all positions with `secureShuffle`.
+  5. Computes theoretical character pool size and theoretical entropy ($L \times \log_2(R)$).
+- **`WebCryptoUnavailableError`**: Thrown if `crypto.getRandomValues` is absent; strictly prohibits insecure fallback to `Math.random()`.
+
+### Feature Components (`src/features/generator/components/`)
+- **`PasswordDisplay`**: Monospace password display with character visibility toggle (`Eye`/`EyeOff`), copy action with clipboard disclaimer, regeneration trigger (`RotateCw`), and in-memory clear (`Trash2`).
+- **`LengthControl`**: Slider control coupled with numeric stepper and quick presets (12, 16, 24, 32) spanning 8 to 64 characters.
+- **`CategoryToggles`**: Category selectors for Lowercase (26), Uppercase (26), Numbers (10), and Symbols (32) with live pool size and theoretical entropy indicators.
+- **`GeneratorNoticeCard`**: Transparency card outlining CSPRNG rejection sampling, zero persistence, and real-world clipboard security trade-offs.

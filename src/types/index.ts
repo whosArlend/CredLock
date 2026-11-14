@@ -27,6 +27,36 @@ export interface SanitizedBreachRecord {
   breachCount: number;      // Frequency of exposure found in breaches
 }
 
+// Configuration options for Secure Password Generator (Phase 2.4)
+export interface GeneratorOptions {
+  length: number;           // Target length (8 to 64)
+  includeLowercase: boolean;
+  includeUppercase: boolean;
+  includeNumbers: boolean;
+  includeSymbols: boolean;
+}
+
+// Result structure from password generator (strictly in-memory)
+export interface GeneratorResult {
+  password: string;
+  length: number;
+  theoreticalEntropyBits: number;
+  poolSize: number;
+  options: GeneratorOptions;
+  characterCounts: {
+    lowercase: number;
+    uppercase: number;
+    numbers: number;
+    symbols: number;
+  };
+}
+
+// Validation feedback for generator configuration
+export interface GeneratorValidationResult {
+  isValid: boolean;
+  error?: string;
+}
+
 // REST API Adapter Interface (Prepared for Module 1 Integration)
 export interface IModule1Service {
   saveAnalysisRecord(record: SanitizedAnalysisRecord): Promise<boolean>;

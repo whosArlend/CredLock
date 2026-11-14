@@ -90,3 +90,45 @@ The history model strictly isolates non-reversible metadata from credentials:
   - Full cryptographic hashes
   - Hash suffixes or SHA-1 prefixes
   - Password-derived identifiers
+
+---
+
+## 6. Secure Password Generation & Cryptographic Soundness (Phase 2.4)
+
+### 1. Cryptographically Secure Pseudo-Random Number Generation (CSPRNG)
+CredLock exclusively utilizes the browser's native Web Crypto API (`crypto.getRandomValues()`). Standard pseudo-random engines like `Math.random()` are strictly prohibited due to known predictability, small internal state, and vulnerability to seed recovery attacks.
+
+If `crypto.getRandomValues()` is unavailable, CredLock throws an explicit `WebCryptoUnavailableError` rather than silently degrading to insecure fallbacks.
+
+### 2. Elimination of Modulo Bias via Rejection Sampling
+A common flaw in random character generators is naive modulo reduction (`rand % poolSize`). When mapping a uniform 32-bit unsigned integer ($M = 2^{32} = 4,294,967,296$) onto an arbitrary pool size $N$, modulo bias occurs whenever $M$ is not evenly divisible by $N$. Lower index values would possess an infinitesimally higher probability of selection:
+$$P(\text{index} < (M \pmod N)) = \frac{\lfloor M/N \rfloor + 1}{M} > \frac{\lfloor M/N \rfloor}{M}$$
+
+To eliminate this bias, CredLock implements **rejection sampling**:
+$$\text{limit} = 2^{32} - (2^{32} \pmod N)$$
+Any sampled integer $R \ge \text{limit}$ is discarded, and a new sample is drawn. Once $R < \text{limit}$, the value $R \pmod N$ is returned. This mathematically guarantees exact uniform probability $\frac{1}{N}$ for all elements.
+
+### 3. Defined Character Sets
+* **Lowercase Letters (`LOWERCASE_CHARS`):** 26 characters (`a-z`)
+* **Uppercase Letters (`UPPERCASE_CHARS`):** 26 characters (`A-Z`)
+* **Numeric Digits (`NUMBER_CHARS`):** 10 characters (`0-9`)
+* **Printable ASCII Symbols (`SYMBOL_CHARS`):** 32 characters (`!@#$%^&*()_+-=[]{}|;:,.<>?/~"'\\```)
+* **Maximum Combined Pool Size:** 94 printable ASCII characters (excluding space and control characters).
+
+### 4. Guaranteed Category Coverage
+When a user selects multiple character categories, naive uniform selection from the combined pool could randomly omit a category in shorter passwords. CredLock eliminates this risk:
+1. For each active category, exactly 1 character is selected via CSPRNG rejection sampling.
+2. The remaining $L - C$ characters (where $L$ is requested length and $C$ is active category count) are drawn uniformly from the combined active pool.
+3. The resulting character array is permuted using an unbiased **CSPRNG Fisher-Yates shuffle**, ensuring guaranteed category representation is uniformly distributed across all positions.
+
+### 5. In-Memory Lifecycle & Zero Persistence
+Generated passwords exist solely within transient React component state. They are:
+- Never written to `localStorage`, `sessionStorage`, or `IndexedDB`.
+- Excluded from application history logs.
+- Never output to `console.log` or error monitoring.
+- Immediately discarded when the user clicks "Clear" or navigates away.
+
+### 6. Clipboard Security Realities
+When the user clicks "Copy", the password is written to the operating system clipboard via `navigator.clipboard.writeText()`. CredLock avoids false security claims:
+- CredLock explicitly notifies users that clipboard contents can be inspected by other running desktop/mobile applications and system clipboard history managers.
+- CredLock does not claim that clipboard contents can be guaranteed to self-destruct or be safely erased across different OS architectures. Users are advised to paste the credential and clear their clipboard manually.

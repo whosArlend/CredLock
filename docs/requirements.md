@@ -19,8 +19,8 @@
 | Core Feature | Status | Implementation Details |
 | :--- | :---: | :--- |
 | **1. Password Strength Analyzer** | **IMPLEMENTED (Phase 2.3)** | Local in-browser evaluation with `@zxcvbn-ts/core`, 0-4 scoring, feedback warnings/suggestions, composition breakdown, multi-scenario crack times, and sanitized history archival. |
-| **2. Secure Password Generator** | *PENDING (Phase 2.4)* | Scheduled for Phase 2.4 using Web Crypto CSPRNG (`crypto.getRandomValues`). |
-| **3. Password Breach Checker** | *PENDING (Phase 2.5)* | Scheduled for Phase 2.5 using k-anonymity SHA-1 prefix protocol. |
+| **2. Secure Password Generator** | **IMPLEMENTED (Phase 2.4)** | Client-side CSPRNG using Web Crypto API (`crypto.getRandomValues`), rejection sampling to eliminate modulo bias, CSPRNG Fisher-Yates shuffle, guaranteed category coverage, configurable length (8–64), and in-memory zero-knowledge handling. |
+| **3. Password Breach Checker** | *PENDING (Phase 2.5)* | Scheduled for Phase 2.5 using k-anonymity SHA-1 prefix protocol against Have I Been Pwned. |
 
 ## 3. Non-Functional Constraints & Security Rules
 

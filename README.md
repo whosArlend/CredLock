@@ -17,12 +17,16 @@ Evaluate password strength based on length, character diversity, common patterns
 - Avoid transmitting plaintext passwords to external servers.
 
 ### 2. Secure Password Generator
-Generate strong and unpredictable passwords using the browser's cryptographically secure random number generator.
+Generate strong and cryptographically uniform random passwords using the browser's Web Crypto API (`crypto.getRandomValues()`).
 
-- Uses the Web Crypto API.
-- Supports configurable password length.
-- Allows users to select character types.
-- Avoids predictable random number generation methods.
+- Exclusively powered by Web Crypto CSPRNG; strictly prohibits `Math.random()`.
+- Implements unbiased rejection sampling to completely eliminate modulo bias.
+- Uses an unbiased Fisher-Yates shuffle powered by CSPRNG.
+- Enforces guaranteed category coverage (at least 1 character from every active character set).
+- Configurable length (8 to 64 characters) with slider and preset buttons.
+- Selectable character categories: lowercase (`a-z`), uppercase (`A-Z`), digits (`0-9`), and printable ASCII symbols (32 characters).
+- Zero-knowledge in-memory lifecycle: passwords exist only in transient component memory; never persisted to history, storage, or external networks.
+- Secure copy action with explicit, non-absolute clipboard accessibility disclosure.
 
 ### 3. Password Breach Checker
 Check whether a password appears in known data breaches through the Have I Been Pwned Pwned Passwords service.
@@ -111,8 +115,9 @@ http://localhost:5173
 
 ```bash
 npm run dev      # Start development server
-npm run build    # Build for production
-npm run lint     # Run ESLint
+npm run build    # Build for production (type-check + bundle)
+npm run lint     # Run ESLint checks
+npm test         # Run automated unit test suite (Node test runner)
 ```
 
 ## Security and Privacy
@@ -122,6 +127,7 @@ CredLock is designed with a privacy-oriented approach:
 - Password analysis and generation are performed locally.
 - Plaintext passwords, full hashes, and SHA-1 prefixes/suffixes are never stored in application history.
 - History records contain strictly sanitized security metrics (UUID, timestamp, score, length, breach count) rather than actual passwords or cryptographic digests.
+- Generated passwords exist strictly in client RAM; never written to storage, logs, or history.
 - Breach checking uses the k-anonymity protocol in transient memory.
 - Sensitive API responses and password inputs must not be cached by the PWA.
 
@@ -134,6 +140,7 @@ Read [Security Design](docs/security-design.md) for more information.
 - [Architecture](docs/architecture.md)
 - [Security Design](docs/security-design.md)
 - [API Documentation](docs/api-documentation.md)
+- [Testing & Verification](docs/testing.md)
 - [Development Log](docs/development-log.md)
 
 ## Project Status
@@ -143,9 +150,9 @@ CredLock is currently under active development as an academic project.
 - **Phase 2.1:** Project Foundation & Design System — Completed & Verified.
 - **Phase 2.2:** Application Shell & Navigation — Completed & Verified.
 - **Phase 2.3:** Password Strength Analyzer — Completed & Verified (Local evaluation via `@zxcvbn-ts/core`, multi-scenario crack modeling, heuristic pattern feedback, sanitized archival).
+- **Phase 2.4:** Secure Password Generator — Completed & Verified (Web Crypto CSPRNG, rejection sampling, unbiased Fisher-Yates, category coverage guarantee, in-memory lifecycle).
 
 **Upcoming subphases:**
-- Secure Password Generator (Phase 2.4)
 - Password Breach Checker (Phase 2.5)
 - IndexedDB Persistence & PWA Offline Pipeline (Phase 2.6)
 

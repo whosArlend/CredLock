@@ -18,12 +18,14 @@ CredLock provides a client-side cryptographic security utility empowering users 
 | **Routing** | React Router 7 | Declarative routing supporting persistent layout shells and parameterized `:id` routes. |
 | **Icons** | Lucide React | High-performance, tree-shakable SVG iconography. |
 | **Password Estimator** | @zxcvbn-ts/core (v4.2.0) | Local heuristic strength estimation, pattern detection, and guess-difficulty modeling. |
+| **Random Number Generation** | Web Crypto API (CSPRNG) | `crypto.getRandomValues()` with rejection sampling for unbiased password generation. |
+| **Test Runner** | Node.js Test Runner | Native ESM automated test execution (`node --test`). |
 
 ## 3. Strict Scope Enforcement
 
 CredLock strictly delivers three security capabilities:
-1. **Password Strength Analyzer:** Local entropy and pattern inspection.
-2. **Secure Password Generator:** Web Crypto API uniform randomness.
-3. **Password Breach Checker:** k-Anonymity privacy-preserving verification.
+1. **Password Strength Analyzer (IMPLEMENTED - Phase 2.3):** Local entropy, composition breakdown, multi-scenario crack modeling, and heuristic pattern inspection via `@zxcvbn-ts`.
+2. **Secure Password Generator (IMPLEMENTED - Phase 2.4):** Cryptographically secure uniform randomness using Web Crypto API rejection sampling, CSPRNG Fisher-Yates shuffle, guaranteed category coverage, and in-memory zero-knowledge handling.
+3. **Password Breach Checker (SCHEDULED - Phase 2.5):** k-Anonymity privacy-preserving verification using SHA-1 range queries against Have I Been Pwned.
 
 Unrelated modules (such as AI advisors, educational quizzes, or generic marketing portals) are explicitly excluded from this system.

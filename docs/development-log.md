@@ -1,5 +1,38 @@
 # Development Log — CredLock
 
+## Entry: Phase 2.4 — Secure Password Generator Implementation
+**Date:** 2026-11-14  
+**Status:** Completed & Verified
+
+### Actions Taken:
+1. **Cryptographic Engine Implementation (`src/services/passwordGenerator.ts`):**
+   - Utilized native Web Crypto API (`crypto.getRandomValues()`). Strictly prohibited `Math.random()`.
+   - Implemented rejection sampling algorithm (`getSecureRandomInt`) to eliminate modulo bias when mapping 32-bit uints onto arbitrary character pool sizes ($N$).
+   - Implemented unbiased Fisher-Yates shuffle (`secureShuffle`) utilizing CSPRNG.
+   - Defined 4 character categories: Lowercase (26), Uppercase (26), Numbers (10), and Symbols (32 printable ASCII characters).
+   - Enforced guaranteed category coverage: at least 1 character is picked from each active category, remaining slots are filled from the combined pool, and the entire array is shuffled securely.
+   - Implemented `WebCryptoUnavailableError` to prevent silent fallback to insecure PRNGs.
+   - Calculated theoretical character pool size and theoretical entropy bits ($L \times \log_2(R)$).
+2. **UI Component Implementation (`src/features/generator/components/`):**
+   - `PasswordDisplay.tsx`: High-contrast monospace password display with show/hide toggle (`Eye`/`EyeOff`), copy action with non-absolute clipboard disclosure, regenerate action (`RotateCw`), and memory-clear action (`Trash2`).
+   - `LengthControl.tsx`: Range slider (8 to 64) with stepper controls, visual length tier badge (Basic, Strong, High Entropy), and quick presets (12, 16, 24, 32).
+   - `CategoryToggles.tsx`: Checkbox toggles with character examples, pool size badges, live total pool count, and theoretical entropy indicators.
+   - `GeneratorNoticeCard.tsx`: Educational card outlining CSPRNG rejection sampling, in-memory zero-knowledge lifecycle, and clipboard security trade-offs.
+3. **Page Integration (`src/pages/GeneratorPage.tsx`):**
+   - Wired options, real-time generation, validation alerts, toast feedback, and memory-clear handling.
+   - Connected optional transition "Test in Analyzer" which passes the generated password directly via React Router navigation state (preventing URL query leakage).
+   - Updated `AnalyzerPage.tsx` to accept prefilled passwords from router state without persistent storage.
+4. **Automated Testing Suite (`tests/generator.test.ts` & `package.json`):**
+   - Added `"test": "node --test tests/**/*.test.ts"` script.
+   - Implemented 20 automated unit tests covering all 10 cryptographic, validation, and boundary conditions.
+5. **Testing & Verification:**
+   - `npm test`: 20/20 tests passed across 10 test suites in 124 ms.
+   - `npx tsc --noEmit`: 0 errors.
+   - `npm run lint`: 0 errors, 0 warnings.
+   - `npm run build`: Compiled 1696 modules successfully in 5.8s.
+
+---
+
 ## Entry: Phase 2.3 — Password Strength Analyzer Implementation
 **Date:** 2026-11-14  
 **Status:** Completed & Verified

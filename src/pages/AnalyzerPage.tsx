@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -18,7 +18,9 @@ import { FeedbackCard } from '@/features/analyzer/components/FeedbackCard';
 import { PrivacyNoticeCard } from '@/features/analyzer/components/PrivacyNoticeCard';
 
 export function AnalyzerPage() {
-  const [password, setPassword] = useState('');
+  const location = useLocation();
+  const prefill = (location.state as { prefillPassword?: string } | null)?.prefillPassword || '';
+  const [password, setPassword] = useState(prefill);
   const { showToast } = useToast();
 
   // Instant local evaluation
