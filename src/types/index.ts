@@ -40,7 +40,7 @@ export interface GeneratorOptions {
 export interface GeneratorResult {
   password: string;
   length: number;
-  theoreticalEntropyBits: number;
+  theoreticalPoolEntropyBits: number; // Theoretical pool-based entropy estimate: length * log2(poolSize). Upper bound; category constraints reduce exact keyspace.
   poolSize: number;
   options: GeneratorOptions;
   characterCounts: {

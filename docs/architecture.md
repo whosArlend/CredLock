@@ -68,16 +68,18 @@ Located in `src/components/ui/` and `src/components/layout/`:
 ### Core Service (`src/services/passwordGenerator.ts`)
 - **`getSecureRandomInt(max: number): number`**: Draws 32-bit unsigned integers from `crypto.getRandomValues()`. Implements rejection sampling using threshold $\text{limit} = 2^{32} - (2^{32} \pmod{\text{max}})$, completely eliminating modulo bias.
 - **`secureShuffle<T>(array: T[]): T[]`**: Unbiased Fisher-Yates shuffle utilizing `getSecureRandomInt` at every index step.
-- **`generatePassword(options: GeneratorOptions): GeneratorResult`**: Multi-stage generation that:
+- **`generatePassword(options: GeneratorOptions, maxAttempts: number): GeneratorResult`**: Candidate-level rejection sampling algorithm:
   1. Validates options ($8 \le \text{length} \le 64$, at least 1 category, length $\ge$ active category count).
-  2. Guarantees inclusion of at least 1 character from each selected category.
-  3. Fills remaining positions uniformly from the combined active character pool.
-  4. Shuffles all positions with `secureShuffle`.
-  5. Computes theoretical character pool size and theoretical entropy ($L \times \log_2(R)$).
+  2. Constructs candidate string by drawing each position independently and uniformly from the active combined character pool.
+  3. Verifies that the candidate satisfies all enabled category requirements using `satisfiesCategoryConstraints`.
+  4. Discards candidates missing any required category and resamples independently, mathematically guaranteeing a uniform distribution over the valid category-constrained password space.
+  5. Enforces defensive retry limit (`MAX_GENERATOR_ATTEMPTS = 1000`). If exceeded, throws `GenerationAttemptLimitExceededError` without falling back.
+  6. Computes theoretical pool-based entropy estimate ($L \times \log_2(R)$), clearly labeled as an upper bound.
 - **`WebCryptoUnavailableError`**: Thrown if `crypto.getRandomValues` is absent; strictly prohibits insecure fallback to `Math.random()`.
+- **`GenerationAttemptLimitExceededError`**: Thrown if rejection sampling exceeds retry limit; prevents infinite loops while guaranteeing valid outputs.
 
 ### Feature Components (`src/features/generator/components/`)
-- **`PasswordDisplay`**: Monospace password display with character visibility toggle (`Eye`/`EyeOff`), copy action with clipboard disclaimer, regeneration trigger (`RotateCw`), and in-memory clear (`Trash2`).
+- **`PasswordDisplay`**: Monospace password display with character visibility toggle (`Eye`/`EyeOff`), copy action with clipboard disclaimer, regeneration trigger (`RotateCw`), in-memory clear (`Trash2`), and tooltip-annotated Pool Entropy Estimate badge.
 - **`LengthControl`**: Slider control coupled with numeric stepper and quick presets (12, 16, 24, 32) spanning 8 to 64 characters.
-- **`CategoryToggles`**: Category selectors for Lowercase (26), Uppercase (26), Numbers (10), and Symbols (32) with live pool size and theoretical entropy indicators.
-- **`GeneratorNoticeCard`**: Transparency card outlining CSPRNG rejection sampling, zero persistence, and real-world clipboard security trade-offs.
+- **`CategoryToggles`**: Category selectors for Lowercase (26), Uppercase (26), Numbers (10), and Symbols (32) with live pool size and pool-based entropy estimate indicator.
+- **`GeneratorNoticeCard`**: Transparency card outlining CSPRNG candidate rejection sampling, pool entropy estimate boundaries, zero persistence, and real-world clipboard security trade-offs.

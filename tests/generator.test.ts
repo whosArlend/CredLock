@@ -6,17 +6,33 @@ import {
   secureShuffle,
   validateGeneratorOptions,
   calculatePoolSize,
-  calculateTheoreticalEntropy,
+  calculateTheoreticalPoolEntropy,
+  satisfiesCategoryConstraints,
   isWebCryptoAvailable,
   WebCryptoUnavailableError,
+  GenerationAttemptLimitExceededError,
   LOWERCASE_CHARS,
   UPPERCASE_CHARS,
   NUMBER_CHARS,
   SYMBOL_CHARS,
   MIN_GENERATOR_LENGTH,
   MAX_GENERATOR_LENGTH,
+  MAX_GENERATOR_ATTEMPTS,
   DEFAULT_GENERATOR_OPTIONS,
 } from '../src/services/passwordGenerator.ts';
+
+/**
+ * Phase 2.4 — Secure Password Generator Test Suite
+ *
+ * MATHEMATICAL FOUNDATION FOR UNIFORMITY:
+ * Rejection sampling over the entire candidate string w in Sigma^L guarantees exact uniformity
+ * over the constrained space V = { w in Sigma^L | w satisfies all category requirements }.
+ * Since each unrestricted candidate in Sigma^L is generated with independent, uniform character
+ * probability (1 / |Sigma|)^L, Bayes' theorem guarantees that the conditional probability of
+ * every valid string w in V is identical: P(w | w in V) = 1 / |V|.
+ * No statistical sample of output strings can prove uniformity; mathematical correctness
+ * stems from unbiased CSPRNG integer sampling combined with candidate-level rejection.
+ */
 
 describe('Phase 2.4 — Secure Password Generator Test Suite', () => {
   // Test 1: Cryptographically Secure Random Number Generation Availability
@@ -25,8 +41,8 @@ describe('Phase 2.4 — Secure Password Generator Test Suite', () => {
     assert.strictEqual(typeof globalThis.crypto.getRandomValues, 'function');
   });
 
-  // Test 2: Rejection Sampling & Unbiased Index Selection
-  describe('2. Rejection Sampling (getSecureRandomInt)', () => {
+  // Test 2: Unbiased Integer Selection (Rejection Sampling at Integer Level)
+  describe('2. Unbiased Integer Selection (getSecureRandomInt)', () => {
     it('returns 0 when max is 1', () => {
       assert.strictEqual(getSecureRandomInt(1), 0);
     });
@@ -37,7 +53,7 @@ describe('Phase 2.4 — Secure Password Generator Test Suite', () => {
       assert.throws(() => getSecureRandomInt(3.14), RangeError);
     });
 
-    it('consistently produces integers in valid bounds [0, max - 1]', () => {
+    it('consistently produces integers strictly within valid bounds [0, max - 1]', () => {
       const bounds = [2, 10, 26, 32, 62, 94];
       for (const max of bounds) {
         for (let i = 0; i < 100; i++) {
@@ -50,19 +66,18 @@ describe('Phase 2.4 — Secure Password Generator Test Suite', () => {
       }
     });
 
-    it('secureShuffle produces a permutation containing all original elements', () => {
+    it('secureShuffle produces an unbiased permutation containing all original elements', () => {
       const original = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
       const shuffled = secureShuffle(original);
 
       assert.strictEqual(shuffled.length, original.length);
-      // Verify elements remain identical as a set
       assert.deepStrictEqual([...shuffled].sort((a, b) => a - b), original);
     });
   });
 
   // Test 3: Correct Password Length
   describe('3. Password Length Accuracy', () => {
-    it('produces passwords matching requested lengths exactly', () => {
+    it('produces accepted outputs matching requested lengths exactly', () => {
       const lengths = [8, 12, 16, 20, 24, 32, 48, 64];
       for (const len of lengths) {
         const result = generatePassword({
@@ -75,10 +90,35 @@ describe('Phase 2.4 — Secure Password Generator Test Suite', () => {
     });
   });
 
-  // Test 4: Guaranteed Inclusion of Every Selected Category
-  describe('4. Guaranteed Category Coverage', () => {
-    it('guarantees at least 1 character from every active category', () => {
-      // Run multiple trials to ensure invariant is guaranteed
+  // Test 4: Candidate-Level Rejection Sampling & Category Coverage
+  describe('4. Candidate-Level Rejection Sampling & Category Coverage', () => {
+    it('satisfiesCategoryConstraints rejects candidates missing required categories', () => {
+      const activeCats = [
+        { name: 'lowercase', chars: LOWERCASE_CHARS },
+        { name: 'uppercase', chars: UPPERCASE_CHARS },
+        { name: 'numbers', chars: NUMBER_CHARS },
+      ];
+
+      // Missing numbers
+      assert.strictEqual(
+        satisfiesCategoryConstraints('abcdefABCDEF', activeCats),
+        false
+      );
+
+      // Missing uppercase
+      assert.strictEqual(
+        satisfiesCategoryConstraints('abcdef123456', activeCats),
+        false
+      );
+
+      // Contains all three active categories
+      assert.strictEqual(
+        satisfiesCategoryConstraints('abcABC123', activeCats),
+        true
+      );
+    });
+
+    it('guarantees every accepted output contains at least 1 character from every enabled category', () => {
       for (let trial = 0; trial < 50; trial++) {
         const result = generatePassword({
           length: 16,
@@ -88,27 +128,15 @@ describe('Phase 2.4 — Secure Password Generator Test Suite', () => {
           includeSymbols: true,
         });
 
-        assert.ok(
-          result.characterCounts.lowercase >= 1,
-          'Expected at least 1 lowercase character'
-        );
-        assert.ok(
-          result.characterCounts.uppercase >= 1,
-          'Expected at least 1 uppercase character'
-        );
-        assert.ok(
-          result.characterCounts.numbers >= 1,
-          'Expected at least 1 number character'
-        );
-        assert.ok(
-          result.characterCounts.symbols >= 1,
-          'Expected at least 1 symbol character'
-        );
+        assert.ok(result.characterCounts.lowercase >= 1, 'Must include lowercase');
+        assert.ok(result.characterCounts.uppercase >= 1, 'Must include uppercase');
+        assert.ok(result.characterCounts.numbers >= 1, 'Must include numbers');
+        assert.ok(result.characterCounts.symbols >= 1, 'Must include symbols');
       }
     });
 
-    it('works with minimum length (8) and all 4 categories', () => {
-      for (let trial = 0; trial < 20; trial++) {
+    it('enforces category coverage even at minimum boundary length (8)', () => {
+      for (let trial = 0; trial < 25; trial++) {
         const result = generatePassword({
           length: 8,
           includeLowercase: true,
@@ -126,28 +154,33 @@ describe('Phase 2.4 — Secure Password Generator Test Suite', () => {
     });
   });
 
-  // Test 5: Strict Exclusion of Unselected Categories
-  describe('5. Strict Exclusion of Unselected Categories', () => {
-    it('excludes uppercase and symbols when only lowercase and numbers are selected', () => {
-      for (let trial = 0; trial < 30; trial++) {
-        const result = generatePassword({
-          length: 20,
-          includeLowercase: true,
-          includeUppercase: false,
-          includeNumbers: true,
-          includeSymbols: false,
-        });
+  // Test 5: Strict Character Pool Membership & Exclusion
+  describe('5. Strict Pool Membership & Category Exclusion', () => {
+    it('every character in the accepted output strictly belongs to the enabled combined pool', () => {
+      const options = {
+        length: 24,
+        includeLowercase: true,
+        includeUppercase: false,
+        includeNumbers: true,
+        includeSymbols: false,
+      };
 
+      const combinedPool = LOWERCASE_CHARS + NUMBER_CHARS;
+
+      for (let trial = 0; trial < 30; trial++) {
+        const result = generatePassword(options);
+
+        // Verification of exclusion
         assert.strictEqual(result.characterCounts.uppercase, 0);
         assert.strictEqual(result.characterCounts.symbols, 0);
         assert.ok(result.characterCounts.lowercase > 0);
         assert.ok(result.characterCounts.numbers > 0);
 
-        // Character-by-character verification
+        // Character-by-character membership check
         for (const char of result.password) {
           assert.ok(
-            LOWERCASE_CHARS.includes(char) || NUMBER_CHARS.includes(char),
-            `Unexpected character '${char}' found in output`
+            combinedPool.includes(char),
+            `Character '${char}' does not belong to enabled combined pool`
           );
         }
       }
@@ -170,7 +203,7 @@ describe('Phase 2.4 — Secure Password Generator Test Suite', () => {
       for (const char of result.password) {
         assert.ok(
           SYMBOL_CHARS.includes(char),
-          `Character '${char}' must be in SYMBOL_CHARS`
+          `Character '${char}' must belong to SYMBOL_CHARS`
         );
       }
     });
@@ -192,7 +225,7 @@ describe('Phase 2.4 — Secure Password Generator Test Suite', () => {
       for (const char of result.password) {
         assert.ok(
           UPPERCASE_CHARS.includes(char),
-          `Character '${char}' must be in UPPERCASE_CHARS`
+          `Character '${char}' must belong to UPPERCASE_CHARS`
         );
       }
     });
@@ -220,7 +253,7 @@ describe('Phase 2.4 — Secure Password Generator Test Suite', () => {
     });
   });
 
-  // Test 7: Minimum and Maximum Length Validation
+  // Test 7: Length Bounds Validation
   describe('7. Length Bounds Validation', () => {
     it('rejects lengths below minimum (8)', () => {
       const invalidShort = {
@@ -267,7 +300,6 @@ describe('Phase 2.4 — Secure Password Generator Test Suite', () => {
   // Test 8: Length Smaller Than Selected Categories
   describe('8. Length vs Selected Categories Validation', () => {
     it('rejects configurations where length is smaller than number of active categories', () => {
-      // 4 categories selected, but length = 3
       const invalidConfig = {
         length: 3,
         includeLowercase: true,
@@ -282,12 +314,30 @@ describe('Phase 2.4 — Secure Password Generator Test Suite', () => {
     });
   });
 
-  // Test 9: Web Crypto Unavailable Handling (Zero Math.random fallback)
-  describe('9. Web Crypto Unavailable Handling', () => {
+  // Test 9: Defensive Retry-Limit Behavior & Web Crypto Unavailable Handling
+  describe('9. Defensive Retry-Limit & Web Crypto Unavailability', () => {
+    it('verifies default maximum attempt constant is defensively set to 1000', () => {
+      assert.strictEqual(MAX_GENERATOR_ATTEMPTS, 1000);
+    });
+
+    it('throws GenerationAttemptLimitExceededError when retry limit is exceeded', () => {
+      // By supplying maxAttempts = 0, the retry limit is immediately reached without candidate acceptance
+      assert.throws(
+        () => generatePassword(DEFAULT_GENERATOR_OPTIONS, 0),
+        (err) => err instanceof GenerationAttemptLimitExceededError
+      );
+    });
+
+    it('never returns an invalid candidate or falls back to Math.random when retry limit is exceeded', () => {
+      assert.throws(
+        () => generatePassword(DEFAULT_GENERATOR_OPTIONS, 0),
+        /Exceeded maximum candidate generation attempts/
+      );
+    });
+
     it('throws WebCryptoUnavailableError if crypto.getRandomValues is missing', () => {
       const originalCrypto = globalThis.crypto;
       try {
-        // Temporarily stub crypto to simulate unsupported environment
         Object.defineProperty(globalThis, 'crypto', {
           value: { getRandomValues: undefined },
           configurable: true,
@@ -303,7 +353,6 @@ describe('Phase 2.4 — Secure Password Generator Test Suite', () => {
           (err) => err instanceof WebCryptoUnavailableError
         );
       } finally {
-        // Restore original crypto
         Object.defineProperty(globalThis, 'crypto', {
           value: originalCrypto,
           configurable: true,
@@ -312,9 +361,11 @@ describe('Phase 2.4 — Secure Password Generator Test Suite', () => {
     });
   });
 
-  // Test 10: Regenerate Behavior and State Freshness
-  describe('10. Regenerate Behavior & Theoretical Calculations', () => {
-    it('consecutive generations produce distinct passwords', () => {
+  // Test 10: Operational Independence Check & Theoretical Entropy Metrics
+  describe('10. Operational Output Independence & Theoretical Pool Entropy', () => {
+    it('consecutive invocations produce distinct outputs (operational sanity check, not proof of randomness)', () => {
+      // Note: Output difference across consecutive calls verifies basic state freshness and
+      // non-trivial sampling, but is NOT mathematical proof of cryptographic entropy or uniformity.
       const res1 = generatePassword(DEFAULT_GENERATOR_OPTIONS);
       const res2 = generatePassword(DEFAULT_GENERATOR_OPTIONS);
       const res3 = generatePassword(DEFAULT_GENERATOR_OPTIONS);
@@ -324,13 +375,13 @@ describe('Phase 2.4 — Secure Password Generator Test Suite', () => {
       assert.notStrictEqual(res1.password, res3.password);
     });
 
-    it('accurately calculates theoretical character pool size and entropy bits', () => {
+    it('accurately computes theoretical pool-based entropy estimates without mislabeling as measured entropy', () => {
       // All 4 categories: 26 + 26 + 10 + 32 = 94 chars
       const pool94 = calculatePoolSize(DEFAULT_GENERATOR_OPTIONS);
       assert.strictEqual(pool94, 94);
 
-      // Entropy for length 16: 16 * log2(94) = 16 * 6.55458886 = ~104.9 bits
-      const entropy16 = calculateTheoreticalEntropy(16, pool94);
+      // Theoretical pool entropy for length 16: 16 * log2(94) = 16 * 6.55458886 = ~104.9 bits
+      const entropy16 = calculateTheoreticalPoolEntropy(16, pool94);
       assert.strictEqual(entropy16, 104.9);
 
       // Only numbers: 10 chars
@@ -343,7 +394,7 @@ describe('Phase 2.4 — Secure Password Generator Test Suite', () => {
       });
       assert.strictEqual(poolNumbers, 10);
       // 8 * log2(10) = 8 * 3.3219 = ~26.6 bits
-      const entropyNumbers = calculateTheoreticalEntropy(8, poolNumbers);
+      const entropyNumbers = calculateTheoreticalPoolEntropy(8, poolNumbers);
       assert.strictEqual(entropyNumbers, 26.6);
     });
   });

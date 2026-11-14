@@ -41,28 +41,30 @@ This document tracks the testing strategies, test matrices, and verification run
 | # | Test Area | Test Description | Invariant Verified | Status |
 | :-: | :--- | :--- | :--- | :---: |
 | **1** | **CSPRNG Availability** | Detection of Web Crypto API | `crypto.getRandomValues` function present and accessible | **PASS** |
-| **2** | **Rejection Sampling** | `getSecureRandomInt(max)` bounds | Generates uniform values strictly in $[0, \text{max}-1]$ across pools 2, 10, 26, 32, 62, 94; rejects invalid bounds ($\le 0$, floats) | **PASS** |
+| **2** | **Unbiased Integer Sampling** | `getSecureRandomInt(max)` bounds | Generates uniform values strictly in $[0, \text{max}-1]$ across pools 2, 10, 26, 32, 62, 94; rejects invalid bounds ($\le 0$, floats) | **PASS** |
 | **3** | **Fisher-Yates Shuffle** | `secureShuffle(array)` | Produces unbiased set-preserving permutations with identical length and elements | **PASS** |
 | **4** | **Length Accuracy** | Password lengths 8, 12, 16, 20, 24, 32, 48, 64 | Output password string length strictly matches requested parameter | **PASS** |
-| **5** | **Category Coverage** | Guaranteed inclusion of all 4 active sets | Every generated password contains $\ge 1$ lowercase, $\ge 1$ uppercase, $\ge 1$ digit, $\ge 1$ symbol across 50 consecutive runs | **PASS** |
-| **6** | **Minimum Length Category Coverage** | Length 8 with 4 active categories | All 4 character types present even at minimum boundary length ($L=8$) | **PASS** |
-| **7** | **Category Exclusion** | Strict exclusion of unselected sets | When uppercase and symbols are disabled, output contains exactly 0 uppercase and 0 symbols across 30 runs | **PASS** |
-| **8** | **Single Category Selection** | Pure symbols or pure uppercase generation | 100% of generated characters belong to the single active set | **PASS** |
-| **9** | **Empty Category Validation** | Zero categories selected | Throws descriptive validation error; refuses generation | **PASS** |
-| **10** | **Length Bounds Validation** | Lengths $< 8$, $> 64$, or non-integer floats | Rejected by `validateGeneratorOptions` and `generatePassword` | **PASS** |
-| **11** | **Length Smaller Than Categories** | Length < number of selected sets | Throws descriptive error ($L=3$ with 4 categories selected) | **PASS** |
-| **12** | **Web Crypto Unavailable Handling** | Simulates missing `crypto.getRandomValues` | Throws `WebCryptoUnavailableError`; strictly refuses `Math.random()` fallback | **PASS** |
-| **13** | **Regenerate Behavior** | Consecutive runs with identical options | Generates distinct, independent cryptographic output keys | **PASS** |
-| **14** | **Theoretical Entropy Calculation** | Information entropy formula $L \times \log_2(R)$ | Correctly computes 94-char pool (104.9 bits at $L=16$) and 10-char pool (26.6 bits at $L=8$) | **PASS** |
+| **5** | **Candidate-Level Rejection** | `satisfiesCategoryConstraints` | Discards candidate strings lacking any required category; accepts candidates satisfying all active categories | **PASS** |
+| **6** | **Category Coverage** | Guaranteed inclusion of all active sets | Every accepted password contains $\ge 1$ lowercase, $\ge 1$ uppercase, $\ge 1$ digit, $\ge 1$ symbol across 50 consecutive runs | **PASS** |
+| **7** | **Minimum Length Category Coverage** | Length 8 with 4 active categories | All 4 character types present even at minimum boundary length ($L=8$) | **PASS** |
+| **8** | **Strict Pool Membership** | Every character belongs to active pool | Every character in accepted output belongs to enabled pool; excluded categories produce 0 occurrences | **PASS** |
+| **9** | **Single Category Selection** | Pure symbols or pure uppercase generation | 100% of generated characters belong to the single active set | **PASS** |
+| **10** | **Empty Category Validation** | Zero categories selected | Throws descriptive validation error; refuses generation | **PASS** |
+| **11** | **Length Bounds Validation** | Lengths $< 8$, $> 64$, or non-integer floats | Rejected by `validateGeneratorOptions` and `generatePassword` | **PASS** |
+| **12** | **Length Smaller Than Categories** | Length < number of selected sets | Throws descriptive error ($L=3$ with 4 categories selected) | **PASS** |
+| **13** | **Defensive Retry Boundary** | Exceeding `maxAttempts` | Throws `GenerationAttemptLimitExceededError`; never returns invalid candidate or falls back to weaker RNG | **PASS** |
+| **14** | **Web Crypto Unavailable Handling** | Simulates missing `crypto.getRandomValues` | Throws `WebCryptoUnavailableError`; strictly refuses `Math.random()` fallback | **PASS** |
+| **15** | **Operational Output Independence** | Consecutive runs produce distinct keys | Operational sanity check confirming state freshness (explicitly noted: not proof of randomness) | **PASS** |
+| **16** | **Theoretical Pool Entropy Calculation** | Information entropy formula $L \times \log_2(R)$ | Correctly computes 94-char pool (104.9 bits at $L=16$) and 10-char pool (26.6 bits at $L=8$) labeled as pool-based estimate | **PASS** |
 
 ### 2. Automated Pipeline Verification
 
 | Tool / Check | Command | Result | Verification Notes |
 | :--- | :--- | :---: | :--- |
-| **Unit Test Suite** | `npm test` | **PASS (20/20 tests pass)** | Runs 10 test suites covering all cryptographic constraints in 124 ms. |
+| **Unit Test Suite** | `npm test` | **PASS (24/24 tests pass)** | Runs 10 test suites covering all cryptographic constraints in ~325 ms. |
 | **TypeScript Compiler** | `npx tsc --noEmit` | **PASS (0 errors)** | Strict compiler flags satisfied with zero warnings or type casts. |
 | **ESLint Linter** | `npm run lint` | **PASS (0 errors, 0 warnings)** | Clean linting pass with React hooks and unused vars enforced. |
-| **Vite Production Build** | `npm run build` | **PASS** | Compiles 1696 modules; bundles vendor chunks cleanly in 5.8s. |
+| **Vite Production Build** | `npm run build` | **PASS** | Compiles 1696 modules; bundles vendor chunks cleanly in 5.7s. |
 
 ---
 

@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -19,9 +19,17 @@ import { PrivacyNoticeCard } from '@/features/analyzer/components/PrivacyNoticeC
 
 export function AnalyzerPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const prefill = (location.state as { prefillPassword?: string } | null)?.prefillPassword || '';
   const [password, setPassword] = useState(prefill);
   const { showToast } = useToast();
+
+  // Security purge: Wipe navigation state from browser history immediately upon consumption
+  useEffect(() => {
+    if (location.state && (location.state as { prefillPassword?: string }).prefillPassword) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.pathname, location.state, navigate]);
 
   // Instant local evaluation
   const analysisResult = useMemo(() => analyzePassword(password), [password]);

@@ -1,13 +1,14 @@
 import React from 'react';
 import { Check, ShieldAlert, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
+import { Tooltip } from '@/components/ui/Tooltip';
 import {
   LOWERCASE_CHARS,
   UPPERCASE_CHARS,
   NUMBER_CHARS,
   SYMBOL_CHARS,
   calculatePoolSize,
-  calculateTheoreticalEntropy,
+  calculateTheoreticalPoolEntropy,
 } from '@/services/passwordGenerator';
 import type { GeneratorOptions } from '@/types';
 
@@ -69,7 +70,7 @@ export const CategoryToggles: React.FC<CategoryTogglesProps> = ({
   };
 
   const poolSize = calculatePoolSize(options);
-  const theoreticalEntropyBits = calculateTheoreticalEntropy(options.length, poolSize);
+  const theoreticalPoolEntropyBits = calculateTheoreticalPoolEntropy(options.length, poolSize);
   const selectedCount =
     (options.includeLowercase ? 1 : 0) +
     (options.includeUppercase ? 1 : 0) +
@@ -92,9 +93,13 @@ export const CategoryToggles: React.FC<CategoryTogglesProps> = ({
           <Badge variant={hasNoCategories ? 'rose' : 'cyan'} size="sm">
             Pool: {poolSize} chars
           </Badge>
-          <Badge variant={hasNoCategories ? 'rose' : 'emerald'} size="sm">
-            ~{theoreticalEntropyBits} bits theoretical
-          </Badge>
+          <Tooltip content="Theoretical pool-based entropy estimate: length * log2(poolSize). Upper bound assuming unconstrained uniform selection; category constraints slightly restrict the keyspace.">
+            <div>
+              <Badge variant={hasNoCategories ? 'rose' : 'emerald'} size="sm">
+                ~{theoreticalPoolEntropyBits} bits (Pool Est.)
+              </Badge>
+            </div>
+          </Tooltip>
         </div>
       </div>
 

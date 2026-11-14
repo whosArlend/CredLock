@@ -1,5 +1,35 @@
 # Development Log — CredLock
 
+## Entry: Phase 2.4 — Security Audit & Mathematical Corrections
+**Date:** 2026-11-14  
+**Status:** Completed & Verified
+
+### Actions Taken:
+1. **Candidate-Level Rejection Sampling Distribution:**
+   - Identified non-uniformity in the initial forced-category-slot approach (which biased permutations where categories appeared multiple times).
+   - Replaced with candidate-level rejection sampling: selects all positions independently and uniformly from the active combined pool, tests candidates against active categories (`satisfiesCategoryConstraints`), and rejects candidates missing any category.
+   - Mathematically proven uniform: because all candidate strings in $\Sigma^L$ have equal unconditional probability $(1/|\Sigma|)^L$, conditional probability given acceptance is $1/|V|$ for every valid password.
+   - Enforced defensive retry limit `MAX_GENERATOR_ATTEMPTS = 1000` throwing `GenerationAttemptLimitExceededError` without falling back.
+2. **Entropy Terminology Recalibration:**
+   - Replaced all instances of "Theoretical Entropy" with "Theoretical Pool Entropy" / "Pool-Based Entropy Estimate".
+   - Documented that $L \times \log_2(\text{Pool})$ is a theoretical upper-bound estimate assuming unconstrained uniform selection, and category requirements slightly constrain the valid keyspace.
+   - Ensured no claims are made regarding measured entropy.
+3. **Navigation State Lifecycle Security:**
+   - Audited the "Test in Analyzer" transition from `GeneratorPage` to `AnalyzerPage`.
+   - Verified that credentials are never stored in URLs, query parameters, `localStorage`, `sessionStorage`, or `IndexedDB`.
+   - Added immediate history state purge in `AnalyzerPage.tsx`: executes `navigate(location.pathname, { replace: true, state: null })` on component mount, wiping `prefillPassword` from `window.history.state` so that browser refresh (F5) or back/forward navigation does not restore the secret.
+4. **Test Suite Enhancements (`tests/generator.test.ts`):**
+   - Expanded test suite from 20 to 24 tests across 10 suites.
+   - Added tests for candidate rejection, strict pool membership, defensive retry limit, and accurate pool-based entropy calculation.
+   - Added explicit comments documenting that consecutive output variance is an operational check, not mathematical proof of cryptographic quality.
+5. **Verification Pipeline:**
+   - `npm test`: 24/24 tests passed in ~325 ms.
+   - `npx tsc --noEmit`: 0 errors.
+   - `npm run lint`: 0 errors, 0 warnings.
+   - `npm run build`: Compiled cleanly in 5.7s.
+
+---
+
 ## Entry: Phase 2.4 — Secure Password Generator Implementation
 **Date:** 2026-11-14  
 **Status:** Completed & Verified

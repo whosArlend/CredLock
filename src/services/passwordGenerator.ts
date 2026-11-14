@@ -17,6 +17,7 @@ export const SYMBOL_CHARS = '!@#$%^&*()_+-=[]{}|;:,.<>?/~"\'\\`'; // 32 chars
 export const MIN_GENERATOR_LENGTH = 8;
 export const MAX_GENERATOR_LENGTH = 64;
 export const DEFAULT_GENERATOR_LENGTH = 16;
+export const MAX_GENERATOR_ATTEMPTS = 1000;
 
 /**
  * Default generator configuration options.
@@ -39,6 +40,19 @@ export class WebCryptoUnavailableError extends Error {
   ) {
     super(message);
     this.name = 'WebCryptoUnavailableError';
+  }
+}
+
+/**
+ * Custom error thrown when candidate-level rejection sampling exceeds its retry limit.
+ * Never returns an invalid candidate or degrades to weaker RNG.
+ */
+export class GenerationAttemptLimitExceededError extends Error {
+  constructor(
+    message = `Exceeded maximum candidate generation attempts (${MAX_GENERATOR_ATTEMPTS}) while satisfying category constraints.`
+  ) {
+    super(message);
+    this.name = 'GenerationAttemptLimitExceededError';
   }
 }
 
@@ -171,10 +185,17 @@ export function calculatePoolSize(options: GeneratorOptions): number {
 }
 
 /**
- * Calculates theoretical character-pool entropy in bits:
- * Entropy = Length * log2(PoolSize)
+ * Calculates the theoretical pool-based entropy estimate in bits:
+ * Estimate = Length * log2(PoolSize)
+ *
+ * NOTE ON ENTROPY TERMINOLOGY:
+ * This metric is a theoretical upper-bound estimate assuming unrestricted, independent
+ * uniform character selection over the entire combined character pool. Enforcing category
+ * constraints (requiring at least one character from each active category) slightly restricts
+ * the valid output space, meaning true keyspace size is |V| < |Pool|^Length.
+ * It is NOT a measured entropy value.
  */
-export function calculateTheoreticalEntropy(
+export function calculateTheoreticalPoolEntropy(
   length: number,
   poolSize: number
 ): number {
@@ -183,22 +204,63 @@ export function calculateTheoreticalEntropy(
   return Math.round(entropy * 10) / 10;
 }
 
+// Backward-compatibility alias
+export const calculateTheoreticalEntropy = calculateTheoreticalPoolEntropy;
+
+interface CategoryDefinition {
+  name: string;
+  chars: string;
+}
+
 /**
- * Generates a cryptographically secure random password.
+ * Evaluates whether a candidate string contains at least one character from every active category.
+ */
+export function satisfiesCategoryConstraints(
+  candidate: string,
+  activeCategories: readonly CategoryDefinition[]
+): boolean {
+  for (const category of activeCategories) {
+    let hasCategoryChar = false;
+    for (let i = 0; i < candidate.length; i++) {
+      if (category.chars.includes(candidate[i]!)) {
+        hasCategoryChar = true;
+        break;
+      }
+    }
+    if (!hasCategoryChar) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Generates a cryptographically secure random password using Candidate-Level Rejection Sampling.
  *
- * Guarantees:
- * 1. Uses crypto.getRandomValues() with rejection sampling (zero modulo bias).
- * 2. Guaranteed category coverage: includes at least 1 character from every active category.
- * 3. Remaining positions filled uniformly from combined active character pool.
- * 4. Positions randomized with unbiased CSPRNG Fisher-Yates shuffle.
- * 5. Exactly matches requested length.
- * 6. Generates strictly in client memory; zero persistent storage, telemetry, or network exposure.
+ * MATHEMATICAL JUSTIFICATION FOR UNIFORMITY:
+ * 1. Let Sigma be the combined pool of active character categories with size S = |Sigma|.
+ * 2. For a requested length L, every candidate sequence w in Sigma^L is generated independently
+ *    and uniformly at random using Web Crypto CSPRNG with rejection sampling (zero modulo bias).
+ * 3. Hence, every unrestricted string w in Sigma^L has identical unconditional probability P(w) = (1/S)^L.
+ * 4. Let V subset of Sigma^L be the subset of candidate passwords satisfying the category constraints
+ *    (containing at least 1 character from each active category).
+ * 5. Rejection sampling accepts w if and only if w in V. If w not in V, it is rejected and a fresh
+ *    independent candidate is drawn.
+ * 6. By the definition of conditional probability:
+ *    For every w in V: P(w | w in V) = P(w) / P(V) = (1/S^L) / (|V|/S^L) = 1 / |V|
+ *    For every w not in V: P(w | w in V) = 0
+ * 7. Because 1 / |V| is identical for all valid passwords, this produces an exactly uniform
+ *    distribution over the valid constrained password space V.
  *
- * @param options Generator configuration.
- * @returns GeneratorResult containing the password and cryptographic metadata.
+ * @param options Generator configuration options.
+ * @param maxAttempts Defensive retry limit (defaults to MAX_GENERATOR_ATTEMPTS).
+ * @returns GeneratorResult containing the uniform password and metadata.
+ * @throws WebCryptoUnavailableError if Web Crypto is unavailable.
+ * @throws GenerationAttemptLimitExceededError if retry limit is exceeded.
  */
 export function generatePassword(
-  options: GeneratorOptions = DEFAULT_GENERATOR_OPTIONS
+  options: GeneratorOptions = DEFAULT_GENERATOR_OPTIONS,
+  maxAttempts: number = MAX_GENERATOR_ATTEMPTS
 ): GeneratorResult {
   if (!isWebCryptoAvailable()) {
     throw new WebCryptoUnavailableError();
@@ -210,7 +272,7 @@ export function generatePassword(
   }
 
   // Identify active categories
-  const activeCategories: { name: string; chars: string }[] = [];
+  const activeCategories: CategoryDefinition[] = [];
   if (options.includeLowercase) {
     activeCategories.push({ name: 'lowercase', chars: LOWERCASE_CHARS });
   }
@@ -226,24 +288,35 @@ export function generatePassword(
 
   // Build combined pool of all selected categories
   const combinedPool = activeCategories.map((c) => c.chars).join('');
-  const chars: string[] = [];
+  const poolSize = combinedPool.length;
 
-  // Step 1: Guaranteed coverage — pick at least 1 character from each selected category
-  for (const category of activeCategories) {
-    const charIndex = getSecureRandomInt(category.chars.length);
-    chars.push(category.chars[charIndex]!);
+  let attempts = 0;
+  let acceptedPassword = '';
+  let isAccepted = false;
+
+  // Candidate-level rejection sampling loop
+  while (attempts < maxAttempts) {
+    attempts++;
+
+    // Generate candidate of requested length uniformly from combined pool
+    const candidateChars: string[] = [];
+    for (let i = 0; i < options.length; i++) {
+      const charIndex = getSecureRandomInt(poolSize);
+      candidateChars.push(combinedPool[charIndex]!);
+    }
+    const candidate = candidateChars.join('');
+
+    // Check category satisfaction
+    if (satisfiesCategoryConstraints(candidate, activeCategories)) {
+      acceptedPassword = candidate;
+      isAccepted = true;
+      break;
+    }
   }
 
-  // Step 2: Fill remaining positions uniformly from the combined pool
-  const remainingCount = options.length - chars.length;
-  for (let i = 0; i < remainingCount; i++) {
-    const charIndex = getSecureRandomInt(combinedPool.length);
-    chars.push(combinedPool[charIndex]!);
+  if (!isAccepted) {
+    throw new GenerationAttemptLimitExceededError();
   }
-
-  // Step 3: Unbiased Fisher-Yates shuffle to randomize character order
-  const shuffledChars = secureShuffle(chars);
-  const password = shuffledChars.join('');
 
   // Character breakdown counts
   const characterCounts = {
@@ -253,20 +326,22 @@ export function generatePassword(
     symbols: 0,
   };
 
-  for (const char of password) {
+  for (const char of acceptedPassword) {
     if (LOWERCASE_CHARS.includes(char)) characterCounts.lowercase++;
     else if (UPPERCASE_CHARS.includes(char)) characterCounts.uppercase++;
     else if (NUMBER_CHARS.includes(char)) characterCounts.numbers++;
     else if (SYMBOL_CHARS.includes(char)) characterCounts.symbols++;
   }
 
-  const poolSize = calculatePoolSize(options);
-  const theoreticalEntropyBits = calculateTheoreticalEntropy(options.length, poolSize);
+  const theoreticalPoolEntropyBits = calculateTheoreticalPoolEntropy(
+    options.length,
+    poolSize
+  );
 
   return {
-    password,
-    length: password.length,
-    theoreticalEntropyBits,
+    password: acceptedPassword,
+    length: acceptedPassword.length,
+    theoreticalPoolEntropyBits,
     poolSize,
     options: { ...options },
     characterCounts,

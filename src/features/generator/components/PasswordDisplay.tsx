@@ -53,9 +53,13 @@ export const PasswordDisplay: React.FC<PasswordDisplayProps> = ({
               <Badge variant="neutral" size="sm">
                 {result.poolSize}-char pool
               </Badge>
-              <Badge variant="emerald" size="sm">
-                ~{result.theoreticalEntropyBits} bits
-              </Badge>
+              <Tooltip content="Theoretical pool-based entropy estimate: length * log2(poolSize). Upper-bound estimate assuming unconstrained uniform selection; category requirements slightly restrict the keyspace.">
+                <div>
+                  <Badge variant="emerald" size="sm">
+                    ~{result.theoreticalPoolEntropyBits} bits (Pool Est.)
+                  </Badge>
+                </div>
+              </Tooltip>
             </div>
           )}
         </div>

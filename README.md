@@ -20,13 +20,15 @@ Evaluate password strength based on length, character diversity, common patterns
 Generate strong and cryptographically uniform random passwords using the browser's Web Crypto API (`crypto.getRandomValues()`).
 
 - Exclusively powered by Web Crypto CSPRNG; strictly prohibits `Math.random()`.
-- Implements unbiased rejection sampling to completely eliminate modulo bias.
-- Uses an unbiased Fisher-Yates shuffle powered by CSPRNG.
-- Enforces guaranteed category coverage (at least 1 character from every active character set).
-- Configurable length (8 to 64 characters) with slider and preset buttons.
+- Implements candidate-level rejection sampling: candidates missing any required category are rejected and independently resampled, mathematically guaranteeing a uniform distribution over all valid category-constrained passwords.
+- Eliminates modulo bias at the integer level via CSPRNG rejection sampling.
+- Enforces category coverage (at least 1 character from every active character set) with a defensive retry limit.
+- Displays a clearly labeled **Theoretical Pool Entropy Estimate** ($L \times \log_2(\text{Pool})$) as an upper bound, noting that category constraints slightly restrict the keyspace.
+- Configurable length (8 to 64 characters) with slider, stepper, and preset buttons.
 - Selectable character categories: lowercase (`a-z`), uppercase (`A-Z`), digits (`0-9`), and printable ASCII symbols (32 characters).
 - Zero-knowledge in-memory lifecycle: passwords exist only in transient component memory; never persisted to history, storage, or external networks.
 - Secure copy action with explicit, non-absolute clipboard accessibility disclosure.
+- Safe Analyzer transition: clears navigation state from browser history immediately upon consumption.
 
 ### 3. Password Breach Checker
 Check whether a password appears in known data breaches through the Have I Been Pwned Pwned Passwords service.
