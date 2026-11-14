@@ -33,7 +33,7 @@ export interface CharacterComposition {
 export interface AttackScenarioCrackTime {
   onlineThrottled: string;    // 100 per hour (throttled login endpoint)
   onlineUnthrottled: string;  // 10 per second (unthrottled login endpoint)
-  offlineSlowHash: string;    // 10,000 per second (e.g. bcrypt, Argon2, scrypt)
+  offlineSlowHash: string;    // 10,000 per second (illustrative benchmark for adaptive hashes; varies with cost parameters)
   offlineFastHash: string;    // 10,000,000,000 per second (e.g. MD5, SHA-256 on GPUs)
 }
 

@@ -14,7 +14,7 @@ export function CrackTimeScenarios({
     {
       title: 'Offline Slow Hash',
       rate: '10,000 guesses/sec',
-      methodology: 'Adaptive password hashes (e.g. bcrypt, Argon2, PBKDF2)',
+      methodology: 'Benchmark for adaptive hashes (e.g. bcrypt, Argon2); actual rates depend on configured cost factors',
       time: isEmpty ? '—' : crackTimes.offlineSlowHash,
       icon: Cpu,
       highlight: true,
@@ -89,7 +89,7 @@ export function CrackTimeScenarios({
       <div className="pt-2 text-[11px] text-foreground-dim leading-relaxed flex items-start gap-1.5">
         <ShieldAlert className="w-3.5 h-3.5 text-cyber-amber shrink-0 mt-0.5" />
         <p>
-          <strong className="text-foreground-muted">Methodology & Limitations:</strong> Crack-time estimates depend on assumed attack speed and methodology. Hardware advances, distributed botnets, and pre-computed rainbow tables can alter crack times significantly. Estimates do not constitute a guarantee of security.
+          <strong className="text-foreground-muted">Methodology & Limitations:</strong> Crack-time estimates depend on assumed attack speed and methodology. Adaptive algorithms like bcrypt and Argon2 vary widely in cracking speed depending on their configured work and memory parameters. Hardware advances, distributed botnets, and pre-computed rainbow tables can alter crack times significantly. Estimates do not constitute a guarantee of security.
         </p>
       </div>
     </div>
