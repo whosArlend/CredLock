@@ -27,42 +27,55 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-medium transition-all duration-150 select-none rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyber-emerald focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50';
+      'inline-flex items-center justify-center font-medium transition-all duration-150 select-none rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 disabled:cursor-not-allowed';
 
     const variants = {
+      // Obsidian Vault × Cipher Ledger: Amber primary authorization
       primary:
-        'bg-cyber-emerald text-background font-semibold hover:bg-cyber-emerald-hover active:bg-cyber-emerald-active shadow-sm hover:shadow-glow-emerald',
+        'bg-accent text-background font-semibold hover:bg-accent-hover active:bg-accent-active shadow-sm',
+      // Milled alloy surface elevated
       secondary:
-        'bg-background-surface text-foreground border border-border hover:bg-background-elevated hover:border-border-focus text-foreground',
+        'bg-background-elevated text-foreground border border-border hover:bg-[#2C3138] hover:border-border-strong',
+      // Precision outline
       outline:
-        'border border-cyber-emerald/40 text-cyber-emerald hover:bg-cyber-emerald-muted hover:border-cyber-emerald',
+        'border border-accent/40 text-accent hover:bg-accent/10 hover:border-accent active:bg-accent/20',
+      // Low-profile ghost
       ghost:
-        'text-foreground-muted hover:text-foreground hover:bg-background-surface',
+        'text-foreground-muted hover:text-foreground hover:bg-background-surface active:bg-background-elevated',
+      // High-consequence danger
       danger:
-        'bg-cyber-rose/10 text-cyber-rose border border-cyber-rose/30 hover:bg-cyber-rose/20 active:bg-cyber-rose/30',
+        'bg-status-danger/15 text-[#EF4444] border border-status-danger/30 hover:bg-status-danger/25 active:bg-status-danger/35',
     };
 
     const sizes = {
-      sm: 'h-8 px-3 text-xs gap-1.5',
-      md: 'h-10 px-4 text-sm gap-2',
-      lg: 'h-12 px-6 text-base gap-2.5',
+      sm: 'h-8 px-3 text-xs gap-1.5 rounded-sm',
+      md: 'h-10 px-4 text-sm gap-2 rounded-md',
+      lg: 'h-12 px-5 text-base gap-2.5 rounded-md',
     };
+
+    const isDisabled = disabled || isLoading;
 
     return (
       <button
         ref={ref}
         type={type}
-        disabled={disabled || isLoading}
+        disabled={isDisabled}
+        aria-busy={isLoading || undefined}
         className={cn(baseStyles, variants[variant], sizes[size], className)}
         {...props}
       >
         {isLoading ? (
-          <Loader2 className="w-4 h-4 animate-spin text-current" aria-hidden="true" />
+          <>
+            <Loader2 className="w-4 h-4 animate-spin shrink-0" aria-hidden="true" />
+            <span>{children}</span>
+          </>
         ) : (
-          leftIcon
+          <>
+            {leftIcon && <span className="inline-flex shrink-0">{leftIcon}</span>}
+            {children}
+            {rightIcon && <span className="inline-flex shrink-0">{rightIcon}</span>}
+          </>
         )}
-        <span>{children}</span>
-        {!isLoading && rightIcon}
       </button>
     );
   }

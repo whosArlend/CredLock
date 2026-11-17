@@ -15,31 +15,32 @@ export function Badge({
   children,
   ...props
 }: BadgeProps) {
+  // Obsidian Vault × Cipher Ledger: Restrained technical badges
   const variants = {
-    emerald: 'bg-cyber-emerald-muted text-cyber-emerald border-cyber-emerald-border',
-    amber: 'bg-cyber-amber-muted text-cyber-amber border-cyber-amber-border',
-    rose: 'bg-cyber-rose-muted text-cyber-rose border-cyber-rose-border',
-    cyan: 'bg-cyber-cyan-muted text-cyber-cyan border-cyber-cyan-border',
-    neutral: 'bg-background-elevated text-foreground-muted border-border',
+    emerald: 'bg-status-success/12 text-status-success border-status-success/30',
+    amber: 'bg-accent/12 text-accent border-accent/30',
+    rose: 'bg-status-danger/12 text-[#EF4444] border-status-danger/30',
+    cyan: 'bg-status-info/12 text-status-info border-status-info/30',
+    neutral: 'bg-background-elevated text-foreground-secondary border-border',
   };
 
   const dotColors = {
-    emerald: 'bg-cyber-emerald',
-    amber: 'bg-cyber-amber',
-    rose: 'bg-cyber-rose',
-    cyan: 'bg-cyber-cyan',
+    emerald: 'bg-status-success',
+    amber: 'bg-accent',
+    rose: 'bg-status-danger',
+    cyan: 'bg-status-info',
     neutral: 'bg-foreground-dim',
   };
 
   const sizes = {
-    sm: 'text-[11px] px-2 py-0.5 gap-1',
-    md: 'text-xs px-2.5 py-1 gap-1.5',
+    sm: 'text-[10px] font-mono px-1.5 py-0.5 gap-1 rounded-sm',
+    md: 'text-xs font-mono px-2 py-0.5 gap-1.5 rounded-sm',
   };
 
   return (
     <span
       className={cn(
-        'inline-flex items-center font-medium rounded-full border select-none transition-colors duration-150',
+        'inline-flex items-center font-medium border select-none transition-colors duration-150 tracking-tight',
         variants[variant],
         sizes[size],
         className

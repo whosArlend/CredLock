@@ -5,20 +5,41 @@
 @layer base {
   :root {
     color-scheme: dark;
+    --bg-primary: #0C0D0E;
+    --bg-secondary: #131517;
+    --bg-surface: #1A1D20;
+    --bg-elevated: #24282D;
+    --accent: #E5A93C;
+    --accent-hover: #D9982F;
+    --accent-active: #C28424;
+    --success: #10B981;
+    --danger: #DC2626;
+    --warning: #F59E0B;
+    --text-primary: #F3F4F6;
+    --text-secondary: #A1A1AA;
+    --text-muted: #71717A;
+    --border: #282C32;
+    --border-strong: #383E46;
   }
 
   body {
-    background-color: #0a0e17;
-    color: #f8fafc;
+    background-color: #0C0D0E;
+    color: #F3F4F6;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Accessible high-contrast focus rings for keyboard navigation */
+  /* Accessible high-contrast amber focus rings for keyboard navigation */
   :focus-visible {
-    outline: 2px solid #10b981;
+    outline: 2px solid #E5A93C;
     outline-offset: 2px;
   }
+}
+
+/* Dynamic metric tabular alignment helper */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Reduced motion preference */
@@ -33,21 +54,21 @@
   }
 }
 
-/* Custom subtle scrollbar */
+/* Subtle, precision scrollbar matching the obsidian palette */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #0C0D0E;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 9999px;
+  background: #282C32;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #383E46;
 }

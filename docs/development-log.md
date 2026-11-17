@@ -1,5 +1,62 @@
 # Development Log — CredLock
 
+## Entry: UI/UX Redesign Stage 3 — Home Page Redesign
+**Date:** 2026-11-17  
+**Status:** Completed & Verified
+
+### Actions Taken:
+1. **Home Page Redesign Architecture:**
+   - Redesigned the primary landing experience at `src/pages/HomePage.tsx` adhering to the **Obsidian Vault × Cipher Ledger** design system.
+   - Decomposed the page into focused, modular subcomponents within `src/features/home/components/`.
+2. **Hero Master Input Chamber (`src/features/home/components/HeroMasterInput.tsx`):**
+   - Implemented editorial brand eyebrow (`CREDLOCK // LOCAL SECURITY ENVIRONMENT`) and headline ("Your passwords deserve better protection").
+   - Integrated an interactive password evaluation chamber with monospace typography, password visibility toggle, clear button, and real-time client-side analysis using `analyzePassword()`.
+   - Embedded calibrated 5-segment hardware `<Meter>` displaying score, crack time estimate, and estimated guess difficulty.
+   - Security assurance: Navigation to `/analyzer` and `/generator` strictly avoids transmitting passwords via URL query parameters or React Router navigation state.
+3. **Security Feature Index (`src/features/home/components/SecurityFeatureIndex.tsx`):**
+   - Built an asymmetric editorial grid highlighting the 3 core tools: `01 // HEURISTIC EVALUATION` (primary 6-col emphasis), `02 // CSPRNG KEYGEN` (3 cols), and `03 // k-ANONYMITY LOOKUP` (3 cols).
+   - Emphasized technical rigor and client-side guarantees without generic marketing copy.
+4. **Recent Activity Section (`src/features/home/components/RecentActivitySection.tsx`):**
+   - Directly integrated with `getAnalysisRecords()` from `src/services/historyStorage.ts`.
+   - Zero mock/fabricated records: Displays genuine sanitized records (timestamp, score badge, length, categories) or renders a deliberate empty state when no records exist.
+5. **Privacy Architecture Principles (`src/features/home/components/PrivacyPrinciplesSection.tsx`):**
+   - Established the "Privacy is part of the architecture" section detailing 3 client-side enclave guarantees: Local Analysis, Cryptographic Generation, and Privacy-Preserving Hash-Prefix Lookup.
+   - Restrained hairline borders and technical indicators without superficial compliance badges.
+6. **Pipeline Verification:**
+   - `npm test`: 27/27 tests passed across 11 suites.
+   - `npx tsc --noEmit`: 0 errors.
+   - `npm run lint`: 0 errors, 0 warnings.
+   - `npm run build`: Production bundle compiled cleanly in 5.26s.
+
+---
+
+## Entry: UI/UX Redesign Stage 2 — Design Tokens & Base Components
+**Date:** 2026-11-17  
+**Status:** Completed & Verified
+
+### Actions Taken:
+1. **Design Token Infrastructure (`tailwind.config.ts` & `src/styles/index.css`):**
+   - Established the **Obsidian Vault × Cipher Ledger** visual foundation.
+   - Centralized color tokens: Basalt Void (`#0C0D0E`), Milled Slate (`#131517`), Obsidian Plate (`#1A1D20`), Alloy Elevate (`#24282D`), Crucible Gold / Safety Amber (`#E5A93C`), Cold Beryl (`#10B981`), Oxide Crimson (`#DC2626`), Chalk White (`#F3F4F6`), Steel Mist (`#A1A1AA`), and Zinc Muted (`#71717A`).
+   - Integrated primary font pairing: Plus Jakarta Sans (interface, headings, labels) and Space Mono (technical metrics, passwords, entropy), loaded via Google Fonts in `index.html` with system fallbacks.
+   - Refined border radius scale to restrained geometry: `sm` (4px), `md` (6px), `lg`/`card` (8px), `xl`/`panel` (12px).
+   - Added `.tabular-nums` utility class and high-contrast amber keyboard focus ring (`:focus-visible`).
+2. **Base Component Implementation & Refactoring:**
+   - **`Button.tsx`**: Implemented `primary` (Amber), `secondary` (Alloy Elevated), `outline`, `ghost`, and `danger` variants; sizes `sm`, `md`, `lg`; accessible focus ring, loading spinner, and icon slots.
+   - **`Card.tsx`**: Implemented `default`, `elevated`, `inset`, and `flat` variants; padding options (`none`, `sm`, `md`, `lg`); accessible `isInteractive` states and subcomponents.
+   - **`Input.tsx`**: Implemented accessible label association, helper text, error state with `role="alert"`, leading/trailing slots, and password compatibility without memory/persistence leakage.
+   - **`Meter.tsx`**: Created a generic, accessible meter supporting numeric ranges (`min`, `max`, `value`), continuous progress or discrete calibrated hardware segments (`segments`), and semantic variants (`default`, `accent`, `success`, `warning`, `danger`).
+   - **`Badge.tsx`**: Refined to crisp 4px geometry, eliminating bubbly pill styling while retaining full variant compatibility.
+3. **Automated Testing & Pipeline Verification:**
+   - Updated `package.json` test script with `--experimental-strip-types` for Node.js test execution.
+   - Created `tests/meter.test.ts` verifying value clamping, range percentages, and hardware segment threshold calculations.
+   - `npm test`: 27/27 tests passed across 11 suites.
+   - `npx tsc --noEmit`: 0 errors.
+   - `npm run lint`: 0 errors, 0 warnings.
+   - `npm run build`: Compiled 1696 modules successfully.
+
+---
+
 ## Entry: Phase 2.4 — Security Audit & Mathematical Corrections
 **Date:** 2026-11-14  
 **Status:** Completed & Verified

@@ -30,11 +30,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const helperId = `${inputId}-helper`;
 
     return (
-      <div className="w-full flex flex-col gap-1.5 text-left">
+      <div className="w-full flex flex-col gap-1.5 text-left font-sans">
         {label && (
           <label
             htmlFor={inputId}
-            className="text-xs font-medium text-foreground-muted select-none flex items-center justify-between"
+            className="text-xs font-medium text-foreground-secondary select-none flex items-center justify-between"
           >
             <span>{label}</span>
           </label>
@@ -52,12 +52,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             aria-invalid={Boolean(error)}
             aria-describedby={error ? errorId : helperText ? helperId : undefined}
             className={cn(
-              'w-full h-10 px-3.5 bg-background-surface text-foreground placeholder:text-foreground-dim text-sm rounded-lg border border-border transition-colors duration-150',
-              'focus:outline-none focus:border-cyber-emerald focus:ring-1 focus:ring-cyber-emerald',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'w-full h-10 px-3.5 bg-background-secondary text-foreground placeholder:text-foreground-dim text-sm rounded-md border border-border transition-colors duration-150',
+              'focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent',
+              'disabled:opacity-40 disabled:cursor-not-allowed',
               leftElement && 'pl-10',
               rightElement && 'pr-10',
-              error && 'border-cyber-rose focus:border-cyber-rose focus:ring-cyber-rose',
+              error && 'border-status-danger text-foreground focus:border-status-danger focus:ring-status-danger',
               className
             )}
             {...props}
@@ -69,7 +69,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
         {error ? (
-          <p id={errorId} className="text-xs text-cyber-rose mt-0.5">
+          <p id={errorId} className="text-xs text-status-danger mt-0.5" role="alert">
             {error}
           </p>
         ) : helperText ? (

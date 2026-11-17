@@ -51,13 +51,16 @@ The persistent `BottomNav` maintains user orientation by highlighting:
 * **Security Guard:** Never retains plaintext passwords, full hashes, suffixes, prefixes, or password-derived tokens.
 * **Extensibility:** The abstraction defines asynchronous/synchronous methods (`getAnalysisRecords`, `getAnalysisRecordById`, `getBreachRecords`, `getBreachRecordById`, `addAnalysisRecord`, `addBreachRecord`, `clearAllHistory`) designed for seamless replacement with IndexedDB in Phase 2.6 without changing view components.
 
-## 4. UI Component System
+## 4. UI Component System & Design Tokens (Redesign Stage 2: Obsidian Vault × Cipher Ledger)
+
+The component layer implements the **Obsidian Vault × Cipher Ledger** design system, combining industrial warm-charcoal surfaces (`#0C0D0E`, `#131517`, `#1A1D20`, `#24282D`) with Safety Amber (`#E5A93C`) authorization accents, crisp typography (Plus Jakarta Sans and Space Mono), restrained radii (4px, 6px, 8px, 12px), and hairline architectural borders (`#282C32`, `#383E46`).
 
 Located in `src/components/ui/` and `src/components/layout/`:
-* **`Button`**: Accessible button with variants (`primary`, `secondary`, `outline`, `ghost`, `danger`), sizes, loading states, and keyboard focus rings.
-* **`Input`**: Text input with accessible labels, helper text, error text, and left/right icon slots.
-* **`Card`**: Structured surface component (`Header`, `Title`, `Description`, `Content`, `Footer`) with `focus-within` keyboard indicator.
-* **`Badge`**: Status chips with variant tokens (`emerald`, `amber`, `rose`, `cyan`, `neutral`) and pulsing dot indicators.
+* **`Button`**: Precision action button with variants (`primary`, `secondary`, `outline`, `ghost`, `danger`), sizes (`sm`, `md`, `lg`), `isLoading` spinner state, icon slots, and high-contrast amber keyboard focus ring.
+* **`Card`**: Multi-surface component with variants (`default`, `elevated`, `inset`, `flat`), configurable padding (`none`, `sm`, `md`, `lg`), `isInteractive` focus rings, and composable subcomponents (`Header`, `Title`, `Description`, `Content`, `Footer`).
+* **`Input`**: Form field input with accessible label association, helper text, error state (`role="alert"`), disabled styling, leading/trailing slots, and password masking support.
+* **`Meter`**: Generic, accessible progress and calibrated hardware meter (`role="progressbar"`) supporting continuous or discrete segment displays, semantic variants (`default`, `accent`, `success`, `warning`, `danger`), and custom labels/readouts.
+* **`Badge`**: Restrained status chip with crisp 4px radius, avoiding bubbly pill shapes while supporting semantic color variants and beacon dots.
 * **`Tooltip`**: Lightweight accessible hover/focus popover (`role="tooltip"`).
 * **`Toast`**: Context-driven notification queue for non-blocking asynchronous user feedback (`useToast`, `ToastViewport`).
 * **`LoadingIndicator`**: Accessible SVG spinner with animated shield icon.

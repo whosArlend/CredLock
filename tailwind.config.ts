@@ -6,64 +6,111 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Obsidian Vault × Cipher Ledger Core Tokens
         background: {
-          DEFAULT: '#0a0e17', // Deep navy abyss base
-          subtle: '#0f172a',  // Secondary background
-          surface: '#131d31', // Card surface
-          elevated: '#1a263e',// Popovers / Modals
-        },
-        border: {
-          DEFAULT: '#1e293b',
-          muted: '#172033',
-          focus: '#334155',
-          accent: '#10b981',
+          DEFAULT: '#0C0D0E', // Main application background (Basalt)
+          secondary: '#131517', // Secondary structural surfaces
+          subtle: '#131517',  // Backward compatibility alias
+          surface: '#1A1D20', // Primary component surfaces (Obsidian Plate)
+          elevated: '#24282D',// Elevated interactive elements (Alloy Elevate)
         },
         foreground: {
-          DEFAULT: '#f8fafc', // Crisp off-white
-          muted: '#94a3b8',   // Secondary metadata
-          dim: '#64748b',     // Tertiary subtle text
+          DEFAULT: '#F3F4F6', // Main text (Chalk White)
+          secondary: '#A1A1AA', // Supporting text
+          muted: '#A1A1AA',   // Supporting text (Zinc 400)
+          dim: '#71717A',     // Low-priority / muted text (Zinc 500)
         },
+        border: {
+          DEFAULT: '#282C32', // Default boundaries (Milled Edge)
+          strong: '#383E46',  // Emphasized boundaries
+          muted: '#1B1E22',   // Subtle dividers
+          focus: '#E5A93C',   // Primary accent focus ring
+          accent: '#E5A93C',  // Brand accent boundary
+        },
+        accent: {
+          DEFAULT: '#E5A93C', // Primary Accent (Crucible Gold / Safety Amber)
+          hover: '#D9982F',
+          active: '#C28424',
+          muted: 'rgba(229, 169, 60, 0.12)',
+          border: 'rgba(229, 169, 60, 0.3)',
+        },
+        status: {
+          success: '#10B981', // Safe and successful states (Emerald)
+          danger: '#DC2626',  // Breached and critical states (Crimson)
+          warning: '#F59E0B', // Warnings and caution states (Amber)
+          info: '#38BDF8',    // Informational states (Sky)
+        },
+        // Mapped cyber tokens for existing feature compatibility
         cyber: {
           emerald: {
-            DEFAULT: '#10b981',
+            DEFAULT: '#10B981',
             hover: '#059669',
             active: '#047857',
             muted: 'rgba(16, 185, 129, 0.12)',
             border: 'rgba(16, 185, 129, 0.3)',
           },
           amber: {
-            DEFAULT: '#f59e0b',
-            muted: 'rgba(245, 158, 11, 0.12)',
-            border: 'rgba(245, 158, 11, 0.3)',
+            DEFAULT: '#E5A93C',
+            hover: '#D9982F',
+            active: '#C28424',
+            muted: 'rgba(229, 169, 60, 0.12)',
+            border: 'rgba(229, 169, 60, 0.3)',
           },
           rose: {
-            DEFAULT: '#f43f5e',
-            muted: 'rgba(244, 63, 94, 0.12)',
-            border: 'rgba(244, 63, 94, 0.3)',
+            DEFAULT: '#DC2626',
+            hover: '#B91C1C',
+            active: '#991B1B',
+            muted: 'rgba(220, 38, 38, 0.12)',
+            border: 'rgba(220, 38, 38, 0.3)',
           },
           cyan: {
-            DEFAULT: '#06b6d4',
-            muted: 'rgba(6, 182, 212, 0.12)',
-            border: 'rgba(6, 182, 212, 0.3)',
+            DEFAULT: '#38BDF8',
+            hover: '#0284C7',
+            active: '#0369A1',
+            muted: 'rgba(56, 189, 248, 0.12)',
+            border: 'rgba(56, 189, 248, 0.3)',
           },
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'ui-monospace', 'monospace'],
+        sans: [
+          '"Plus Jakarta Sans"',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
+          'Roboto',
+          'sans-serif',
+        ],
+        mono: [
+          '"Space Mono"',
+          '"JetBrains Mono"',
+          'ui-monospace',
+          'SFMono-Regular',
+          'Menlo',
+          'Monaco',
+          'Consolas',
+          'monospace',
+        ],
       },
       boxShadow: {
-        card: '0 4px 20px -2px rgba(0, 0, 0, 0.5)',
-        elevated: '0 10px 30px -5px rgba(0, 0, 0, 0.6)',
-        'glow-emerald': '0 0 20px -5px rgba(16, 185, 129, 0.25)',
+        card: '0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4)',
+        elevated: '0 4px 16px -2px rgba(0, 0, 0, 0.6), 0 2px 6px -2px rgba(0, 0, 0, 0.4)',
+        inset: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.5)',
+        'glow-accent': '0 0 16px -4px rgba(229, 169, 60, 0.25)',
       },
       borderRadius: {
-        DEFAULT: '0.5rem',
-        card: '0.75rem',
-        panel: '1rem',
+        sm: '4px',
+        DEFAULT: '6px',
+        md: '6px',
+        lg: '8px',
+        card: '8px',
+        xl: '12px',
+        panel: '12px',
       },
       transitionTimingFunction: {
         DEFAULT: 'cubic-bezier(0.16, 1, 0.3, 1)',
+        mechanical: 'cubic-bezier(0.2, 0, 0, 1)',
       },
     },
   },
