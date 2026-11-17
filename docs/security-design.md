@@ -149,3 +149,35 @@ Generated passwords exist solely within transient React component state:
 When the user clicks "Copy", the password is written to the operating system clipboard via `navigator.clipboard.writeText()`. CredLock avoids false security claims:
 - CredLock explicitly notifies users that clipboard contents can be inspected by other running desktop/mobile applications and system clipboard history managers.
 - CredLock does not claim that clipboard contents can be guaranteed to self-destruct or be safely erased across different OS architectures. Users are advised to paste the credential and clear their clipboard manually.
+
+---
+
+## 8. Password Breach Checker Security & Privacy Model (Phase 2.5)
+
+### 1. The k-Anonymity Range Query Protocol
+To verify credentials against compromised databases without exposing the secret to the verification service or network eavesdroppers, CredLock implements the **k-Anonymity mathematical model**:
+1. **Local Digest Computation:** The candidate password $P$ is converted to UTF-8 bytes and hashed using `crypto.subtle.digest('SHA-1', data)` client-side, yielding a 160-bit (40 hex characters) digest $H(P)$.
+2. **Prefix Partitioning:** The digest is split into:
+   - **Prefix:** The first 5 hexadecimal characters ($H_1 = H[0..4]$), representing $16^5 = 1,048,576$ possible buckets.
+   - **Suffix:** The remaining 35 hexadecimal characters ($H_2 = H[5..39]$), representing a space of $16^{35} \approx 6.3 \times 10^{41}$ possibilities.
+3. **Range Query:** The browser requests `GET https://api.pwnedpasswords.com/range/{H_1}`. Because the prefix matches hundreds of thousands of unrelated passwords across Have I Been Pwned's dataset of 800M+ hashes, the remote service learns only that the user possesses *one of the thousands of passwords* sharing that prefix. The specific password cannot be identified.
+4. **Padding Header Protection:** The request includes `Add-Padding: true`. HIBP includes synthetic padding records in the response, preventing eavesdroppers from deducing the specific prefix frequency through network packet size analysis (traffic analysis mitigation).
+5. **Local Suffix Matching:** The remote service returns a list of candidate suffixes and their breach frequencies. CredLock parses this list client-side and performs an exact string comparison between $H_2$ and the returned suffixes.
+6. **Mathematical Privacy Guarantee:**
+   - Plaintext passwords are never transmitted.
+   - Complete 40-character SHA-1 digests are never transmitted.
+   - The 35-character suffix is never transmitted.
+   - Neither the password nor any hash is stored in browser cache, cookies, `localStorage`, `sessionStorage`, or `IndexedDB`.
+
+### 2. Protocol Role of SHA-1
+- SHA-1 is used strictly because it is mandated by the Have I Been Pwned Pwned Passwords range lookup API.
+- CredLock explicitly does **not** advocate or use SHA-1 for modern password storage or cryptographic integrity protection.
+
+### 3. Sanitized History Storage
+When users explicitly save a breach query result, the record contains only:
+- `id`: Random UUID generated via `crypto.randomUUID()`
+- `timestamp`: ISO 8601 creation string
+- `isBreached`: Exposure status boolean
+- `breachCount`: Public database frequency count
+- **Prohibited Fields:** The record strictly excludes plaintext passwords, password fragments, full hashes, prefixes, suffixes, or raw API response payloads.
+

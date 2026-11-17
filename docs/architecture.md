@@ -86,3 +86,29 @@ Located in `src/components/ui/` and `src/components/layout/`:
 - **`LengthControl`**: Slider control coupled with numeric stepper and quick presets (12, 16, 24, 32) spanning 8 to 64 characters.
 - **`CategoryToggles`**: Category selectors for Lowercase (26), Uppercase (26), Numbers (10), and Symbols (32) with live pool size and pool-based entropy estimate indicator.
 - **`GeneratorNoticeCard`**: Transparency card outlining CSPRNG candidate rejection sampling, pool entropy estimate boundaries, zero persistence, and real-world clipboard security trade-offs.
+
+## 6. Breach Checker Engine & Feature Components (Phase 2.5)
+
+### Core Service (`src/services/breachChecker.ts`)
+- **`computeSha1Hex(text: string): Promise<string>`**: Computes 40-character uppercase hexadecimal SHA-1 digest client-side via `crypto.subtle.digest('SHA-1', data)`.
+- **`splitSha1Hash(hashHex: string): { prefix: string; suffix: string }`**: Separates the 40-character hash into a 5-character prefix (sent to HIBP) and a 35-character suffix (retained locally).
+- **`parseRangeResponse(responseText: string): Map<string, number>`**: Parses the HIBP range response containing `<suffix>:<count>` lines into a fast in-memory hash map.
+- **`checkPasswordBreach(password: string, options?: BreachCheckOptions): Promise<BreachCheckResult>`**: Orchestrates the k-anonymity breach verification query:
+  1. Validates input non-emptiness (throws `EmptyPasswordError` if empty or whitespace-only).
+  2. Computes SHA-1 hash locally in transient memory.
+  3. Sends `GET https://api.pwnedpasswords.com/range/{prefix}` with `Add-Padding: true` to prevent response-size traffic analysis attacks.
+  4. Manages timeout (default 10s) and cancellation via `AbortController`.
+  5. Performs local suffix lookup against returned dataset.
+  6. Returns sanitized result containing `isBreached: boolean`, `breachCount: number`, `prefix: string`, and `queriedAt: string`.
+- **Granular Error Handling**: Defines `BreachCheckError`, `EmptyPasswordError`, `WebCryptoUnavailableError`, `BreachNetworkError`, `BreachTimeoutError`, `BreachApiError`, and `BreachMalformedResponseError`.
+
+### Feature Components (`src/features/breach/components/`)
+- **`BreachPasswordInput`**: Credential query chamber featuring monospace input, password visibility toggle (`Eye`/`EyeOff`), clear action (`X`), keyboard Enter submission, and disabled state during query execution.
+- **`BreachResult`**: Multi-state visual display handling:
+  - *Loading*: Monospace pulse indicator `[ HIBP RANGE QUERY // IN PROGRESS ]`.
+  - *Compromised*: Crimson hazard alert with formatted occurrence count, urgent remediation advice, and direct link to Secure Password Generator.
+  - *Clean / Not Found*: Emerald confirmation with explicit caveat that absence from public breaches does not guarantee security against targeted brute-force attacks.
+  - *Network/API Error*: Amber alert with descriptive failure details and a one-click retry trigger.
+  - *Save to History Action*: Explicit user-triggered archival saving only `SanitizedBreachRecord` (`id`, `timestamp`, `isBreached`, `breachCount`).
+- **`BreachPrivacyNotice`**: Architectural transparency card explaining the 3-step k-anonymity protocol (Local Hash $\to$ 5-Character Prefix Range Query $\to$ Local Suffix Matching) and protocol context for SHA-1.
+

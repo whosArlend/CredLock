@@ -27,6 +27,17 @@ export interface SanitizedBreachRecord {
   breachCount: number;      // Frequency of exposure found in breaches
 }
 
+// In-memory result from active breach query
+export interface BreachCheckResult {
+  isBreached: boolean;
+  breachCount: number;
+  prefix: string;
+  queriedAt: string;
+}
+
+export type BreachCheckStatus = 'idle' | 'loading' | 'success' | 'error';
+
+
 // Configuration options for Secure Password Generator (Phase 2.4)
 export interface GeneratorOptions {
   length: number;           // Target length (8 to 64)

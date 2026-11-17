@@ -1,5 +1,38 @@
 # Development Log — CredLock
 
+## Entry: Phase 2.5 — Password Breach Checker Implementation
+**Date:** 2026-11-17  
+**Status:** Completed & Verified
+
+### Actions Taken:
+1. **Core Service Implementation (`src/services/breachChecker.ts`):**
+   - Implemented `computeSha1Hex(text)` computing client-side 40-character uppercase hexadecimal SHA-1 digests using `crypto.subtle.digest('SHA-1', ...)`.
+   - Implemented `splitSha1Hash(hash)` partitioning the digest into a 5-character prefix for network transmission and a 35-character suffix for local matching.
+   - Implemented `parseRangeResponse(text)` safely mapping `<suffix>:<count>` lines into an in-memory Map while handling synthetic padding entries (`count=0`).
+   - Implemented `checkPasswordBreach(password, options)` with timeout handling via `AbortController` and `Add-Padding: true` header to thwart response-size traffic analysis attacks.
+   - Defined robust, typed error hierarchy: `BreachCheckError`, `EmptyPasswordError`, `WebCryptoUnavailableError`, `BreachNetworkError`, `BreachTimeoutError`, `BreachApiError`, and `BreachMalformedResponseError`.
+2. **Modular UI Feature Components (`src/features/breach/components/`):**
+   - `BreachPasswordInput.tsx`: Obsidian Vault × Cipher Ledger input chamber with monospace typography, password visibility toggle (`Eye`/`EyeOff`), clear button (`X`), Enter-key submission, and disabled state during queries.
+   - `BreachResult.tsx`: Comprehensive state presentation for:
+     - *Loading*: Monospace pulse indicator `[ HIBP RANGE QUERY // IN PROGRESS ]`.
+     - *Found*: Crimson hazard card with formatted occurrence count, immediate action recommendations, and direct CTA to `/generator`.
+     - *Not Found*: Emerald confirmation with explicit clarification that absence from known breaches does not guarantee brute-force immunity.
+     - *Error*: Amber alert with specific error messaging and retry button.
+     - *Save to History*: Explicit user action appending `SanitizedBreachRecord` (`id`, `timestamp`, `isBreached`, `breachCount`) to session memory with toast feedback.
+   - `BreachPrivacyNotice.tsx`: 3-stage visual explanation of k-anonymity (Local Hash $\to$ 5-Char Prefix Query $\to$ In-Browser Suffix Comparison) with SHA-1 protocol context.
+3. **Breach Checker Page Redesign (`src/pages/BreachCheckerPage.tsx`):**
+   - Replaced static placeholder shell with interactive, production-ready implementation assembled from the modular components.
+   - Clean component unmount and query abort cleanup via `useRef<AbortController>`.
+4. **Automated Unit Tests (`tests/breach.test.ts`):**
+   - Implemented 15 comprehensive automated tests across 6 suites covering SHA-1 hashing, uppercase hex conversion, prefix/suffix splitting, request confidentiality (5-char prefix only, zero plaintext or full hash in URL/headers), padding header handling, suffix matching, empty password rejection, network failure, timeout/cancellation, and sanitized history verification.
+5. **Pipeline Verification:**
+   - `npm test`: 42/42 tests passed across 18 suites (0 failed).
+   - `npx tsc --noEmit`: 0 errors.
+   - `npm run lint`: 0 errors, 0 warnings.
+   - `npm run build`: Production bundle built cleanly in ~5.2s.
+
+---
+
 ## Entry: UI/UX Redesign Stage 3 — Home Page Redesign
 **Date:** 2026-11-17  
 **Status:** Completed & Verified

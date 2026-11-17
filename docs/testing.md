@@ -68,7 +68,42 @@ This document tracks the testing strategies, test matrices, and verification run
 
 ---
 
+## Phase 2.5 — Password Breach Checker Verification
+
+### 1. Functional & Privacy Test Matrix (`tests/breach.test.ts`)
+
+| # | Test Area | Test Description | Invariant Verified | Status |
+| :-: | :--- | :--- | :--- | :---: |
+| **1** | **SHA-1 Hashing** | RFC 3174 standard vector (`"abc"`) & artificial fixtures | Produces exact 40-character uppercase hexadecimal digest via `crypto.subtle.digest` | **PASS** |
+| **2** | **Digest Determinism** | Consecutive hash evaluations | Produces identical uppercase hex strings across identical inputs | **PASS** |
+| **3** | **Hash Splitting** | `splitSha1Hash` 40-char decomposition | Exactly 5 characters for prefix, 35 characters for suffix, and $\text{prefix} + \text{suffix} = \text{hash}$ | **PASS** |
+| **4** | **Malformed Hash Handling** | Hashes $<40$, $>40$, or non-hex characters | Explicitly throws `BreachCheckError` without proceeding | **PASS** |
+| **5** | **Request Confidentiality** | Outgoing fetch URL inspection | Transmits ONLY `https://api.pwnedpasswords.com/range/{prefix}`; plaintext password, full hash, and suffix NEVER appear in URL or headers | **PASS** |
+| **6** | **Traffic Padding Header** | Request header verification | Verifies `Add-Padding: true` is set on every HIBP range query | **PASS** |
+| **7** | **Range Response Parsing** | Suffix list extraction (`<suffix>:<count>`) | Correctly parses CRLF/LF separated lines into typed map; ignores whitespace and padding entries | **PASS** |
+| **8** | **Breached Match Detection** | Matching suffix with count $>0$ | Correctly flags `isBreached: true` and extracts exact numerical breach frequency | **PASS** |
+| **9** | **Unbreached Match Detection** | Suffix absent from range response | Correctly flags `isBreached: false` and sets `breachCount: 0` | **PASS** |
+| **10** | **Synthetic Padding Filtering** | Matching suffix with $\text{count} = 0$ | Correctly treats count 0 as unbreached padding entry | **PASS** |
+| **11** | **Empty Input Rejection** | Empty string `""` and whitespace-only `" "` | Throws `EmptyPasswordError` immediately without making any network request | **PASS** |
+| **12** | **HTTP Error Handling** | Mocked 429 Too Many Requests and 500 responses | Throws `BreachApiError` with exact status code and user-actionable message | **PASS** |
+| **13** | **Network Failure Handling** | Network disconnect (`TypeError: Failed to fetch`) | Throws `BreachNetworkError` with actionable connection guidance | **PASS** |
+| **14** | **Timeout & Cancellation** | `AbortSignal` triggering or timeout | Throws `BreachTimeoutError` and cleanly terminates query | **PASS** |
+| **15** | **Malformed Response Resiliency** | Garbage API text without colons or hex | Gracefully handles malformed content without crashing or false positives | **PASS** |
+| **16** | **Sanitized History Guarantee** | `SanitizedBreachRecord` storage inspection | Stored record contains strictly `id`, `timestamp`, `isBreached`, `breachCount`. Plaintext password, full hash, prefix, and suffix are completely excluded | **PASS** |
+
+### 2. Automated Pipeline Verification
+
+| Tool / Check | Command | Result | Verification Notes |
+| :--- | :--- | :---: | :--- |
+| **Unit Test Suite** | `npm test` | **PASS (42/42 tests pass)** | Runs 18 test suites covering Analyzer, Generator, Meter, and Breach Checker in ~260 ms. |
+| **TypeScript Compiler** | `npx tsc --noEmit` | **PASS (0 errors)** | Strict compiler validation passed with zero type errors. |
+| **ESLint Linter** | `npm run lint` | **PASS (0 errors, 0 warnings)** | Clean linting pass with React hooks and unused vars enforced. |
+| **Vite Production Build** | `npm run build` | **PASS** | Production bundle compiled cleanly in ~5.2s. |
+
+---
+
 ## Verification Method Distinctions
+
 
 * **Automated Node & Build Checks:** Verified compilation, linting, packaging, and cryptographic/heuristic algorithm outputs using automated test runs.
 * **Component Code Audits:** Verified accessible attributes (`aria-label`, `htmlFor`, `:focus-visible`, `role="progressbar"`, reduced motion media queries) directly in source code.
