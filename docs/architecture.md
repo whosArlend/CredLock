@@ -44,12 +44,16 @@ The persistent `BottomNav` maintains user orientation by highlighting:
 * **Analyze Tab** when on `/analyzer`, `/analysis-history`, or `/analysis-history/:id`.
 * **Breach Tab** when on `/breach-checker`, `/breach-history`, or `/breach-history/:id`.
 
-## 3. History Storage Architecture
+## 3. History Storage Architecture (Phase 2.6: IndexedDB Enclave)
 
-`src/services/historyStorage.ts` manages sanitized history operations:
-* **Current Mechanism (Phase 2.3):** Module-scoped in-memory storage initialized to an empty state (`[]`). User-initiated saves from `/analyzer` append sanitized evaluation records.
-* **Security Guard:** Never retains plaintext passwords, full hashes, suffixes, prefixes, or password-derived tokens.
-* **Extensibility:** The abstraction defines asynchronous/synchronous methods (`getAnalysisRecords`, `getAnalysisRecordById`, `getBreachRecords`, `getBreachRecordById`, `addAnalysisRecord`, `addBreachRecord`, `clearAllHistory`) designed for seamless replacement with IndexedDB in Phase 2.6 without changing view components.
+`src/services/historyStorage.ts` and `src/services/db.ts` provide persistent local storage backed by browser IndexedDB:
+* **Storage Target:** Database `credlock-db` (version 1) using dedicated object stores:
+  - `analysis_history`: Keyed by `id` (UUID), indexed by `timestamp` and `score`.
+  - `breach_history`: Keyed by `id` (UUID), indexed by `timestamp` and `isBreached`.
+* **Zero-Knowledge Security Invariant:** Under NO circumstances are plaintext passwords, full SHA-1 hashes, suffixes, prefixes, or password-derived tokens persisted or cached.
+* **Dual-Tier Architecture:** In-memory synchronous cache enables zero-delay component renders and Node.js test execution, backed by transactional IndexedDB writes, reads, single-item deletions, and complete store flushing.
+* **Reactive Synchronization:** Emits `credlock:history-updated` events across browser windows/components to trigger reactive state updates in UI hooks (`useAnalysisHistory`, `useBreachHistory`).
+
 
 ## 4. UI Component System & Design Tokens (Redesign Stage 2: Obsidian Vault × Cipher Ledger)
 

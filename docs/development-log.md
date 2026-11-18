@@ -1,5 +1,40 @@
 # Development Log — CredLock
 
+## Entry: Phase 2.6 — History, Detail & IndexedDB Persistence Implementation
+**Date:** 2026-11-18  
+**Status:** Completed & Verified
+
+### Actions Taken:
+1. **Centralized IndexedDB Storage Layer (`src/services/db.ts`):**
+   - Implemented database `credlock-db` (version 1) using transactional object stores:
+     - `analysis_history` with indexes on `timestamp` and `score`.
+     - `breach_history` with indexes on `timestamp` and `isBreached`.
+   - Built transactional helpers for `getAllFromStore` (sorted by timestamp descending), `getByIdFromStore`, `putInStore`, `deleteFromStore`, `clearStore`, and `clearAllCredLockData`.
+   - Included runtime availability checking and graceful error handling when IndexedDB is unavailable or restricted.
+2. **Unified Storage Repository (`src/services/historyStorage.ts`):**
+   - Refactored `historyStorage.ts` to coordinate between persistent IndexedDB and high-speed in-memory caches.
+   - Built one-time session migration transferring any pre-existing in-memory records into IndexedDB without creating duplicates.
+   - Dispatches `credlock:history-updated` custom events across browser contexts for reactive synchronization.
+   - Added asynchronous operations (`getAnalysisRecordsAsync`, `getAnalysisRecordByIdAsync`, `deleteAnalysisRecordAsync`, `getBreachRecordsAsync`, `getBreachRecordByIdAsync`, `deleteBreachRecordAsync`, `clearAllHistoryAsync`).
+3. **Reactive UI Custom Hooks (`src/hooks/useHistory.ts`):**
+   - Created `useAnalysisHistory`, `useAnalysisDetail`, `useBreachHistory`, and `useBreachDetail` providing reactive data fetching, automatic event-driven refreshes, `isLoading`, `error`, and `deleteRecord` handlers.
+4. **History & Detail Pages Overhaul (`src/pages/`):**
+   - `AnalysisHistoryPage.tsx`: Connected to `useAnalysisHistory`, added asynchronous loading skeletons, error states, empty states, and per-item single record deletion.
+   - `AnalysisDetailPage.tsx`: Connected to `useAnalysisDetail`, full sanitized cryptographic breakdown, ID-not-found state, and record purge button with history redirect.
+   - `BreachHistoryPage.tsx`: Connected to `useBreachHistory`, loading/error/empty states, and per-item deletion.
+   - `BreachDetailPage.tsx`: Connected to `useBreachDetail`, k-anonymity query parameters, ID-not-found handling, and record purge button.
+   - `RecentActivitySection.tsx`: Switched to asynchronous reactive loading via `useAnalysisHistory`.
+   - `ProfilePage.tsx`: Upgraded "Clear Local Data" with an explicit confirmation step, complete IndexedDB flush, and safe CredLock-scoped localStorage cleaning.
+5. **Comprehensive Automated Test Suite (`tests/history.test.ts`):**
+   - Added 10 tests across 4 suites verifying database constants, schema stores, chronological sorting, retrieval by ID, single-item deletion, store wipe, zero-knowledge sanitization invariants, and mocked IndexedDB transaction lifecycle.
+6. **Pipeline Verification:**
+   - `npm test`: 52/52 tests passed across 23 suites (0 failed).
+   - `npx tsc --noEmit`: 0 errors.
+   - `npm run lint`: 0 errors, 0 warnings.
+   - `npm run build`: Production bundle compiled cleanly in 20.63s.
+
+---
+
 ## Entry: Phase 2.5 — Password Breach Checker Implementation
 **Date:** 2026-11-17  
 **Status:** Completed & Verified

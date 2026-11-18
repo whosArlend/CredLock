@@ -3,10 +3,10 @@ import { History, ShieldCheck, ArrowRight, Plus } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { getAnalysisRecords } from '@/services/historyStorage';
+import { useAnalysisHistory } from '@/hooks/useHistory';
 
 export function RecentActivitySection() {
-  const records = getAnalysisRecords();
+  const { records, isLoading } = useAnalysisHistory();
   const hasRecords = records.length > 0;
   const recentRecords = records.slice(0, 3);
 
@@ -37,7 +37,7 @@ export function RecentActivitySection() {
           <History className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
           <span>[ AUDIT LOGS // RECENT ACTIVITY ]</span>
         </h2>
-        {hasRecords && (
+        {!isLoading && hasRecords && (
           <Link
             to="/analysis-history"
             className="text-[11px] font-mono text-accent hover:underline flex items-center gap-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent rounded-sm"
@@ -48,7 +48,14 @@ export function RecentActivitySection() {
         )}
       </div>
 
-      {hasRecords ? (
+      {isLoading ? (
+        <Card variant="inset" padding="md" className="text-center py-6 border-border">
+          <div className="flex items-center justify-center gap-2 text-xs font-mono text-muted">
+            <div className="w-3.5 h-3.5 rounded-full border border-accent/20 border-t-accent animate-spin" />
+            <span>Loading audit log...</span>
+          </div>
+        </Card>
+      ) : hasRecords ? (
         <div className="space-y-2.5">
           {recentRecords.map((record) => (
             <Card

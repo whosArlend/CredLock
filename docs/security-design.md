@@ -181,3 +181,22 @@ When users explicitly save a breach query result, the record contains only:
 - `breachCount`: Public database frequency count
 - **Prohibited Fields:** The record strictly excludes plaintext passwords, password fragments, full hashes, prefixes, suffixes, or raw API response payloads.
 
+---
+
+## 9. Persistent Storage & Client Privacy Model (Phase 2.6: IndexedDB)
+
+### 1. Dedicated IndexedDB Enclave (`credlock-db`)
+CredLock implements persistent storage exclusively using the browser's structured IndexedDB API:
+* **Object Store Isolation:** Two dedicated stores (`analysis_history` and `breach_history`) isolate data domains.
+* **No `localStorage` for Sensitive Metadata:** `localStorage` is completely prohibited for credential or evaluation persistence to avoid insecure synchronous disk writes, quota limits, and plain text inspection vectors.
+* **Non-Reversible Schema Enforced:**
+  - *Analysis Records:* Retain only length, estimated guess difficulty bits, score (0-4), character composition flags, and crack time label.
+  - *Breach Records:* Retain only exposure status boolean, occurrence count, and timestamp.
+* **Prohibited Attributes:** The storage subsystem asserts that properties `password`, `hash`, `sha1`, `prefix`, `suffix`, and `rawResponse` are strictly absent.
+
+### 2. Client-Side Data Purge Security
+* **Single-Item Deletion:** Users can delete individual audit logs from IndexedDB transactions with immediate cache and reactive UI synchronization.
+* **Clear Local Data:** Provides a confirmation modal before triggering an asynchronous database flush. CredLock flushes only its own IndexedDB stores (`credlock-db`) and CredLock-scoped keys, strictly preventing deletion of data from other origins or applications sharing localhost.
+* **Memory Security Disclaimer:** CredLock explicitly clarifies to users that while IndexedDB records are deleted from storage, JavaScript runtime environments cannot guarantee immediate zeroization of garbage-collected hardware RAM.
+
+

@@ -102,7 +102,36 @@ This document tracks the testing strategies, test matrices, and verification run
 
 ---
 
+## Phase 2.6 — History, Detail & IndexedDB Persistence Verification
+
+### 1. Functional & Storage Test Matrix (`tests/history.test.ts`)
+
+| # | Test Area | Test Description | Invariant Verified | Status |
+| :-: | :--- | :--- | :--- | :---: |
+| **1** | **Database Configuration** | Database name & version constants | Verifies `DB_NAME === 'credlock-db'` and `DB_VERSION === 1` | **PASS** |
+| **2** | **Store Separation** | Dedicated object stores | Confirms distinct stores for `analysis_history` and `breach_history` | **PASS** |
+| **3** | **Chronological Sorting** | Multiple records retrieval | Asserts records are sorted descending by `timestamp` (newest first) | **PASS** |
+| **4** | **Record Retrieval by ID** | `getAnalysisRecordById` / `getBreachRecordById` | Accurately retrieves the target record matching unique UUID | **PASS** |
+| **5** | **Single Item Deletion** | `deleteAnalysisRecordAsync` / `deleteBreachRecordAsync` | Removes target record without mutating or corrupting remaining entries | **PASS** |
+| **6** | **Global Store Flush** | `clearAllHistoryAsync` / `clearAllCredLockData` | Wipes both `analysis_history` and `breach_history` completely | **PASS** |
+| **7** | **Zero-Knowledge Sanitization** | Stored record property assertion | Verifies `password`, `hash`, `sha1`, `prefix`, and `suffix` are strictly absent | **PASS** |
+| **8** | **IndexedDB Availability Check** | Runtime detection | Accurately detects `window.indexedDB` support | **PASS** |
+| **9** | **Transactional Read/Write** | Mocked IndexedDB transactions | Verifies `openCredLockDatabase`, `putInStore`, `getByIdFromStore`, `getAllFromStore` lifecycle | **PASS** |
+| **10** | **Complete Store Cleanup** | `clearAllCredLockData` execution | Wipes all object stores within the database | **PASS** |
+
+### 2. Automated Pipeline Verification
+
+| Tool / Check | Command | Result | Verification Notes |
+| :--- | :--- | :---: | :--- |
+| **Unit Test Suite** | `npm test` | **PASS (52/52 tests pass)** | Runs 23 test suites covering Analyzer, Generator, Meter, Breach, and IndexedDB History in ~580 ms. |
+| **TypeScript Compiler** | `npx tsc --noEmit` | **PASS (0 errors)** | Strict compiler validation passed with zero type errors. |
+| **ESLint Linter** | `npm run lint` | **PASS (0 errors, 0 warnings)** | Clean linting pass with React hooks and unused vars enforced. |
+| **Vite Production Build** | `npm run build` | **PASS** | Production bundle compiled cleanly in 20.63s. |
+
+---
+
 ## Verification Method Distinctions
+
 
 
 * **Automated Node & Build Checks:** Verified compilation, linting, packaging, and cryptographic/heuristic algorithm outputs using automated test runs.
