@@ -91,7 +91,7 @@ For detailed technical information, see the documentation in the `docs/` directo
 Clone the repository:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/CredLock.git
+git clone https://github.com/whosArlend/CredLock.git
 cd CredLock
 ```
 
