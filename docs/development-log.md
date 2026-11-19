@@ -1,5 +1,35 @@
 # Development Log — CredLock
 
+## Entry: UI Refinement & Content Simplification
+**Date:** 2026-11-20  
+**Status:** Completed & Verified
+
+### Actions Taken:
+1. **Content Hierarchy & Progressive Disclosure:**
+   - **Home / Dashboard (`src/pages/HomePage.tsx`)**: Removed the lengthy "Zero-Knowledge Principles" card collection from the main workflow. Prioritized immediate functionality: Hero Master Input, Security Feature Index, Security Overview (live IndexedDB stats), and Recent Activity timeline. Condensed the historical audit disclaimer into a single concise sentence.
+   - **Password Strength Analyzer (`src/features/analyzer/components/`)**:
+     - `CrackTimeScenarios.tsx`: Condensed attack scenario grid to a compact 4-column overview (scenario title, attack rate, estimated crack time). Relocated benchmark assumptions and methodology limitations into an expandable `<details>` section ("How are these estimates calculated?").
+     - `PrivacyNoticeCard.tsx`: Replaced verbose 20-line notice card with a compact inline status indicator ("Evaluated locally") backed by a detailed tooltip for users seeking technical context.
+   - **Secure Password Generator (`src/features/generator/components/GeneratorNoticeCard.tsx`)**:
+     - Removed the massive 4-card grid from the primary generation workflow.
+     - Added a clean one-line security statement: "Secure generation using your browser's cryptographic random number generator."
+     - Encapsulated technical details (CSPRNG, Candidate rejection sampling, Theoretical pool entropy, In-memory handling, Clipboard security) within an accessible expandable disclosure.
+   - **Password Breach Checker (`src/features/breach/components/BreachPrivacyNotice.tsx`)**:
+     - Replaced verbose permanent multi-card explainer with a compact primary privacy note: "Only a 5-character hash prefix is transmitted."
+     - Moved full step-by-step technical breakdown (Local SHA-1, Prefix range query, Local suffix matching, k-Anonymity) into an expandable section titled "How does the privacy-preserving lookup work?".
+   - **Profile / About Page (`src/pages/ProfilePage.tsx`)**:
+     - Restructured into 6 well-organized, concise sections: About CredLock (2–3 sentences), Core Features (3 cards with 1 short description each), Technology Stack (compact 8-tile grid), Privacy & Security Principles (concise overview + expandable technical declarations), Project Information, and Client Storage Management (retained working Clear Local Data with confirmation modal).
+2. **Security Terminology Audit:**
+   - Audited all user-facing UI text. Replaced unwarranted "Zero-Knowledge" claims with accurate technical phrasing ("Privacy-Focused Client", "Client-Side Security & Privacy", "In-Memory Client Processing", "k-Anonymity Protected Lookup").
+   - Header badge updated to `Privacy-Focused Client`.
+3. **Pipeline Verification:**
+   - `npm test`: 66/66 tests passed across 26 suites (0 failed).
+   - `npx tsc --noEmit`: 0 errors.
+   - `npm run lint`: 0 errors, 0 warnings.
+   - `npm run build`: Production bundle compiled cleanly in 6.00s.
+
+---
+
 ## Entry: Phase 2.7A.1 — Adaptive Capsule Navigation System
 **Date:** 2026-11-20  
 **Status:** Completed & Verified
