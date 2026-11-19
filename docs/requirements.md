@@ -10,7 +10,7 @@
 | **List Pages** | At least 2 main list pages | 1. `/analysis-history` (Sanitized Analysis Records)<br>2. `/breach-history` (Sanitized Breach Query Records). |
 | **List-to-Detail Interaction** | Every list item clickable to detail | Flow 1: `/analysis-history` $\rightarrow$ `/analysis-history/:id`<br>Flow 2: `/breach-history` $\rightarrow$ `/breach-history/:id`. Both flows support deep parameterization, empty states, and graceful fallback for missing IDs. |
 | **Profile/About Page** | At least one dedicated page | `/profile` detailing developer profile, academic matrix, security statement, and cache purge. |
-| **Custom REST API** | Integrate Module 1 Web Service | Abstracted `IModule1Service` interface defined. Awaiting Module 1 specifications. |
+| **Custom REST API** | Integrate Module 1 Web Service | **IMPLEMENTED & APPROVED (Phase 2.7B.1):** Live read-only telemetry from Express.js + Supabase Sales-API (`GET /api/reports/total`) via Vite dev proxy; end-to-end verified with active database. |
 | **Source Publication** | GitHub repository | Intentionally postponed until Phase 2 completion. |
 | **Deployment** | Free PWA hosting | PWA build pipeline configured; hosting postponed to deployment phase. |
 
@@ -20,7 +20,8 @@
 | :--- | :---: | :--- |
 | **1. Password Strength Analyzer** | **IMPLEMENTED (Phase 2.3)** | Local in-browser evaluation with `@zxcvbn-ts/core`, 0-4 scoring, feedback warnings/suggestions, composition breakdown, multi-scenario crack times, and sanitized history archival. |
 | **2. Secure Password Generator** | **IMPLEMENTED (Phase 2.4)** | Client-side CSPRNG using Web Crypto API (`crypto.getRandomValues`), rejection sampling to eliminate modulo bias, CSPRNG Fisher-Yates shuffle, guaranteed category coverage, configurable length (8–64), and in-memory zero-knowledge handling. |
-| **3. Password Breach Checker** | *PENDING (Phase 2.5)* | Scheduled for Phase 2.5 using k-anonymity SHA-1 prefix protocol against Have I Been Pwned. |
+| **3. Password Breach Checker** | **IMPLEMENTED (Phase 2.5)** | Live k-Anonymity privacy-preserving verification using SHA-1 range queries against Have I Been Pwned with synthetic padding. |
+| **4. History & Persistence** | **IMPLEMENTED (Phase 2.6)** | Client-side persistent storage using native IndexedDB (`credlock-db`) with complete zero-knowledge sanitization and store isolation. |
 
 ## 3. Non-Functional Constraints & Security Rules
 

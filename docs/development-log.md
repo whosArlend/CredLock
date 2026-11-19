@@ -2,26 +2,35 @@
 
 ## Entry: Phase 2.7B.1 — Minimal Modul 1 (Sales-API) Integration
 **Date:** 2026-11-20  
-**Status:** Completed & Verified
+**Status:** Completed & Approved (Manual End-to-End Verification Confirmed)
 
-### Actions Taken:
-1. **Vite Development Proxy Configuration (`vite.config.ts`):**
-   - Configured development server reverse proxy: route prefix `/modul1-api` proxies to `http://localhost:3000` with path rewrite `rewrite: (path) => path.replace(/^\/modul1-api/, '')`.
-   - Resolves browser CORS restrictions during local development without modifying Sales-API backend code.
-2. **Dedicated API Service Adapter (`src/services/api/module1Service.ts`):**
-   - Implemented `fetchTotalCustomers()` to query `GET /api/reports/total`.
-   - Supported parsing of both bare number format and JSON count objects.
-   - Enforced 5000ms deadline via `AbortController`.
-   - Handled non-2xx responses, network disconnects, and malformed responses without uncaught rejections.
-   - Enforced strict privacy: zero passwords, hashes, or tokens transmitted; zero persistence in IndexedDB or localStorage.
-3. **Home Dashboard Widget (`src/features/home/components/Modul1IntegrationWidget.tsx`):**
+### Actions Taken & Manual Verification Results:
+1. **End-to-End Manual Testing & Operational Approval:**
+   - **Backend Service Execution:** `Sales-API` Express backend executed successfully on `http://localhost:3000`.
+   - **Database Connection & Schema:** Supabase cloud database connection verified; table schemas for `categories`, `products`, `customers`, and `transactions` successfully created and confirmed active.
+   - **Endpoint Contract Verification:** Direct and proxied queries to `GET /api/reports/total` successfully returned `0`. This zero count was verified as the expected and correct value because the `customers` table is newly provisioned and currently contains zero records.
+   - **Integration Flow:** Verified full request path:
+     `CredLock (Browser @ localhost:5173) → Vite Dev Proxy (/modul1-api) → Sales-API (Express @ localhost:3000) → Supabase Cloud Database`.
+   - **Home Dashboard Widget:** Verified live rendering of `Modul1IntegrationWidget` on the Home Dashboard (`/`). Verified state handling: initial loading spinner, transition to emerald `Sales-API Online` status chip, accurate display of total customers (`0`), response latency readout (~ms), formatted last refresh timestamp, and manual refresh button action.
+   - **Error Handling & Resilience:** Verified offline/unreachable indicator and error states.
+   - **Runtime Cleanliness:** Verified that browser DevTools console and both terminal windows (Vite frontend and Express backend) ran cleanly with zero runtime errors or unhandled rejections.
+2. **Vite Development Proxy Configuration (`vite.config.ts`):**
+   - Configured development reverse proxy: `/modul1-api` proxies to `http://localhost:3000` with path rewrite `rewrite: (path) => path.replace(/^\/modul1-api/, '')`.
+   - Bypasses browser CORS restrictions during local development without modifying `Sales-API` backend code or installing CORS middleware.
+   - **Deployment Constraint Documented:** The Vite proxy (`server.proxy`) is strictly a local development utility (`npm run dev`) and is not automatically present in production builds (`dist/`). Production deployments require an external reverse proxy, serverless proxy function, or backend CORS provisioning.
+3. **Dedicated API Service Adapter (`src/services/api/module1Service.ts`):**
+   - Implemented `fetchTotalCustomers()` targeting `GET /api/reports/total`.
+   - Robustly parses both bare numbers (e.g. `0`, `42`) and JSON count wrappers (`{ count: 0 }`, `{ total: 0 }`).
+   - Enforces a 5000ms deadline via `AbortController`.
+   - Returns typed `Module1ReportResult` with error isolation, preventing uncaught promise rejections.
+   - **Zero-Knowledge Invariants:** Zero passwords, hashes, prefixes, or tokens are ever transmitted; zero data is written to IndexedDB or localStorage.
+4. **Home Dashboard Widget (`src/features/home/components/Modul1IntegrationWidget.tsx`):**
    - Implemented compact telemetry card in Obsidian Vault × Cipher Ledger design tokens.
-   - Displays connection status badge (Loading, Online, Offline, Error), total customer count, response latency (~ms), and last refreshed timestamp.
-   - Implemented manual refresh button with duplicate request protection.
-   - Integrated into `HomePage.tsx`.
-4. **Automated Testing Suite (`tests/module1Api.test.ts`):**
+   - Visual states: Loading, Online (emerald badge), Offline/Unreachable (rose badge), and Error.
+   - Features manual refresh with duplicate-click protection.
+5. **Automated Testing Suite (`tests/module1Api.test.ts`):**
    - Implemented 11 unit tests covering endpoint resolution, bare numeric and JSON object parsing, HTTP 500/404 handling, network offline/abort timeout resilience, malformed response defense, and request privacy invariants.
-5. **Pipeline Verification:**
+6. **Pipeline Verification:**
    - `npm test`: 77/77 tests passed across 33 suites (0 failed).
    - `npx tsc --noEmit`: 0 errors.
    - `npm run lint`: 0 errors, 0 warnings.

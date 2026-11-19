@@ -21,9 +21,10 @@ CredLock is structured around a **Client-Side Zero-Knowledge Architecture**:
   │     ├── historyStorage.ts (Sanitized query service with empty-state & invalid ID protection)
   │     └── Stores ONLY: Record UUID, timestamp, length, score, entropy bits, and breach occurrence count
   │
-  └── Module 1 REST API Integration Layer
-        ├── IModule1Service (TypeScript Contract)
-        └── Module1HttpAdapter (Pluggable once API docs are provided)
+  └── Module 1 REST API Integration Layer (Phase 2.7B.1 Verified)
+        ├── Client Adapter (src/services/api/module1Service.ts)
+        ├── Vite Reverse Proxy (/modul1-api → http://localhost:3000)
+        └── Sales-API Express Backend → Supabase Cloud Database
 ```
 
 ## 2. Page & Routing Architecture
@@ -115,4 +116,25 @@ Located in `src/components/ui/` and `src/components/layout/`:
   - *Network/API Error*: Amber alert with descriptive failure details and a one-click retry trigger.
   - *Save to History Action*: Explicit user-triggered archival saving only `SanitizedBreachRecord` (`id`, `timestamp`, `isBreached`, `breachCount`).
 - **`BreachPrivacyNotice`**: Architectural transparency card explaining the 3-step k-anonymity protocol (Local Hash $\to$ 5-Character Prefix Range Query $\to$ Local Suffix Matching) and protocol context for SHA-1.
+
+## 7. Modul 1 (Sales-API) Integration Architecture (Phase 2.7B.1)
+
+CredLock integrates with the user's Modul 1 Web Service (`Sales-API`) via a decoupled client adapter pattern:
+* **Data Flow Architecture:**
+  `CredLock (Browser @ localhost:5173) → Vite Dev Proxy (/modul1-api) → Sales-API (Express @ localhost:3000) → Supabase Cloud Database`
+* **Target Endpoint:** `GET /api/reports/total`
+  - Queries the aggregate customer count from the database without accessing personal customer data.
+  - Returns `0` when the `customers` table is newly initialized and empty.
+* **Adapter Service (`src/services/api/module1Service.ts`):**
+  - Enforces a 5000ms deadline with `AbortController`.
+  - Parses numeric count responses and wrapped JSON formats.
+  - Isolates network and HTTP errors to prevent unhandled promise rejections.
+  - Zero-persistence guarantee: values exist only in transient component state.
+* **Dashboard Telemetry Component (`src/features/home/components/Modul1IntegrationWidget.tsx`):**
+  - Compact widget rendered on the Home Dashboard (`/`).
+  - Dynamic states: *Loading*, *Online* (emerald badge), *Offline/Unreachable* (rose badge), *Error*.
+  - Displays total customer count, response latency in ms, last refresh time, and manual refresh trigger.
+* **Development-Only Proxy Notice:**
+  The Vite development proxy (`/modul1-api`) is active exclusively during local development (`npm run dev`). Production static deployments do not inherit this proxy automatically; production deployment requires an external reverse proxy, serverless proxy function, or backend CORS configuration.
+
 

@@ -199,4 +199,16 @@ CredLock implements persistent storage exclusively using the browser's structure
 * **Clear Local Data:** Provides a confirmation modal before triggering an asynchronous database flush. CredLock flushes only its own IndexedDB stores (`credlock-db`) and CredLock-scoped keys, strictly preventing deletion of data from other origins or applications sharing localhost.
 * **Memory Security Disclaimer:** CredLock explicitly clarifies to users that while IndexedDB records are deleted from storage, JavaScript runtime environments cannot guarantee immediate zeroization of garbage-collected hardware RAM.
 
+---
+
+## 10. Modul 1 (Sales-API) Integration Security Boundaries (Phase 2.7B.1)
+
+CredLock enforces strict security boundaries when connecting to the Modul 1 Web Service:
+* **Strict Read-Only Query:** Integration is confined to `GET /api/reports/total` for aggregate customer counts; no write, update, or delete operations are permitted from the client.
+* **Zero Credential Transmission:** Plaintext passwords, hashes, k-anonymity prefixes/suffixes, and evaluation records are NEVER transmitted to Sales-API.
+* **Zero Persistence Invariant:** API response metrics exist strictly in transient React component memory; they are never persisted to IndexedDB (`credlock-db`) or `localStorage`.
+* **Zero Secrets in Frontend:** The client PWA requires no secret API tokens, database keys, or sensitive environment variables; database credentials remain isolated in the backend Express service.
+* **Denial-of-Service / Hang Prevention:** All outgoing network calls enforce a hard 5-second deadline via `AbortController`.
+
+
 
