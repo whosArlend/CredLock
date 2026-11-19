@@ -1,69 +1,79 @@
 # Custom REST API Integration Strategy — CredLock
 
-## Current Integration Status: Specification Pending
+## Current Integration Status: Phase 2.7B.1 Minimal Integration Verified
 
-> **Notice:** The actual REST API / Web Service documentation and implementation developed during the user's **Module 1 assignment** have not yet been provided.  
-> In strict accordance with architectural rules, **no imaginary API endpoints, authentication mechanisms (e.g. fake JWT handlers), or mocked backend behaviors are assumed**.
+CredLock integrates with the user's **Modul 1 (Sales-API)** REST Web Service via a decoupled, read-only adapter architecture.
 
 ---
 
-## 1. Adapter & Repository Architecture
+## 1. Modul 1 (Sales-API) Integration Overview
 
-To prevent tight coupling and allow immediate integration the moment Module 1 specifications are supplied, CredLock defines an abstract service interface in `src/types/index.ts`:
+* **Service Name:** Sales-API (Express.js + Supabase backend)
+* **Integration Phase:** Phase 2.7B.1 Minimal Integration
+* **Integrated Endpoint:** `GET /api/reports/total`
+* **Purpose:** Demonstrates live client-to-backend REST API communication by retrieving the aggregate customer count from the Modul 1 database and surfacing live connection telemetry on the CredLock Home Dashboard.
+
+### Technical Contract:
+* **HTTP Method:** `GET`
+* **Request Headers:** `Accept: application/json`
+* **Request Body:** None (zero payload)
+* **Response Format:** Numeric count (e.g. `42`) or JSON object with count (`{ "count": 42 }` or `{ "total": 42 }`)
+* **Error Response:** JSON with error message (`{ "error": "..." }`) or standard HTTP status codes
+
+---
+
+## 2. Local Development & Vite Proxy Configuration
+
+Because Sales-API operates locally on port `3000` without Cross-Origin Resource Sharing (`cors`) headers, CredLock configures a **Vite development proxy** to eliminate browser origin blocks during local evaluation:
 
 ```typescript
-export interface IModule1Service {
-  saveAnalysisRecord(record: SanitizedAnalysisRecord): Promise<boolean>;
-  getAnalysisHistory(): Promise<SanitizedAnalysisRecord[]>;
-  getAnalysisDetail(id: string): Promise<SanitizedAnalysisRecord | null>;
-  saveBreachRecord(record: SanitizedBreachRecord): Promise<boolean>;
-  getBreachHistory(): Promise<SanitizedBreachRecord[]>;
-  getBreachDetail(id: string): Promise<SanitizedBreachRecord | null>;
+// vite.config.ts
+server: {
+  port: 5173,
+  host: true,
+  proxy: {
+    '/modul1-api': {
+      target: 'http://localhost:3000',
+      changeOrigin: true,
+      rewrite: (path) => path.replace(/^\/modul1-api/, ''),
+    },
+  },
 }
 ```
 
----
+### Running the Services Locally:
+1. **Start Sales-API (Backend):**
+   Navigate to `Praktikum PPB/Mod. 1/Sales-API` and run:
+   ```bash
+   npm run dev
+   # Starts Express server on http://localhost:3000
+   ```
+2. **Start CredLock (Frontend):**
+   In the CredLock workspace, run:
+   ```bash
+   npm run dev
+   # Starts Vite PWA dev server on http://localhost:5173
+   ```
+3. **Local Route Resolution:**
+   The frontend requests `/modul1-api/api/reports/total`. Vite proxies the request to `http://localhost:3000/api/reports/total`.
 
-## 2. Permitted Sanitized Payloads
-
-When the Module 1 REST API is integrated, the data transmitted will be strictly limited to non-reversible analytical metrics:
-
-### Example: Analysis Log Payload
-```json
-{
-  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "timestamp": "2026-11-14T14:30:00Z",
-  "passwordLength": 16,
-  "entropyBits": 84.2,
-  "score": 4,
-  "hasLowercase": true,
-  "hasUppercase": true,
-  "hasNumbers": true,
-  "hasSymbols": true,
-  "crackTimeDisplay": "2.4 million years"
-}
-```
-
-### Example: Breach Log Payload
-```json
-{
-  "id": "7b89d421-2a1e-45e3-9821-6b83f0923f11",
-  "timestamp": "2026-11-14T14:45:00Z",
-  "isBreached": true,
-  "breachCount": 38241
-}
-```
+### Known Production Limitation:
+> **Important:** The Vite development proxy (`server.proxy`) exists **only** during local development (`npm run dev`). In a production static deployment (e.g., Vercel, Netlify, GitHub Pages), this proxy is not present. For production deployment, a dedicated reverse proxy rule, serverless proxy route, or backend CORS configuration must be provisioned.
 
 ---
 
-## 3. Next Steps for Module 1 Integration
-1. Receive endpoint specifications, URL schema, and authentication requirements from student.
-2. Implement `src/services/api/Module1HttpAdapter.ts` adhering to `IModule1Service`.
-3. Configure environment variable `VITE_API_BASE_URL` in `.env`.
+## 3. Privacy & Zero-Knowledge Invariants
+
+The Modul 1 integration strictly maintains CredLock's local security boundaries:
+* **Read-Only Scope:** Only the aggregate non-sensitive total customer count is queried.
+* **Zero Credential Exposure:** Plaintext passwords, hashes, prefixes, and breach records are NEVER transmitted to Sales-API.
+* **No Persistence:** API telemetry and customer counts exist solely in transient React component state and are never written to IndexedDB or localStorage.
+* **Timeout Guarantee:** All requests use an `AbortController` signal enforcing a strict 5-second deadline, preventing UI hangs.
+* **Graceful Degradation:** When Sales-API is offline, the widget displays a clean `Sales-API Offline` indicator without breaking any core security features.
 
 ---
 
-## 4. External Privacy-Preserving API: Have I Been Pwned (HIBP) Range API (Phase 2.5)
+## 4. External Privacy-Preserving API: Have I Been Pwned (HIBP) Range API
 
 ### 1. Endpoint Specification
 * **URL:** `https://api.pwnedpasswords.com/range/{first5HashCharacters}`
@@ -78,7 +88,7 @@ Host: api.pwnedpasswords.com
 Accept: text/plain
 Add-Padding: true
 ```
-* **`Add-Padding: true`**: Instructs the HIBP service to return synthetic padding entries (with zero or pseudo-random counts) to prevent eavesdroppers from deducing the specific prefix frequency via response packet size analysis (traffic analysis protection).
+* **`Add-Padding: true`**: Instructs the HIBP service to return synthetic padding entries to protect against packet size traffic analysis.
 
 ### 3. Response Format
 Plaintext response where each line contains a 35-character hexadecimal suffix and an exposure count separated by a colon:
@@ -94,4 +104,3 @@ Plaintext response where each line contains a 35-character hexadecimal suffix an
 * An exact string comparison is executed between the user's computed suffix and the returned set.
 * If a match exists with $\text{count} > 0$, the password is confirmed breached.
 * If no match exists or $\text{count} = 0$ (padding), the password is confirmed unbreached in the queried database.
-

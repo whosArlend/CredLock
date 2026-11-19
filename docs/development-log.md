@@ -1,5 +1,34 @@
 # Development Log — CredLock
 
+## Entry: Phase 2.7B.1 — Minimal Modul 1 (Sales-API) Integration
+**Date:** 2026-11-20  
+**Status:** Completed & Verified
+
+### Actions Taken:
+1. **Vite Development Proxy Configuration (`vite.config.ts`):**
+   - Configured development server reverse proxy: route prefix `/modul1-api` proxies to `http://localhost:3000` with path rewrite `rewrite: (path) => path.replace(/^\/modul1-api/, '')`.
+   - Resolves browser CORS restrictions during local development without modifying Sales-API backend code.
+2. **Dedicated API Service Adapter (`src/services/api/module1Service.ts`):**
+   - Implemented `fetchTotalCustomers()` to query `GET /api/reports/total`.
+   - Supported parsing of both bare number format and JSON count objects.
+   - Enforced 5000ms deadline via `AbortController`.
+   - Handled non-2xx responses, network disconnects, and malformed responses without uncaught rejections.
+   - Enforced strict privacy: zero passwords, hashes, or tokens transmitted; zero persistence in IndexedDB or localStorage.
+3. **Home Dashboard Widget (`src/features/home/components/Modul1IntegrationWidget.tsx`):**
+   - Implemented compact telemetry card in Obsidian Vault × Cipher Ledger design tokens.
+   - Displays connection status badge (Loading, Online, Offline, Error), total customer count, response latency (~ms), and last refreshed timestamp.
+   - Implemented manual refresh button with duplicate request protection.
+   - Integrated into `HomePage.tsx`.
+4. **Automated Testing Suite (`tests/module1Api.test.ts`):**
+   - Implemented 11 unit tests covering endpoint resolution, bare numeric and JSON object parsing, HTTP 500/404 handling, network offline/abort timeout resilience, malformed response defense, and request privacy invariants.
+5. **Pipeline Verification:**
+   - `npm test`: 77/77 tests passed across 33 suites (0 failed).
+   - `npx tsc --noEmit`: 0 errors.
+   - `npm run lint`: 0 errors, 0 warnings.
+   - `npm run build`: Production bundle compiled cleanly in 5.89s.
+
+---
+
 ## Entry: UI Refinement & Content Simplification
 **Date:** 2026-11-20  
 **Status:** Completed & Verified
