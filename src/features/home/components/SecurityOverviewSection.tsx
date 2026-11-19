@@ -167,11 +167,11 @@ export function SecurityOverviewSection() {
             </div>
           </div>
 
-          {/* Explicit Historical Disclaimer */}
-          <div className="p-3 rounded-lg bg-background-base/60 border border-border/80 text-[11px] text-muted flex items-start gap-2 leading-relaxed">
+          {/* Concise Historical Disclaimer */}
+          <div className="p-3 rounded-lg bg-background-base/60 border border-border/80 text-[11px] text-muted flex items-center gap-2">
             <span className="font-mono text-accent shrink-0 font-bold">[NOTE]</span>
             <p>
-              <strong className="text-foreground">Historical Audit Context:</strong> These metrics reflect locally archived queries and evaluations performed on this machine. They represent past query logs stored in IndexedDB and do <strong className="text-foreground">not</strong> monitor active online accounts or imply live exposure status.
+              Metrics reflect locally saved evaluations on this device, not active online account monitoring.
             </p>
           </div>
         </div>

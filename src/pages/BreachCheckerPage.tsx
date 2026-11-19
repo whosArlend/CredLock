@@ -203,7 +203,7 @@ export function BreachCheckerPage() {
         isSaved={isSaved}
       />
 
-      {/* Zero-Knowledge Privacy Architecture Notice */}
+      {/* Privacy-Preserving Architecture Notice */}
       <BreachPrivacyNotice />
     </div>
   );

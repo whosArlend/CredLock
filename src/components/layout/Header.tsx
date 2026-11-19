@@ -29,13 +29,13 @@ export function Header() {
 
           <div className="flex items-center gap-2">
             <Badge variant="emerald" size="sm" dot>
-              <span className="hidden sm:inline">Zero-Knowledge</span> Client
+              <span className="hidden sm:inline">Privacy-Focused</span> Client
             </Badge>
-            <Tooltip content="All cryptographic operations execute locally in browser sandbox" position="bottom">
+            <Tooltip content="All cryptographic and entropy operations execute locally in browser memory" position="bottom">
               <button
                 type="button"
                 className="flex items-center p-1.5 rounded hover:bg-surface-elevated text-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
-                aria-label="Cryptographic Security Isolation Information"
+                aria-label="Client-Side Privacy Information"
               >
                 <Lock className="w-3.5 h-3.5 text-muted" />
               </button>

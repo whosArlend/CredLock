@@ -240,7 +240,7 @@ export function BreachDetailPage() {
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4 text-accent" />
                   <CardTitle className="text-sm font-mono uppercase tracking-wider text-muted">
-                    ZERO-KNOWLEDGE PRIVACY ASSERTION
+                    CLIENT PRIVACY & k-ANONYMITY ASSERTION
                   </CardTitle>
                 </div>
                 <span className="font-mono text-[10px] text-muted uppercase">CLIENT ENCLAVE</span>
