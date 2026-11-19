@@ -197,6 +197,19 @@ export function HeroMasterInput() {
             </Button>
           </Link>
         </div>
+
+        {/* Tertiary Navigation to Breach Checker */}
+        <div className="pt-2 text-center sm:text-left flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-muted">
+          <span>Looking to verify an existing credential against data leaks?</span>
+          <Link
+            to="/breach-checker"
+            className="font-mono text-accent hover:underline inline-flex items-center gap-1 self-center sm:self-auto"
+          >
+            <span>Run k-Anonymity Breach Check</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
       </div>
     </section>
   );

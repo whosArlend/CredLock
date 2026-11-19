@@ -1,5 +1,31 @@
 # Development Log — CredLock
 
+## Entry: Phase 2.7A — Dashboard, Profile & Navigation Refinement
+**Date:** 2026-11-20  
+**Status:** Completed & Verified
+
+### Actions Taken:
+1. **Dashboard Refinement (`src/pages/HomePage.tsx` & Feature Components):**
+   - **`HeroMasterInput.tsx`**: Enhanced hero section with balanced tertiary navigation to Password Breach Checker alongside primary Analyzer and secondary Generator CTAs. Explicitly documented heuristic estimation limits to avoid absolute security claims.
+   - **`SecurityOverviewSection.tsx`**: Created aggregated security telemetry card reading actual metrics from IndexedDB (`analysis_history` and `breach_history`). Displays saved analyses, total breach lookups, clean results, and flagged leak incidents with an explicit note that these are historical audit logs rather than live account monitors. Includes clean zero-data state.
+   - **`RecentActivitySection.tsx`**: Unified both `analysis_history` and `breach_history` records into a single reactive chronological timeline. Differentiates entry types with distinct badges, icons, and direct links to `/analysis-history/:id` and `/breach-history/:id`.
+2. **Profile / About Page Overhaul (`src/pages/ProfilePage.tsx`):**
+   - Transformed generic profile into an informative About CredLock page detailing application purpose, academic context, 3 core architectural pillars, verified technology stack, and formal privacy declarations.
+   - Maintained working "Clear Local Data" with confirmation dialog and safe CredLock-scoped IndexedDB flush.
+3. **Navigation & Layout Token Harmonization (`src/components/layout/`):**
+   - `Header.tsx`: Replaced legacy cyan/emerald styles with Obsidian Vault × Cipher Ledger design tokens (Crucible Gold / Amber `#E5A93C`, `text-accent`, `bg-accent/10`, `border-border`).
+   - `BottomNav.tsx`: Harmonized active tab indicators, icon backgrounds, and labels with amber accents (`text-accent`, `bg-accent/10`, `bg-accent` bar).
+   - `AppLayout.tsx`: Updated keyboard skip-link and text selection highlights to amber tokens.
+4. **API Modul 1 Audit:**
+   - Audited repository for custom REST API specifications: confirmed that official specification remains pending. Ensured zero fake endpoints or mocked integrations were added.
+5. **Pipeline Verification:**
+   - `npm test`: 52/52 tests passed across 23 suites (0 failed).
+   - `npx tsc --noEmit`: 0 errors.
+   - `npm run lint`: 0 errors, 0 warnings.
+   - `npm run build`: Production bundle compiled cleanly.
+
+---
+
 ## Entry: Phase 2.6 — History, Detail & IndexedDB Persistence Implementation
 **Date:** 2026-11-18  
 **Status:** Completed & Verified

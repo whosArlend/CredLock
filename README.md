@@ -50,7 +50,7 @@ Check whether a password appears in known data breaches through the Have I Been 
 | Tailwind CSS | Styling |
 | React Router | Application routing |
 | Web Crypto API | Cryptographically secure operations |
-| In-Memory Service | Local sanitized history storage (IndexedDB scheduled for Phase 2.6) |
+| IndexedDB Service | Local persistent sanitized history storage (credlock-db) |
 | PWA | Installable web application |
 
 ## Project Architecture

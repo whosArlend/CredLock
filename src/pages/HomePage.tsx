@@ -1,5 +1,6 @@
 import { HeroMasterInput } from '@/features/home/components/HeroMasterInput';
 import { SecurityFeatureIndex } from '@/features/home/components/SecurityFeatureIndex';
+import { SecurityOverviewSection } from '@/features/home/components/SecurityOverviewSection';
 import { RecentActivitySection } from '@/features/home/components/RecentActivitySection';
 import { PrivacyPrinciplesSection } from '@/features/home/components/PrivacyPrinciplesSection';
 
@@ -12,10 +13,13 @@ export function HomePage() {
       {/* Section B: Security Feature Index (Asymmetric Editorial Grid) */}
       <SecurityFeatureIndex />
 
-      {/* Section C: Recent Activity / Audit Log (Sanitized local records or deliberate empty state) */}
+      {/* Section C: Security Overview (Aggregated Activity Telemetry from IndexedDB) */}
+      <SecurityOverviewSection />
+
+      {/* Section D: Recent Activity / Audit Log (Unified Timeline from IndexedDB) */}
       <RecentActivitySection />
 
-      {/* Section D: Privacy Architecture Principles */}
+      {/* Section E: Privacy Architecture Principles */}
       <PrivacyPrinciplesSection />
     </div>
   );
