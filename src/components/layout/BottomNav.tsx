@@ -1,81 +1,120 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, ShieldCheck, KeyRound, AlertTriangle, User } from 'lucide-react';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAdaptiveScrollNav } from '@/hooks/useAdaptiveScrollNav';
+import { NAV_ITEMS, DEFAULT_NAV_ITEM, isItemActive, type NavItem } from './navUtils';
 
-export interface NavItem {
-  name: string;
-  to: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { name: 'Home', to: '/', icon: Home },
-  { name: 'Analyze', to: '/analyzer', icon: ShieldCheck },
-  { name: 'Generate', to: '/generator', icon: KeyRound },
-  { name: 'Breach', to: '/breach-checker', icon: AlertTriangle },
-  { name: 'About', to: '/profile', icon: User },
-];
-
+/**
+ * Adaptive Floating Capsule Navigation System.
+ *
+ * Implements Obsidian Vault × Cipher Ledger design tokens:
+ * - Expanded State: Floating dock presenting primary security destinations with active indicators.
+ * - Compact State: Sleek, high-contrast capsule pill showing active route badge and expand affordance.
+ * - Interaction: Collapses on scroll beyond threshold; stays compact when scrolling ceases or shifts direction;
+ *   re-expands on manual click or route change.
+ */
 export function BottomNav() {
   const location = useLocation();
+  const { isExpanded, expand, collapse } = useAdaptiveScrollNav({ threshold: 28 });
 
-  const isItemActive = (to: string): boolean => {
-    const currentPath = location.pathname;
-    if (to === '/') {
-      return currentPath === '/';
-    }
-    if (to === '/analyzer') {
-      return currentPath === '/analyzer' || currentPath.startsWith('/analysis-history');
-    }
-    if (to === '/breach-checker') {
-      return currentPath === '/breach-checker' || currentPath.startsWith('/breach-history');
-    }
-    return currentPath === to || currentPath.startsWith(`${to}/`);
-  };
+  const activeItem: NavItem =
+    NAV_ITEMS.find((item) => isItemActive(item.to, location.pathname)) ?? DEFAULT_NAV_ITEM;
+  const ActiveIcon = activeItem.icon;
 
   return (
-    <nav
-      aria-label="Primary Navigation"
-      className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background-base/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)]"
+    <aside
+      aria-label="Navigation Capsule Container"
+      className="fixed bottom-3 sm:bottom-4 left-0 right-0 z-40 flex justify-center px-3 sm:px-4 pointer-events-none pb-[env(safe-area-inset-bottom)]"
     >
-      <div className="max-w-lg mx-auto flex items-center justify-around h-16 px-2">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const isActive = isItemActive(item.to);
+      <nav
+        role="navigation"
+        aria-label="Primary Navigation"
+        aria-expanded={isExpanded}
+        className={cn(
+          'pointer-events-auto transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
+          'border border-border/80 bg-background-base/95 backdrop-blur-md shadow-2xl shadow-black/60',
+          isExpanded
+            ? 'w-full max-w-lg h-16 rounded-2xl px-2 flex items-center justify-between'
+            : 'w-auto h-12 rounded-full px-3.5 flex items-center gap-2 hover:border-accent/40 hover:bg-surface-elevated/90 group cursor-pointer'
+        )}
+      >
+        {isExpanded ? (
+          <div className="flex items-center justify-between w-full h-full animate-in fade-in duration-200">
+            <div className="flex items-center justify-around flex-1">
+              {NAV_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const active = isItemActive(item.to, location.pathname);
 
-          return (
-            <Link
-              key={item.to}
-              to={item.to}
-              aria-current={isActive ? 'page' : undefined}
-              className={cn(
-                'flex flex-col items-center justify-center flex-1 py-1 px-2 text-xs font-medium transition-all duration-150 select-none relative group rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
-                isActive
-                  ? 'text-accent'
-                  : 'text-muted hover:text-foreground active:scale-95'
-              )}
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'flex flex-col items-center justify-center flex-1 py-1 px-1 text-xs font-medium transition-all duration-150 select-none relative group rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
+                      active
+                        ? 'text-accent'
+                        : 'text-muted hover:text-foreground active:scale-95'
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'p-1.5 rounded-md transition-all duration-150',
+                        active ? 'bg-accent/10 text-accent' : 'group-hover:bg-surface-elevated'
+                      )}
+                    >
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <span className="text-[11px] mt-0.5 tracking-tight font-medium">
+                      {item.name}
+                    </span>
+                    {active && (
+                      <span
+                        className="absolute -top-[1px] w-8 h-[2px] bg-accent rounded-full"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div className="w-[1px] h-6 bg-border/60 mx-1 flex-shrink-0" aria-hidden="true" />
+
+            <button
+              type="button"
+              onClick={collapse}
+              className="flex flex-col items-center justify-center py-1 px-1.5 text-xs font-medium text-muted hover:text-foreground active:scale-95 transition-all select-none rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent group flex-shrink-0"
+              aria-label="Collapse navigation"
+              title="Collapse navigation"
             >
-              <div
-                className={cn(
-                  'p-1.5 rounded-md transition-all duration-150',
-                  isActive ? 'bg-accent/10 text-accent' : 'group-hover:bg-surface-elevated'
-                )}
-              >
-                <Icon className="w-5 h-5" />
+              <div className="p-1 rounded-md group-hover:bg-surface-elevated transition-colors">
+                <ChevronDown className="w-4 h-4 text-muted group-hover:text-accent transition-colors" />
               </div>
-              <span className="text-[11px] mt-0.5 tracking-tight font-medium">
-                {item.name}
-              </span>
-              {isActive && (
-                <span
-                  className="absolute -top-[1px] w-8 h-[2px] bg-accent rounded-full"
-                  aria-hidden="true"
-                />
-              )}
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+              <span className="text-[9px] tracking-tight text-muted font-mono">Hide</span>
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={expand}
+            className="flex items-center gap-2.5 h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-full select-none animate-in fade-in duration-200"
+            aria-label={`Expand navigation (current page: ${activeItem.name})`}
+          >
+            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-accent/15 text-accent border border-accent/30 shadow-sm flex-shrink-0">
+              <ActiveIcon className="w-4 h-4" />
+            </div>
+            <span className="text-xs font-semibold tracking-tight text-foreground font-sans whitespace-nowrap">
+              {activeItem.name}
+            </span>
+            <span className="w-1 h-1 rounded-full bg-border-strong flex-shrink-0" aria-hidden="true" />
+            <div className="flex items-center gap-1 text-muted group-hover:text-accent transition-colors pr-1 flex-shrink-0">
+              <span className="text-[10px] font-mono uppercase tracking-wider hidden xs:inline">Menu</span>
+              <ChevronUp className="w-4 h-4 transition-transform group-hover:-translate-y-0.5" />
+            </div>
+          </button>
+        )}
+      </nav>
+    </aside>
   );
 }

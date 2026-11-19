@@ -1,5 +1,37 @@
 # Development Log — CredLock
 
+## Entry: Phase 2.7A.1 — Adaptive Capsule Navigation System
+**Date:** 2026-11-20  
+**Status:** Completed & Verified
+
+### Actions Taken:
+1. **Adaptive Navigation State Machine (`src/hooks/useAdaptiveScrollNav.ts`):**
+   - Implemented scroll state machine using passive window event listener and `requestAnimationFrame` throttling.
+   - Initial state: Initializes fully expanded on initial page load.
+   - Scroll collapse: Collapses into compact capsule upon detecting vertical scroll movement exceeding threshold (28px).
+   - Invariant: Scrolling up or down while compact NEVER automatically expands the capsule; remains compact when scrolling ceases.
+   - Manual expansion: Clicking the compact capsule expands the navigation and re-anchors `lastScrollY` to the current position, preventing immediate re-collapse.
+   - Route reset: Navigating to any destination automatically initializes the navbar in expanded state.
+2. **Floating Capsule Architecture (`src/components/layout/BottomNav.tsx` & `navUtils.ts`):**
+   - Modularized navigation data and active route detection into `navUtils.ts`.
+   - Re-architected container to a centered floating capsule dock (`fixed bottom-3 sm:bottom-4 left-0 right-0 z-40 flex justify-center px-3 sm:px-4 pointer-events-none`).
+   - Expanded state: Floating dock (`w-full max-w-lg h-16 rounded-2xl px-2`) housing all 5 security destinations (Home, Analyze, Generate, Breach, About) and an explicit keyboard-accessible collapse affordance ("Hide").
+   - Compact state: Sleek, centered capsule pill (`w-auto h-12 rounded-full px-3.5`) highlighting the active route icon badge and an explicit expand affordance ("Menu" + `ChevronUp`).
+   - Transitions: 300ms cubic-bezier transition (`cubic-bezier(0.16, 1, 0.3, 1)`) with native `prefers-reduced-motion` compliance.
+3. **Accessibility (WCAG 2.1 AA):**
+   - Implemented dynamic `aria-expanded` attributes on primary navigation.
+   - Added descriptive `aria-label` tags for both expand and collapse controls.
+   - Preserved full keyboard focus accessibility with amber ring indicators (`focus-visible:ring-accent`).
+4. **Automated Testing Suite (`tests/adaptiveNav.test.ts`):**
+   - Implemented 14 automated unit tests verifying root and sub-route matching, threshold sensitivity, scroll direction independence, manual expansion re-anchoring, and route navigation resets.
+5. **Pipeline Verification:**
+   - `npm test`: 66/66 tests passed across 26 suites (0 failed).
+   - `npx tsc --noEmit`: 0 errors.
+   - `npm run lint`: 0 errors, 0 warnings.
+   - `npm run build`: Production bundle compiled cleanly in 21.93s.
+
+---
+
 ## Entry: Phase 2.7A — Dashboard, Profile & Navigation Refinement
 **Date:** 2026-11-20  
 **Status:** Completed & Verified
