@@ -585,6 +585,42 @@ npm run typecheck
 # 2. Kompilasi TypeScript ke JavaScript (dist/)
 npm run build
 
-# 3. Menjalankan server hasil build
+# 3. Menjalankan server hasil build lokal
 npm start
 ```
+
+---
+
+## 8. Panduan Deployment Produksi ke Vercel (Serverless Functions)
+
+Backend CredLock dapat di-deploy secara mudah dan gratis ke **Vercel** menggunakan arsitektur *Serverless Function* (tanpa memerlukan kartu kredit / *payment-card verification*).
+
+### Konfigurasi Vercel Dashboard
+
+1. Buka [Vercel Dashboard](https://vercel.com/dashboard) dan klik **Add New...** > **Project**.
+2. Pilih repositori **CredLock** Anda.
+3. Pada halaman **Configure Project**:
+   - **Project Name**: `credlock-api` (atau nama pilihan Anda).
+   - **Framework Preset**: Pilih **Other**.
+   - **Root Directory**: Klik **Edit** dan pilih folder `backend/credlock-api`.
+   - **Build & Development Settings**:
+     - **Build Command**: Biarkan aktif / default: `npm run build` (atau `tsc -p tsconfig.json`).
+     - **Output Directory**: Biarkan default.
+     - **Install Command**: `npm install`.
+4. Pada bagian **Environment Variables**, tambahkan:
+   - `NODE_ENV` = `production`
+   - `SUPABASE_URL` = URL project Supabase Anda (contoh: `https://xyzproject.supabase.co`)
+   - `SUPABASE_SECRET_KEY` = Service role secret key Supabase Anda (`sb_secret_...`)
+   - `FRONTEND_URL` = URL domain frontend Vercel Anda (contoh: `https://credlock.vercel.app` atau kosongkan dahulu untuk preview)
+5. Klik **Deploy**.
+
+### Verifikasi Endpoint Setelah Deploy
+Setelah proses deployment selesai, periksa endpoint backend:
+- Root API discovery: `https://<your-vercel-domain>.vercel.app/` -> mengembalikan JSON status operasional.
+- Health probe: `https://<your-vercel-domain>.vercel.app/api/health` -> mengembalikan HTTP 200 `{ "success": true, ... }`.
+- Database readiness: `https://<your-vercel-domain>.vercel.app/api/health/db` -> mengembalikan status koneksi Supabase.
+
+### Konfigurasi CORS Setelah Frontend Ter-deploy
+Setelah frontend selesai di-deploy ke Vercel (misal `https://credlock.vercel.app`), update environment variable `FRONTEND_URL` di Vercel Dashboard Backend (`credlock-api` > Settings > Environment Variables) dengan URL frontend tersebut, lalu lakukan **Redeploy** untuk mengaplikasikan whitelist CORS.
+Backend juga mendukung multiple URL yang dipisahkan tanda koma (contoh: `https://credlock.vercel.app,https://credlock-preview.vercel.app`).
+
