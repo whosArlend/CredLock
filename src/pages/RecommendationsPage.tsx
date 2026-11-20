@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Badge } from '@/components/ui/Badge';
@@ -56,6 +56,8 @@ export function RecommendationsPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [currentPage, setCurrentPage] = useState(1);
 
+  const isMountedRef = useRef(true);
+
   const loadRecommendations = useCallback(async () => {
     setStatus('loading');
     setErrorMessage(null);
@@ -71,10 +73,12 @@ export function RecommendationsPage() {
         order: sortOrder,
       });
 
+      if (!isMountedRef.current) return;
       setRecommendations(result.data);
       setPagination(result.pagination);
       setStatus('success');
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       setStatus('error');
       if (err instanceof ApiClientError) {
         setErrorMessage(err.getUserFriendlyMessage());
@@ -85,7 +89,11 @@ export function RecommendationsPage() {
   }, [currentPage, activeSearch, categoryFilter, priorityFilter, sortBy, sortOrder]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     loadRecommendations();
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [loadRecommendations]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {

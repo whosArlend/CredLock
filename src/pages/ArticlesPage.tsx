@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Badge } from '@/components/ui/Badge';
@@ -54,6 +54,8 @@ export function ArticlesPage() {
   const [sortOrder, setSortOrder] = useState<ArticleSortOrder>('desc');
   const [currentPage, setCurrentPage] = useState(1);
 
+  const isMountedRef = useRef(true);
+
   const loadArticles = useCallback(async () => {
     setStatus('loading');
     setErrorMessage(null);
@@ -68,10 +70,12 @@ export function ArticlesPage() {
         order: sortOrder,
       });
 
+      if (!isMountedRef.current) return;
       setArticles(result.data);
       setPagination(result.pagination);
       setStatus('success');
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       setStatus('error');
       if (err instanceof ApiClientError) {
         setErrorMessage(err.getUserFriendlyMessage());
@@ -82,7 +86,11 @@ export function ArticlesPage() {
   }, [currentPage, activeSearch, categoryFilter, sortBy, sortOrder]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     loadArticles();
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [loadArticles]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {

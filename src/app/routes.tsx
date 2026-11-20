@@ -1,21 +1,24 @@
+import { lazy } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { HomePage } from '@/pages/HomePage';
-import { AnalyzerPage } from '@/pages/AnalyzerPage';
-import { GeneratorPage } from '@/pages/GeneratorPage';
-import { BreachCheckerPage } from '@/pages/BreachCheckerPage';
-import { AnalysisHistoryPage } from '@/pages/AnalysisHistoryPage';
-import { AnalysisDetailPage } from '@/pages/AnalysisDetailPage';
-import { BreachHistoryPage } from '@/pages/BreachHistoryPage';
-import { BreachDetailPage } from '@/pages/BreachDetailPage';
-import { BreachesPage } from '@/pages/BreachesPage';
-import { BreachIncidentDetailPage } from '@/pages/BreachIncidentDetailPage';
-import { RecommendationsPage } from '@/pages/RecommendationsPage';
-import { RecommendationDetailPage } from '@/pages/RecommendationDetailPage';
-import { ArticlesPage } from '@/pages/ArticlesPage';
-import { ArticleDetailPage } from '@/pages/ArticleDetailPage';
-import { ProfilePage } from '@/pages/ProfilePage';
-import { NotFoundPage } from '@/pages/NotFoundPage';
+
+// Route-based code splitting for minimal initial bundle payload
+const HomePage = lazy(() => import('@/pages/HomePage').then((m) => ({ default: m.HomePage })));
+const AnalyzerPage = lazy(() => import('@/pages/AnalyzerPage').then((m) => ({ default: m.AnalyzerPage })));
+const GeneratorPage = lazy(() => import('@/pages/GeneratorPage').then((m) => ({ default: m.GeneratorPage })));
+const BreachCheckerPage = lazy(() => import('@/pages/BreachCheckerPage').then((m) => ({ default: m.BreachCheckerPage })));
+const BreachesPage = lazy(() => import('@/pages/BreachesPage').then((m) => ({ default: m.BreachesPage })));
+const BreachIncidentDetailPage = lazy(() => import('@/pages/BreachIncidentDetailPage').then((m) => ({ default: m.BreachIncidentDetailPage })));
+const RecommendationsPage = lazy(() => import('@/pages/RecommendationsPage').then((m) => ({ default: m.RecommendationsPage })));
+const RecommendationDetailPage = lazy(() => import('@/pages/RecommendationDetailPage').then((m) => ({ default: m.RecommendationDetailPage })));
+const ArticlesPage = lazy(() => import('@/pages/ArticlesPage').then((m) => ({ default: m.ArticlesPage })));
+const ArticleDetailPage = lazy(() => import('@/pages/ArticleDetailPage').then((m) => ({ default: m.ArticleDetailPage })));
+const AnalysisHistoryPage = lazy(() => import('@/pages/AnalysisHistoryPage').then((m) => ({ default: m.AnalysisHistoryPage })));
+const AnalysisDetailPage = lazy(() => import('@/pages/AnalysisDetailPage').then((m) => ({ default: m.AnalysisDetailPage })));
+const BreachHistoryPage = lazy(() => import('@/pages/BreachHistoryPage').then((m) => ({ default: m.BreachHistoryPage })));
+const BreachDetailPage = lazy(() => import('@/pages/BreachDetailPage').then((m) => ({ default: m.BreachDetailPage })));
+const ProfilePage = lazy(() => import('@/pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
+const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
 
 export const router = createBrowserRouter([
   {

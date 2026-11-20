@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Badge } from '@/components/ui/Badge';
@@ -50,6 +50,8 @@ export function BreachesPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [currentPage, setCurrentPage] = useState(1);
 
+  const isMountedRef = useRef(true);
+
   const loadBreaches = useCallback(async () => {
     setStatus('loading');
     setErrorMessage(null);
@@ -64,10 +66,12 @@ export function BreachesPage() {
         order: sortOrder,
       });
 
+      if (!isMountedRef.current) return;
       setBreaches(result.data);
       setPagination(result.pagination);
       setStatus('success');
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       setStatus('error');
       if (err instanceof ApiClientError) {
         setErrorMessage(err.getUserFriendlyMessage());
@@ -78,7 +82,11 @@ export function BreachesPage() {
   }, [currentPage, activeSearch, severityFilter, sortBy, sortOrder]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     loadBreaches();
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [loadBreaches]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {

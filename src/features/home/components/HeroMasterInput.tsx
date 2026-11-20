@@ -1,19 +1,32 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Lock, Eye, EyeOff, X, ArrowRight, ShieldAlert, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Meter } from '@/components/ui/Meter';
-import { analyzePassword } from '@/services/passwordAnalyzer';
+import { analyzePassword, initZxcvbn, isZxcvbnLoaded } from '@/services/passwordAnalyzer';
 
 export function HeroMasterInput() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [zxcvbnLoaded, setZxcvbnLoaded] = useState(() => isZxcvbnLoaded());
 
-  // Instant local evaluation using existing engine (client-side only, zero telemetry/storage)
+  const ensureZxcvbn = () => {
+    if (!zxcvbnLoaded) {
+      initZxcvbn().then(() => setZxcvbnLoaded(true));
+    }
+  };
+
+  useEffect(() => {
+    if (!zxcvbnLoaded && password.length > 0) {
+      initZxcvbn().then(() => setZxcvbnLoaded(true));
+    }
+  }, [password, zxcvbnLoaded]);
+
+  // Instant local evaluation using engine (client-side only, zero telemetry/storage)
   const analysisResult = useMemo(() => {
     if (!password) return null;
     return analyzePassword(password);
-  }, [password]);
+  }, [password, zxcvbnLoaded]);
 
   const handleClear = () => {
     setPassword('');
@@ -55,7 +68,11 @@ export function HeroMasterInput() {
           id="hero-password-input"
           type={showPassword ? 'text' : 'password'}
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onFocus={ensureZxcvbn}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            ensureZxcvbn();
+          }}
           placeholder="Type or paste a password for real-time assessment..."
           autoComplete="off"
           autoCapitalize="none"

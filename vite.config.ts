@@ -14,6 +14,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'zxcvbn-vendor': [
             '@zxcvbn-ts/core',
             '@zxcvbn-ts/language-common',

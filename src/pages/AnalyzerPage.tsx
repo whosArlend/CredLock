@@ -8,6 +8,8 @@ import { History, Save, Sparkles, Shield, Cpu, Lock } from 'lucide-react';
 import {
   analyzePassword,
   createSanitizedAnalysisRecord,
+  initZxcvbn,
+  isZxcvbnLoaded,
 } from '@/services/passwordAnalyzer';
 import { addAnalysisRecord } from '@/services/historyStorage';
 import { PasswordInput } from '@/features/analyzer/components/PasswordInput';
@@ -22,6 +24,7 @@ export function AnalyzerPage() {
   const navigate = useNavigate();
   const prefill = (location.state as { prefillPassword?: string } | null)?.prefillPassword || '';
   const [password, setPassword] = useState(prefill);
+  const [zxcvbnLoaded, setZxcvbnLoaded] = useState(() => isZxcvbnLoaded());
   const { showToast } = useToast();
 
   // Security purge: Wipe navigation state from browser history immediately upon consumption
@@ -31,8 +34,18 @@ export function AnalyzerPage() {
     }
   }, [location.pathname, location.state, navigate]);
 
-  // Instant local evaluation
-  const analysisResult = useMemo(() => analyzePassword(password), [password]);
+  // Ensure full zxcvbn dictionary engine is initialized for deep diagnostics
+  useEffect(() => {
+    if (!zxcvbnLoaded) {
+      initZxcvbn().then(() => setZxcvbnLoaded(true));
+    }
+  }, [zxcvbnLoaded]);
+
+  // Instant local evaluation (recomputed when input changes or when full dictionary loads)
+  const analysisResult = useMemo(
+    () => analyzePassword(password),
+    [password, zxcvbnLoaded]
+  );
   const isEmpty = password.length === 0;
 
   const handleClear = () => {

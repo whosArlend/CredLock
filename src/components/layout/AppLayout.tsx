@@ -1,7 +1,9 @@
+import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Header } from './Header';
 import { BottomNav } from './BottomNav';
 import { Container, type ContainerProps } from './Container';
+import { RouteLoadingFallback } from '@/components/ui/RouteLoadingFallback';
 
 /**
  * Resolves the optimal container size variant based on current route semantics.
@@ -59,7 +61,9 @@ export function AppLayout() {
         className="flex-1 pt-4 sm:pt-6 lg:pt-8 pb-20 sm:pb-24 lg:pb-12 focus:outline-none"
       >
         <Container size={containerSize}>
-          <Outlet />
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <Outlet />
+          </Suspense>
         </Container>
       </main>
       <BottomNav />

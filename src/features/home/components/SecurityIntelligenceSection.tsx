@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -24,6 +24,7 @@ export function SecurityIntelligenceSection() {
   const [status, setStatus] = useState<DashboardStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
 
   const loadData = useCallback(async () => {
     setStatus('loading');
@@ -31,6 +32,7 @@ export function SecurityIntelligenceSection() {
 
     try {
       const summary = await fetchDashboardSummary();
+      if (!isMountedRef.current) return;
       setData(summary);
       setStatus('success');
       setLastUpdated(new Date().toLocaleTimeString(undefined, {
@@ -39,6 +41,7 @@ export function SecurityIntelligenceSection() {
         second: '2-digit',
       }));
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       setStatus('error');
       if (err instanceof ApiClientError) {
         setErrorMessage(err.getUserFriendlyMessage());
@@ -49,7 +52,11 @@ export function SecurityIntelligenceSection() {
   }, []);
 
   useEffect(() => {
+    isMountedRef.current = true;
     loadData();
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [loadData]);
 
   // Compute severity percentage for visualization
