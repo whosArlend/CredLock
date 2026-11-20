@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +17,7 @@ import {
   Building2,
   Calendar,
   Globe,
+  ArrowRight,
 } from 'lucide-react';
 
 export function SecurityIntelligenceSection() {
@@ -335,9 +337,18 @@ export function SecurityIntelligenceSection() {
                     Recent Verified Breach Incidents
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-muted-dim">
-                  TOP {data.recentBreaches.length} INCIDENTS
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-muted-dim">
+                    TOP {data.recentBreaches.length} INCIDENTS
+                  </span>
+                  <Link
+                    to="/breaches"
+                    className="text-[11px] font-mono text-accent hover:underline flex items-center gap-0.5"
+                  >
+                    <span>View All</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </div>
               </div>
 
               <div className="divide-y divide-border/50">
@@ -348,9 +359,12 @@ export function SecurityIntelligenceSection() {
                   >
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-foreground">
+                        <Link
+                          to={`/breaches/${breach.slug}`}
+                          className="text-xs font-semibold text-foreground hover:text-accent transition-colors"
+                        >
                           {breach.title}
-                        </span>
+                        </Link>
                         <Badge
                           variant={getSeverityBadgeVariant(breach.severity)}
                           size="sm"

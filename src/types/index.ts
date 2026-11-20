@@ -93,3 +93,6 @@ export interface IModule1Service {
 // Dashboard Security Intelligence Types (Phase 3.4B)
 export * from './dashboard.ts';
 
+// Breach Intelligence API Types (Phase 3.4C)
+export * from './breach.ts';
+

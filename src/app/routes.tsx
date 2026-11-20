@@ -8,6 +8,8 @@ import { AnalysisHistoryPage } from '@/pages/AnalysisHistoryPage';
 import { AnalysisDetailPage } from '@/pages/AnalysisDetailPage';
 import { BreachHistoryPage } from '@/pages/BreachHistoryPage';
 import { BreachDetailPage } from '@/pages/BreachDetailPage';
+import { BreachesPage } from '@/pages/BreachesPage';
+import { BreachIncidentDetailPage } from '@/pages/BreachIncidentDetailPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
@@ -20,6 +22,8 @@ export const router = createBrowserRouter([
       { path: 'analyzer', element: <AnalyzerPage /> },
       { path: 'generator', element: <GeneratorPage /> },
       { path: 'breach-checker', element: <BreachCheckerPage /> },
+      { path: 'breaches', element: <BreachesPage /> },
+      { path: 'breaches/:slug', element: <BreachIncidentDetailPage /> },
       { path: 'analysis-history', element: <AnalysisHistoryPage /> },
       { path: 'analysis-history/:id', element: <AnalysisDetailPage /> },
       { path: 'breach-history', element: <BreachHistoryPage /> },
