@@ -16,7 +16,6 @@ import {
   Building2,
   Calendar,
   Globe,
-  ExternalLink,
 } from 'lucide-react';
 
 export function SecurityIntelligenceSection() {

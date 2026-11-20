@@ -7,7 +7,11 @@ import type { DashboardSummaryData } from '@/types';
  * Endpoint: GET /api/v1/dashboard/summary
  */
 export class DashboardService {
-  constructor(private readonly client: ApiClient = apiClient) {}
+  private readonly client: ApiClient;
+
+  constructor(client: ApiClient = apiClient) {
+    this.client = client;
+  }
 
   /**
    * Fetches the global cybersecurity intelligence summary.
