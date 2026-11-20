@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -16,13 +15,10 @@ import type {
   ApiPaginationMeta,
 } from '@/types';
 import {
-  BookOpen,
   Search,
-  Filter,
   ArrowRight,
   ArrowLeft,
   RefreshCw,
-  SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
   Database,
@@ -30,10 +26,11 @@ import {
   Clock,
   Calendar,
   PenLine,
-  FileText,
   TrendingUp,
   Newspaper,
   Compass,
+  FileText,
+  AlertTriangle,
 } from 'lucide-react';
 
 export function ArticlesPage() {
@@ -120,11 +117,11 @@ export function ArticlesPage() {
   const getCategoryIcon = (category: ArticleCategory) => {
     switch (category) {
       case 'guide':
-        return <Compass className="w-3.5 h-3.5 text-status-success" />;
+        return <Compass className="w-3.5 h-3.5 text-emerald-400" />;
       case 'analysis':
         return <TrendingUp className="w-3.5 h-3.5 text-accent" />;
       case 'news':
-        return <Newspaper className="w-3.5 h-3.5 text-status-info" />;
+        return <Newspaper className="w-3.5 h-3.5 text-accent" />;
       case 'explainer':
       default:
         return <FileText className="w-3.5 h-3.5 text-muted" />;
@@ -150,20 +147,20 @@ export function ArticlesPage() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200 text-left">
+    <div className="space-y-5 animate-in fade-in duration-200 text-left">
       {/* Page Header */}
       <PageHeader
-        title="Security Knowledge Base & Advisories"
-        description="Comprehensive cybersecurity research papers, cryptographic explainers, and tactical defense guides from CredLock Security Intelligence."
+        title="Cybersecurity Knowledge Base"
+        description="Peer-reviewed security advisories, threat intelligence briefings, and password architecture guides."
         badge={
           <Badge variant="cyan" size="sm" dot>
-            Research & Advisories
+            Advisories & Research
           </Badge>
         }
         actions={
           <div className="flex items-center gap-2">
             <Link to="/">
-              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
+              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}>
                 Dashboard
               </Button>
             </Link>
@@ -180,21 +177,21 @@ export function ArticlesPage() {
         }
       />
 
-      {/* Query Controls: Search, Category Filters & Sorting */}
-      <Card variant="default" padding="md" className="space-y-4 bg-surface border-border">
-        {/* Search Input */}
+      {/* Query Controls: Consolidated Search, Categories & Sorting */}
+      <div className="p-3.5 rounded-xl bg-surface border border-border shadow-sm space-y-3">
+        {/* Search & Action Bar */}
         <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2">
           <div className="flex-1">
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by title, summary, or category (e.g. k-anonymity, Argon2, entropy)..."
+              placeholder="Search advisories by title, topic, or keyword (e.g. quantum, k-anonymity)..."
               leftElement={<Search className="w-4 h-4 text-muted" />}
-              className="font-mono text-xs"
+              className="font-mono text-xs h-9"
             />
           </div>
           <div className="flex items-center gap-2">
-            <Button type="submit" variant="primary" size="sm" className="font-mono text-xs">
+            <Button type="submit" variant="primary" size="sm" className="font-mono text-xs h-9">
               Search
             </Button>
             {(activeSearch || categoryFilter !== 'all' || sortBy !== 'published_at' || sortOrder !== 'desc') && (
@@ -203,7 +200,7 @@ export function ArticlesPage() {
                 variant="ghost"
                 size="sm"
                 onClick={handleClearFilters}
-                className="font-mono text-xs text-muted hover:text-foreground"
+                className="font-mono text-xs h-9 text-muted hover:text-foreground"
               >
                 Reset
               </Button>
@@ -211,14 +208,11 @@ export function ArticlesPage() {
           </div>
         </form>
 
-        {/* Filter Pills and Sorters Row */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/60 text-xs font-mono">
-          {/* Category Pills */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-muted flex items-center gap-1 mr-1">
-              <Filter className="w-3 h-3 text-accent" />
-              <span>Category:</span>
-            </span>
+        {/* Compact Filters & Sorting Row */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-border/50 text-xs font-mono">
+          {/* Category Filter Pills */}
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="text-muted-dim text-[11px] mr-1 hidden sm:inline">Stream:</span>
             {(['all', 'guide', 'analysis', 'news', 'explainer'] as const).map((cat) => {
               const isActive = categoryFilter === cat;
               return (
@@ -229,7 +223,7 @@ export function ArticlesPage() {
                     setCategoryFilter(cat);
                     setCurrentPage(1);
                   }}
-                  className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
+                  className={`px-2 py-0.5 rounded text-[11px] capitalize transition-colors ${
                     isActive
                       ? 'bg-accent/20 text-accent border border-accent/40 font-semibold'
                       : 'text-muted hover:text-foreground hover:bg-surface-elevated border border-transparent'
@@ -241,25 +235,21 @@ export function ArticlesPage() {
             })}
           </div>
 
-          {/* Sorter Selector */}
-          <div className="flex items-center gap-2">
-            <span className="text-muted flex items-center gap-1">
-              <SlidersHorizontal className="w-3 h-3 text-accent" />
-              <span>Sort:</span>
-            </span>
+          {/* Sort Selector */}
+          <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
+            <span className="text-muted-dim text-[11px] hidden sm:inline">Sort:</span>
             <select
               value={sortBy}
               onChange={(e) => {
                 setSortBy(e.target.value as ArticleSortField);
                 setCurrentPage(1);
               }}
-              className="bg-background-secondary text-foreground text-xs font-mono rounded px-2 py-1 border border-border focus:outline-none focus:border-accent"
+              className="bg-background-base text-foreground text-xs font-mono rounded px-2 py-0.5 border border-border focus:outline-none focus:border-accent"
               aria-label="Sort articles by"
             >
-              <option value="published_at">Publish Date</option>
+              <option value="published_at">Published Date</option>
               <option value="read_time_minutes">Read Time</option>
-              <option value="title">Title (Alphabetical)</option>
-              <option value="category">Category</option>
+              <option value="title">Title (A-Z)</option>
             </select>
 
             <button
@@ -268,29 +258,29 @@ export function ArticlesPage() {
                 setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'));
                 setCurrentPage(1);
               }}
-              className="px-2 py-1 bg-background-secondary border border-border rounded text-[11px] font-mono text-muted hover:text-foreground hover:border-accent/40 transition-colors"
+              className="px-1.5 py-0.5 bg-background-base border border-border rounded text-[10px] font-mono text-muted hover:text-foreground hover:border-accent/40 transition-colors"
               title={`Switch order (currently ${sortOrder.toUpperCase()})`}
             >
               {sortOrder.toUpperCase()}
             </button>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Main Content Area */}
       <div className="space-y-3">
-        {/* Telemetry Status Bar */}
+        {/* Status Bar */}
         <div className="flex items-center justify-between text-xs font-mono text-muted px-1">
           <div className="flex items-center gap-2">
             <Database className="w-3.5 h-3.5 text-accent" />
-            <span>
+            <span className="text-[11px]">
               {status === 'loading'
-                ? 'SYNCING WITH BACKEND API...'
-                : `SHOWING ${articles.length} OF ${pagination.totalItems} RESEARCH ADVISORIES`}
+                ? 'SYNCING RESEARCH ADVISORIES...'
+                : `SHOWING ${articles.length} OF ${pagination.totalItems} PUBLISHED ADVISORIES`}
             </span>
           </div>
           {pagination.totalPages > 1 && (
-            <span>
+            <span className="text-[11px]">
               PAGE {pagination.page} / {pagination.totalPages}
             </span>
           )}
@@ -298,28 +288,28 @@ export function ArticlesPage() {
 
         {/* Loading State */}
         {status === 'loading' && (
-          <Card variant="inset" className="text-center py-16 border-border bg-surface">
+          <div className="text-center py-16 rounded-xl border border-border bg-surface">
             <div className="flex flex-col items-center justify-center space-y-3">
               <div className="w-7 h-7 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
               <div className="font-mono text-xs text-muted uppercase tracking-wider">
-                Querying /api/v1/articles telemetry...
+                Retrieving knowledge base articles...
               </div>
             </div>
-          </Card>
+          </div>
         )}
 
         {/* Error State */}
         {status === 'error' && (
-          <Card variant="default" className="border-status-danger/40 bg-surface p-6">
+          <div className="rounded-xl border border-danger/40 bg-surface p-5">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-status-danger/10 text-status-danger border border-status-danger/20 shrink-0">
-                  <BookOpen className="w-5 h-5" />
+                <div className="p-2 rounded-lg bg-danger/10 text-danger border border-danger/20 shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-sm font-bold text-foreground">Articles Service Unavailable</h3>
+                  <h3 className="text-sm font-bold text-foreground">Knowledge Base Service Unavailable</h3>
                   <p className="text-xs text-muted max-w-xl">
-                    {errorMessage || 'Unable to retrieve articles from the backend API. Please verify the CredLock server is running on port 4000.'}
+                    {errorMessage || 'Unable to retrieve articles from the backend API.'}
                   </p>
                 </div>
               </div>
@@ -329,16 +319,16 @@ export function ArticlesPage() {
                 onClick={loadArticles}
                 leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
               >
-                Retry Request
+                Retry
               </Button>
             </div>
-          </Card>
+          </div>
         )}
 
         {/* Empty State */}
         {status === 'success' && articles.length === 0 && (
-          <Card variant="inset" className="text-center py-12 bg-surface border-border">
-            <div className="flex flex-col items-center justify-center space-y-3 max-w-md mx-auto">
+          <div className="text-center py-12 rounded-xl bg-surface border border-border">
+            <div className="flex flex-col items-center justify-center space-y-3 max-w-md mx-auto p-4">
               <div className="p-3 rounded-lg bg-surface-elevated text-muted border border-border">
                 <SearchX className="w-6 h-6" />
               </div>
@@ -359,117 +349,92 @@ export function ArticlesPage() {
                 </Button>
               )}
             </div>
-          </Card>
+          </div>
         )}
 
-        {/* Articles Grid */}
+        {/* Articles Editorial Grid (1 col on mobile, 2 cols on tablet, 3 cols on desktop) */}
         {status === 'success' && articles.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {articles.map((article) => (
-              <Card
+              <div
                 key={article.id}
-                variant="default"
-                isInteractive
-                className="group bg-surface border-border hover:border-accent/40 transition-all duration-200 flex flex-col justify-between"
+                className="group rounded-xl border border-border bg-surface hover:border-accent/40 transition-all duration-200 flex flex-col justify-between shadow-sm p-4"
               >
                 <Link
                   to={`/articles/${article.slug}`}
-                  className="block focus:outline-none p-5 h-full flex flex-col justify-between"
+                  className="block focus:outline-none h-full flex flex-col justify-between space-y-3"
                   aria-label={`Read advisory: ${article.title}`}
                 >
-                  <div className="space-y-3">
-                    {/* Header: Category & Read Time */}
+                  <div className="space-y-2.5">
+                    {/* Header: Stream badge & Read time */}
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5">
                         {getCategoryIcon(article.category)}
-                        <span className="text-[11px] font-mono uppercase tracking-wider text-muted font-semibold">
-                          {formatCategoryLabel(article.category)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="flex items-center gap-1 text-[11px] font-mono text-muted-dim">
-                          <Clock className="w-3 h-3 text-muted-dim" />
-                          {article.read_time_minutes} min read
-                        </span>
                         <Badge variant={getCategoryBadgeVariant(article.category)} size="sm">
-                          {article.category.toUpperCase()}
+                          {formatCategoryLabel(article.category)}
                         </Badge>
+                      </div>
+                      <div className="flex items-center gap-1 text-[11px] font-mono text-muted-dim">
+                        <Clock className="w-3 h-3 text-muted-dim" />
+                        <span>{article.read_time_minutes}m read</span>
                       </div>
                     </div>
 
                     {/* Title & Summary */}
-                    <div className="space-y-1.5">
-                      <h3 className="text-base font-bold text-foreground group-hover:text-accent transition-colors font-sans">
+                    <div className="space-y-1">
+                      <h3 className="text-sm sm:text-base font-bold text-foreground group-hover:text-accent transition-colors font-sans leading-snug line-clamp-2">
                         {article.title}
                       </h3>
-                      <p className="text-xs text-muted leading-relaxed font-sans line-clamp-3">
+                      <p className="text-xs text-muted leading-relaxed font-sans line-clamp-2">
                         {article.summary}
                       </p>
                     </div>
 
-                    {/* Metadata: Author & Published Date */}
-                    <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] font-mono text-muted-dim">
-                      <span className="flex items-center gap-1">
-                        <PenLine className="w-3 h-3 text-muted-dim" />
+                    {/* Byline & Date */}
+                    <div className="flex items-center justify-between text-[11px] font-mono text-muted-dim pt-1 border-t border-border/40">
+                      <span className="truncate flex items-center gap-1">
+                        <PenLine className="w-3 h-3 text-muted-dim shrink-0" />
                         {article.author_name}
                       </span>
                       {article.published_at && (
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3 text-muted-dim" />
+                        <span className="shrink-0 flex items-center gap-1">
+                          <Calendar className="w-3 h-3 text-muted-dim shrink-0" />
                           {formatPublishDate(article.published_at)}
                         </span>
                       )}
                     </div>
-
-                    {/* Tags chips */}
-                    {article.tags && article.tags.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-1 pt-1 font-mono text-[10px]">
-                        {article.tags.slice(0, 3).map((tag) => (
-                          <span
-                            key={tag}
-                            className="px-1.5 py-0.5 rounded bg-background-secondary border border-border/50 text-muted-dim"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                        {article.tags.length > 3 && (
-                          <span className="text-muted-dim">+{article.tags.length - 3}</span>
-                        )}
-                      </div>
-                    )}
                   </div>
 
-                  {/* Card Footer: Read Action Affordance */}
-                  <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs font-mono">
-                    <span className="text-[11px] text-muted">
-                      Knowledge Base Advisory
+                  {/* Card Footer: Read Action */}
+                  <div className="pt-2 border-t border-border/40 flex items-center justify-between text-xs font-mono">
+                    <span className="text-[10px] text-muted-dim uppercase tracking-wider">
+                      Advisory
                     </span>
-
-                    <div className="flex items-center gap-1 text-accent group-hover:text-accent font-semibold transition-colors">
-                      <span className="text-[11px] uppercase tracking-wider">Read Full</span>
+                    <div className="flex items-center gap-1 text-accent font-semibold text-[11px] uppercase tracking-wider">
+                      <span>Read Full</span>
                       <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                     </div>
                   </div>
                 </Link>
-              </Card>
+              </div>
             ))}
           </div>
         )}
 
         {/* Pagination Navigation Controls */}
         {status === 'success' && pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between pt-4 border-t border-border/60 font-mono text-xs">
+          <div className="flex items-center justify-between pt-3 border-t border-border/50 font-mono text-xs">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={!pagination.hasPreviousPage}
-              leftIcon={<ChevronLeft className="w-4 h-4" />}
+              leftIcon={<ChevronLeft className="w-3.5 h-3.5" />}
             >
               Previous
             </Button>
 
-            <span className="text-muted">
+            <span className="text-muted text-[11px]">
               Page {pagination.page} of {pagination.totalPages}
             </span>
 
@@ -478,7 +443,7 @@ export function ArticlesPage() {
               size="sm"
               onClick={() => setCurrentPage((p) => Math.min(pagination.totalPages, p + 1))}
               disabled={!pagination.hasNextPage}
-              rightIcon={<ChevronRight className="w-4 h-4" />}
+              rightIcon={<ChevronRight className="w-3.5 h-3.5" />}
             >
               Next
             </Button>

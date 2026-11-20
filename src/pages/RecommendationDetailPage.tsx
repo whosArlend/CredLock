@@ -94,13 +94,13 @@ export function RecommendationDetailPage() {
       case 'password':
         return <Lock className="w-3.5 h-3.5 text-accent" />;
       case 'auth':
-        return <ShieldCheck className="w-3.5 h-3.5 text-status-success" />;
+        return <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />;
       case 'device':
-        return <Smartphone className="w-3.5 h-3.5 text-status-info" />;
+        return <Smartphone className="w-3.5 h-3.5 text-accent" />;
       case 'network':
-        return <Wifi className="w-3.5 h-3.5 text-status-warning" />;
+        return <Wifi className="w-3.5 h-3.5 text-amber-400" />;
       case 'incident_response':
-        return <AlertTriangle className="w-3.5 h-3.5 text-status-danger" />;
+        return <AlertTriangle className="w-3.5 h-3.5 text-danger" />;
       default:
         return <ShieldCheck className="w-3.5 h-3.5 text-muted" />;
     }
@@ -240,55 +240,55 @@ export function RecommendationDetailPage() {
         }
       />
 
-      {/* Primary Metrics/Metadata Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Primary Metrics Snapshot Bar */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
         {/* Metric 1: Priority */}
-        <Card variant="default" padding="sm" className="space-y-1.5 bg-surface border-border">
-          <div className="flex items-center justify-between text-muted">
-            <span className="text-[11px] font-mono uppercase tracking-wider">Priority Level</span>
+        <div className="p-3 rounded-xl bg-surface border border-border space-y-1">
+          <div className="flex items-center justify-between text-muted text-[10px] font-mono uppercase tracking-wider">
+            <span>Priority Level</span>
             <AlertTriangle className="w-3.5 h-3.5 text-accent" />
           </div>
           <div className="space-y-0.5">
-            <p className="text-xl sm:text-2xl font-bold font-mono text-foreground capitalize tracking-tight">
+            <p className="text-lg sm:text-xl font-bold font-mono text-foreground capitalize tracking-tight">
               {recommendation.priority}
             </p>
             <span className="text-[10px] text-muted-dim font-mono">Defense urgency</span>
           </div>
-        </Card>
+        </div>
 
         {/* Metric 2: Category */}
-        <Card variant="default" padding="sm" className="space-y-1.5 bg-surface border-border">
-          <div className="flex items-center justify-between text-muted">
-            <span className="text-[11px] font-mono uppercase tracking-wider">Category</span>
+        <div className="p-3 rounded-xl bg-surface border border-border space-y-1">
+          <div className="flex items-center justify-between text-muted text-[10px] font-mono uppercase tracking-wider">
+            <span>Category</span>
             {getCategoryIcon(recommendation.category)}
           </div>
           <div className="space-y-0.5">
-            <p className="text-base sm:text-lg font-bold font-mono text-foreground tracking-tight pt-0.5">
+            <p className="text-sm sm:text-base font-bold font-mono text-foreground tracking-tight pt-0.5">
               {formatCategoryLabel(recommendation.category)}
             </p>
             <span className="text-[10px] text-muted-dim font-mono">Domain vector</span>
           </div>
-        </Card>
+        </div>
 
         {/* Metric 3: Action Steps Count */}
-        <Card variant="default" padding="sm" className="space-y-1.5 bg-surface border-border">
-          <div className="flex items-center justify-between text-muted">
-            <span className="text-[11px] font-mono uppercase tracking-wider">Action Steps</span>
-            <CheckCircle2 className="w-3.5 h-3.5 text-status-success" />
+        <div className="p-3 rounded-xl bg-surface border border-border space-y-1">
+          <div className="flex items-center justify-between text-muted text-[10px] font-mono uppercase tracking-wider">
+            <span>Checklist</span>
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
           </div>
           <div className="space-y-0.5">
-            <p className="text-xl sm:text-2xl font-bold font-mono text-foreground tracking-tight">
-              {actionSteps.length} Steps
+            <p className="text-lg sm:text-xl font-bold font-mono text-foreground tracking-tight">
+              {completedSteps.size} / {actionSteps.length}
             </p>
-            <span className="text-[10px] text-muted-dim font-mono">Execution plan</span>
+            <span className="text-[10px] text-muted-dim font-mono">Steps completed</span>
           </div>
-        </Card>
+        </div>
 
         {/* Metric 4: Target Audience */}
-        <Card variant="default" padding="sm" className="space-y-1.5 bg-surface border-border">
-          <div className="flex items-center justify-between text-muted">
-            <span className="text-[11px] font-mono uppercase tracking-wider">Target Scope</span>
-            <Users className="w-3.5 h-3.5 text-status-info" />
+        <div className="p-3 rounded-xl bg-surface border border-border space-y-1">
+          <div className="flex items-center justify-between text-muted text-[10px] font-mono uppercase tracking-wider">
+            <span>Target Scope</span>
+            <Users className="w-3.5 h-3.5 text-accent" />
           </div>
           <div className="space-y-0.5">
             <p className="text-xs sm:text-sm font-semibold text-foreground tracking-tight pt-1 truncate">
@@ -296,97 +296,126 @@ export function RecommendationDetailPage() {
             </p>
             <span className="text-[10px] text-muted-dim font-mono">Audience scope</span>
           </div>
-        </Card>
+        </div>
       </div>
 
-      {/* Main Narrative & Action Steps */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Summary & Step-by-Step Action Plan (8 cols) */}
-        <div className="lg:col-span-8 space-y-6">
+      {/* Main Narrative & Action Checklist */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Left Column: Summary & Step-by-Step Action Checklist (8 cols) */}
+        <div className="lg:col-span-8 space-y-4">
           {/* Executive Summary */}
-          <Card variant="default" padding="lg" className="bg-surface border-border space-y-4">
-            <CardHeader className="px-0 pt-0 pb-2 border-b border-border/60">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-accent" />
-                  <CardTitle className="text-sm font-mono uppercase tracking-wider text-muted">
-                    EXECUTIVE BRIEFING & RATIONALE
-                  </CardTitle>
-                </div>
-                <span className="font-mono text-[10px] text-muted uppercase">PUBLISHED</span>
+          <div className="rounded-xl bg-surface border border-border p-5 space-y-2.5 shadow-sm">
+            <div className="flex items-center justify-between pb-2 border-b border-border/50">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-accent" />
+                <h3 className="text-xs font-mono uppercase tracking-wider text-muted font-semibold">
+                  Executive Briefing & Threat Context
+                </h3>
               </div>
-            </CardHeader>
+              <Badge variant="emerald" size="sm">Published</Badge>
+            </div>
 
-            <CardContent className="px-0 pb-0">
-              <p className="text-sm text-foreground/90 leading-relaxed font-sans">
-                {recommendation.summary}
-              </p>
-            </CardContent>
-          </Card>
+            <p className="text-xs sm:text-sm text-foreground/90 leading-relaxed font-sans">
+              {recommendation.summary}
+            </p>
+          </div>
 
-          {/* Structured Step-by-Step Action Plan */}
-          <Card variant="default" padding="lg" className="bg-surface border-border space-y-4">
-            <CardHeader className="px-0 pt-0 pb-2 border-b border-border/60">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ListOrdered className="w-4 h-4 text-status-success" />
-                  <CardTitle className="text-sm font-mono uppercase tracking-wider text-muted">
-                    HARDENING IMPLEMENTATION STEPS ({actionSteps.length})
-                  </CardTitle>
-                </div>
-                <span className="font-mono text-[10px] text-muted-dim">CHECKLIST</span>
+          {/* Interactive Step-by-Step Action Checklist */}
+          <div className="rounded-xl bg-surface border border-border p-5 space-y-3.5 shadow-sm">
+            <div className="flex items-center justify-between pb-2.5 border-b border-border/50">
+              <div className="flex items-center gap-2">
+                <ListOrdered className="w-4 h-4 text-emerald-400" />
+                <h3 className="text-xs font-mono uppercase tracking-wider text-muted font-semibold">
+                  Hardening Implementation Steps ({actionSteps.length})
+                </h3>
               </div>
-            </CardHeader>
+              <span className="text-[11px] font-mono text-muted">
+                {completedSteps.size === actionSteps.length && actionSteps.length > 0 ? (
+                  <span className="text-emerald-400 font-semibold">All Done!</span>
+                ) : (
+                  <span>Click step to check off</span>
+                )}
+              </span>
+            </div>
 
-            <CardContent className="px-0 pb-0 space-y-3">
+            <div className="space-y-2">
               {actionSteps.length > 0 ? (
-                actionSteps.map((step, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-start gap-3.5 p-3.5 rounded-lg bg-background-secondary border border-border/60 transition-colors hover:border-accent/30"
-                  >
-                    <div className="w-6 h-6 rounded-full bg-accent/15 text-accent border border-accent/30 flex items-center justify-center font-mono text-xs font-bold shrink-0 mt-0.5">
-                      {idx + 1}
+                actionSteps.map((step, idx) => {
+                  const isDone = completedSteps.has(idx);
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => toggleStep(idx)}
+                      className={`flex items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer select-none ${
+                        isDone
+                          ? 'bg-emerald-500/5 border-emerald-500/30'
+                          : 'bg-background-base/60 border-border/60 hover:border-accent/30'
+                      }`}
+                      role="checkbox"
+                      aria-checked={isDone}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === ' ' || e.key === 'Enter') {
+                          e.preventDefault();
+                          toggleStep(idx);
+                        }
+                      }}
+                    >
+                      {/* Checkbox circle */}
+                      <div
+                        className={`w-5 h-5 rounded border flex items-center justify-center font-mono text-xs font-bold shrink-0 mt-0.5 transition-colors ${
+                          isDone
+                            ? 'border-emerald-500 bg-emerald-500 text-background-base'
+                            : 'border-border bg-surface text-muted-dim'
+                        }`}
+                      >
+                        {isDone ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : idx + 1}
+                      </div>
+
+                      <div className="space-y-0.5 flex-1">
+                        <p
+                          className={`text-xs sm:text-sm font-sans leading-relaxed transition-colors ${
+                            isDone ? 'line-through text-muted' : 'text-foreground font-medium'
+                          }`}
+                        >
+                          {step}
+                        </p>
+                        <span className="text-[10px] font-mono text-muted-dim block">
+                          Step 0{idx + 1} {isDone && '• Completed'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="space-y-0.5 flex-1">
-                      <p className="text-sm text-foreground font-medium font-sans leading-relaxed">
-                        {step}
-                      </p>
-                      <span className="text-[10px] font-mono text-muted-dim block">
-                        Action Step 0{idx + 1}
-                      </span>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <p className="text-xs text-muted font-mono py-2">
                   No individual action steps specified for this recommendation.
                 </p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
         {/* Right Column: Taxonomy, Metadata & Tags (4 cols) */}
-        <div className="lg:col-span-4 space-y-6">
-          <Card variant="default" padding="md" className="bg-surface border-border space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b border-border/60">
+        <div className="lg:col-span-4 space-y-4">
+          <div className="rounded-xl bg-surface border border-border p-4 space-y-3 shadow-sm">
+            <div className="flex items-center gap-2 pb-2 border-b border-border/50">
               <ShieldCheck className="w-3.5 h-3.5 text-accent" />
-              <h3 className="text-xs font-mono font-semibold uppercase tracking-wider text-foreground">
+              <h3 className="text-xs font-mono font-semibold uppercase tracking-wider text-muted">
                 Playbook Metadata
               </h3>
             </div>
 
-            <div className="space-y-3 text-xs font-mono">
+            <div className="space-y-2.5 text-xs font-mono">
               <div>
-                <span className="text-[11px] text-muted uppercase tracking-wider block">Category Vector</span>
+                <span className="text-[10px] text-muted-dim uppercase tracking-wider block">Category Vector</span>
                 <span className="text-foreground font-semibold text-sm">
                   {formatCategoryLabel(recommendation.category)}
                 </span>
               </div>
 
               <div>
-                <span className="text-[11px] text-muted uppercase tracking-wider block">Urgency Level</span>
+                <span className="text-[10px] text-muted-dim uppercase tracking-wider block">Urgency Level</span>
                 <Badge variant={getPriorityBadgeVariant(recommendation.priority)} size="sm">
                   {recommendation.priority.toUpperCase()}
                 </Badge>
@@ -394,37 +423,37 @@ export function RecommendationDetailPage() {
 
               {recommendation.target_audience && (
                 <div>
-                  <span className="text-[11px] text-muted uppercase tracking-wider block">Recommended Audience</span>
-                  <span className="text-foreground-dim text-xs font-sans">
+                  <span className="text-[10px] text-muted-dim uppercase tracking-wider block">Scope</span>
+                  <span className="text-foreground text-xs font-sans">
                     {recommendation.target_audience}
                   </span>
                 </div>
               )}
 
               <div>
-                <span className="text-[11px] text-muted uppercase tracking-wider block">Database Slug</span>
-                <code className="text-foreground-dim text-[11px] break-all">{recommendation.slug}</code>
+                <span className="text-[10px] text-muted-dim uppercase tracking-wider block">Database Slug</span>
+                <code className="text-foreground/80 text-[11px] break-all">{recommendation.slug}</code>
               </div>
 
               <div>
-                <span className="text-[11px] text-muted uppercase tracking-wider block">Record Identifier</span>
-                <code className="text-foreground-dim text-[10px] break-all">{recommendation.id}</code>
+                <span className="text-[10px] text-muted-dim uppercase tracking-wider block">Record Identifier</span>
+                <code className="text-muted text-[10px] break-all">{recommendation.id}</code>
               </div>
 
               {/* Tags Section */}
               {recommendation.tags && recommendation.tags.length > 0 && (
-                <div className="pt-2 border-t border-border/60">
-                  <div className="flex items-center gap-1.5 pb-2">
+                <div className="pt-2 border-t border-border/50">
+                  <div className="flex items-center gap-1.5 pb-1.5">
                     <Tag className="w-3 h-3 text-accent" />
-                    <span className="text-[11px] text-muted uppercase tracking-wider font-semibold">
+                    <span className="text-[10px] text-muted-dim uppercase tracking-wider font-semibold">
                       Associated Tags
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-1">
                     {recommendation.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="px-2 py-0.5 rounded bg-background-secondary border border-border text-[11px] font-mono text-muted"
+                        className="px-1.5 py-0.5 rounded bg-background-base border border-border text-[10px] font-mono text-muted"
                       >
                         #{tag}
                       </span>
@@ -433,7 +462,7 @@ export function RecommendationDetailPage() {
                 </div>
               )}
             </div>
-          </Card>
+          </div>
         </div>
       </div>
     </div>

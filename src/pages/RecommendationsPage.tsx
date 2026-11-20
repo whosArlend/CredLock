@@ -16,11 +16,9 @@ import type {
 import {
   ShieldCheck,
   Search,
-  Filter,
   ArrowRight,
   ArrowLeft,
   RefreshCw,
-  SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
   Database,
