@@ -6,24 +6,32 @@ REST API backend untuk **CredLock Security Intelligence**, dibangun dengan Node.
 
 ## 1. Arsitektur Backend & Database Connection
 
-Backend ini menerapkan arsitektur berlapis (*layered modular architecture*) yang memisahkan konfigurasi aplikasi, repositori akses data, layanan bisnis (*service*), pengontrol HTTP (*controller*), dan perutean versi (*versioned routing*):
+Backend ini menerapkan arsitektur berlapis (*layered modular architecture*) yang memisahkan konfigurasi aplikasi, repositori akses data, layanan bisnis (*service*), pengontrol HTTP (*controller*), validator skema Zod, dan perutean versi (*versioned routing*):
 
 ```
 backend/credlock-api/
 ├── src/
 │   ├── config/          # Validasi skema Zod (env.ts) & Supabase Client (supabase.ts)
 │   ├── controllers/     # HTTP Request/Response Controllers
-│   │   └── dashboardController.ts
-│   ├── services/        # Business Logic & Data Aggregations
-│   │   └── dashboardService.ts
-│   ├── repositories/    # Database Queries & Visibility Filtering
-│   │   └── dashboardRepository.ts
+│   │   ├── dashboardController.ts
+│   │   └── breachController.ts
+│   ├── services/        # Business Logic, Data Formatting & Calculations
+│   │   ├── dashboardService.ts
+│   │   └── breachService.ts
+│   ├── repositories/    # Database Queries & Strict Visibility Filtering
+│   │   ├── dashboardRepository.ts
+│   │   └── breachRepository.ts
+│   ├── validators/      # Zod Query & Param Validators
+│   │   └── breachValidator.ts
 │   ├── types/           # TypeScript DTOs & Interfaces
-│   │   └── dashboard.ts
+│   │   ├── dashboard.ts
+│   │   └── breach.ts
 │   ├── middleware/      # Keamanan (Helmet, CORS, Rate Limit), Error Handler, Logger
 │   ├── routes/          # Perutean endpoint (/api/health, /api/health/db, /api/v1)
 │   │   └── v1/
-│   │       └── dashboard.ts
+│   │       ├── dashboard.ts
+│   │       ├── breaches.ts
+│   │       └── index.ts
 │   ├── utils/           # Helper amplop respon JSON standar
 │   ├── app.ts           # Inisialisasi Express & konfigurasi middleware
 │   └── server.ts        # Entry point startup HTTP listener
@@ -143,25 +151,7 @@ Memverifikasi konektivitas ke database Supabase PostgreSQL menggunakan kueri rin
 ### B. Dashboard Summary Endpoint (Phase 3.3A)
 
 #### `GET /api/v1/dashboard/summary`
-Mengambil dan mengagregasi ringkasan statistik keamanan siber, klasifikasi insiden kebocoran berdasarkan keparahan (*severity*), dan daftar insiden terbaru untuk widget dashboard CredLock PWA.
-
-**Metode HTTP**: `GET`  
-**Path**: `/api/v1/dashboard/summary`  
-**Autentikasi**: Publik (Read-Only)
-
-**Aturan Visibilitas Data**:
-- Hanya insiden kebocoran yang berstatus **`is_published = true AND is_verified = true`** yang dihitung dan ditampilkan.
-- Rekomendasi hanya menghitung baris yang berstatus **`is_published = true`**.
-- Artikel hanya menghitung baris yang berstatus **`is_published = true`**.
-- Data draf (*unpublished*) atau belum terverifikasi (*unverified*) tidak dapat masuk ke dalam ringkasan statistik.
-
-**Definisi Kolom Respon**:
-- `statistics.totalBreaches`: Total jumlah insiden kebocoran terverifikasi yang dipublikasikan.
-- `statistics.totalExposedAccounts`: Akumulasi jumlah akun/kredensial yang terekspos lintas insiden (agregasi `pwn_count`). Bukan jumlah pengguna unik individu.
-- `statistics.totalRecommendations`: Total rekomendasi keamanan publik yang tersedia.
-- `statistics.totalArticles`: Total artikel edukasi keamanan siber publik yang tersedia.
-- `breachesBySeverity`: Pengelompokan insiden berdasarkan tingkat dampak (`critical`, `high`, `medium`, `low`). Keempat kategori ini dijamin selalu ada dalam respon (bernilai 0 jika tidak ada catatan).
-- `recentBreaches`: Maksimal 5 insiden kebocoran terbaru yang diurutkan berdasarkan `added_date` menurun. Hanya memuat kolom publik: `id`, `title`, `slug`, `organization`, `domain`, `breach_date`, `added_date`, `pwn_count`, `severity`.
+Mengambil ringkasan statistik keamanan siber, klasifikasi insiden kebocoran berdasarkan keparahan (*severity*), dan daftar insiden terbaru.
 
 **Contoh Respon Sukses (HTTP 200) — *Nilai Ilustratif*:**
 ```json
@@ -180,42 +170,122 @@ Mengambil dan mengagregasi ringkasan statistik keamanan siber, klasifikasi insid
       "medium": 2,
       "low": 1
     },
-    "recentBreaches": [
-      {
-        "id": "e3b0c442-98fc-1c14-9afbf4c8996fb924",
-        "title": "Example Tech Data Breach (2024)",
-        "slug": "example-tech-2024",
-        "organization": "Example Corp",
-        "domain": "example.com",
-        "breach_date": "2024-02-15",
-        "added_date": "2024-03-01",
-        "pwn_count": 50000000,
-        "severity": "critical"
-      }
-    ]
+    "recentBreaches": [ ... ]
   },
   "timestamp": "2026-11-20T12:00:00.000Z"
 }
 ```
 
-**Perilaku Penanganan Error (HTTP 500 / 503)**:
-Jika kueri database mengalami kegagalan:
+---
+
+### C. Breach Intelligence Endpoints (Phase 3.3B)
+
+#### 1. `GET /api/v1/breaches` (Daftar Insiden Terpaginasi)
+Mengambil katalog insiden kebocoran terverifikasi dan dipublikasikan dengan dukungan pencarian, penyaringan keparahan, pengurutan, dan paginasi level database.
+
+**Query Parameters:**
+
+| Parameter | Tipe | Default | Deskripsi |
+| :--- | :--- | :--- | :--- |
+| `page` | Integer | `1` | Nomor halaman (minimal 1) |
+| `limit` | Integer | `10` | Jumlah data per halaman (1 hingga 50) |
+| `search` | String | - | Pencarian pada judul, organisasi, atau domain |
+| `severity`| Enum | - | Filter keparahan: `critical`, `high`, `medium`, `low` |
+| `sort` | Enum | `added_date`| Kolom urutan: `added_date`, `breach_date`, `pwn_count`, `title` |
+| `order` | Enum | `desc` | Arah urutan: `asc`, `desc` |
+
+**Contoh Respon Sukses (HTTP 200) — *Nilai Ilustratif*:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "d6aa41f0-ef6d-448f-bcb5-373c2e05f3e1",
+      "title": "Example E-Commerce Breach (2020)",
+      "slug": "example-ecommerce-2020",
+      "domain": "example.com",
+      "organization": "Example Corp",
+      "breach_date": "2020-03-01",
+      "added_date": "2020-05-02",
+      "pwn_count": 91000000,
+      "data_classes": ["Email addresses", "Password hashes"],
+      "severity": "critical",
+      "logo_url": null
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "totalItems": 1,
+    "totalPages": 1,
+    "hasNextPage": false,
+    "hasPreviousPage": false
+  },
+  "timestamp": "2026-11-20T12:00:00.000Z"
+}
+```
+
+#### 2. `GET /api/v1/breaches/:slug` (Detail Insiden Kebocoran)
+Mengambil informasi lengkap dari satu insiden kebocoran terverifikasi berdasarkan `slug`.
+
+**Contoh Respon Sukses (HTTP 200) — *Nilai Ilustratif*:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "d6aa41f0-ef6d-448f-bcb5-373c2e05f3e1",
+    "title": "Example E-Commerce Breach (2020)",
+    "slug": "example-ecommerce-2020",
+    "domain": "example.com",
+    "organization": "Example Corp",
+    "breach_date": "2020-03-01",
+    "added_date": "2020-05-02",
+    "pwn_count": 91000000,
+    "description": "Kronologi lengkap insiden kebocoran data...",
+    "data_classes": ["Email addresses", "Password hashes"],
+    "severity": "critical",
+    "source_url": "https://zdnet.com/article/example",
+    "logo_url": null
+  },
+  "timestamp": "2026-11-20T12:00:00.000Z"
+}
+```
+
+**Respon Error Not Found (HTTP 404):**  
+Jika `slug` tidak ditemukan, atau catatan terkait berstatus draf (*unpublished*) atau belum diverifikasi (*unverified*), API mengembalikan respon 404 identik guna mencegah *data existence enumeration*:
 ```json
 {
   "success": false,
   "error": {
-    "code": "DATABASE_QUERY_ERROR",
-    "message": "Failed to retrieve breach aggregate statistics"
+    "code": "NOT_FOUND",
+    "message": "Breach with slug 'example-slug' not found"
   },
   "timestamp": "2026-11-20T12:00:00.000Z"
 }
 ```
-*Jaminan Keamanan: Respon error tidak membocorkan struktur SQL, kunci rahasia, URL Supabase, nama basis data internal, ataupun stack trace.*
+
+**Respon Parameter Tidak Valid (HTTP 400 Bad Request):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Limit cannot exceed 50"
+  },
+  "timestamp": "2026-11-20T12:00:00.000Z"
+}
+```
 
 ### Menguji dengan `curl`
 ```bash
-# Uji Dashboard Summary
-curl -i http://localhost:4000/api/v1/dashboard/summary
+# Ambil daftar insiden dengan paginasi dan filter
+curl -i "http://localhost:4000/api/v1/breaches?limit=5&sort=pwn_count&order=desc"
+
+# Cari insiden berdasarkan kata kunci
+curl -i "http://localhost:4000/api/v1/breaches?search=tokopedia"
+
+# Ambil detail insiden berdasarkan slug
+curl -i "http://localhost:4000/api/v1/breaches/tokopedia-2020"
 ```
 
 ---
@@ -232,19 +302,20 @@ npm test
 npm run test:watch
 ```
 
-Cakupan pengujian (24 test cases lintas 4 test suites):
-- `tests/dashboard.test.ts`:
-  - Status HTTP 200 dan kelengkapan struktur DTO dashboard summary
-  - Agregasi statistik akurat dari dataset mock
-  - Keberadaan seluruh 4 kategori severity breakdown (`critical`, `high`, `medium`, `low`)
-  - Pembatasan recent breaches maksimal 5 catatan dan verifikasi ketiadaan *internal leaks*
-  - Verifikasi filter visibilitas (`is_published`, `is_verified`) diterapkan pada kueri
-  - Penanganan dataset kosong (*empty database*) dengan nilai 0 dan array kosong
-  - Penanganan nilai `pwn_count` null, string non-numerik, dan angka masif (> miliaran) tanpa *precision loss*
-  - Respon error aman saat terjadi kegagalan database
-- `tests/health.test.ts`: Basic liveness dan database readiness probe
-- `tests/supabase.test.ts`: Validasi skema Zod environment untuk `SUPABASE_SECRET_KEY`
-- `tests/security.test.ts`: Header Helmet, rate limiting, payload size limits, 404 handler
+Cakupan pengujian (42 test cases lintas 5 test suites):
+- `tests/breaches.test.ts` (18 tests):
+  - List paginasi default, kustomisasi limit/page, kalkulasi metadata
+  - Pencarian multi-kolom (title, organization, domain)
+  - Penyaringan keparahan (`severity`)
+  - Pengurutan multi-level (`sort` & `order`)
+  - Validasi query parameter HTTP 400 (halaman < 1, limit > 50, sort column di luar allowlist, severity invalid)
+  - Aturan visibilitas publik: data draf/unverified tidak pernah masuk hasil atau total count
+  - Ketiadaan kolom audit internal pada respon list maupun detail
+  - Detail endpoint HTTP 200 untuk slug valid dan HTTP 404 identik untuk record yang tidak ada / draf / unverified
+- `tests/dashboard.test.ts` (7 tests): Aggregasi dashboard summary, breakdown severity, limit 5 recent breaches
+- `tests/health.test.ts` (6 tests): Basic liveness probe dan database readiness probe
+- `tests/supabase.test.ts` (7 tests): Validasi skema Zod environment untuk `SUPABASE_SECRET_KEY`
+- `tests/security.test.ts` (4 tests): Header Helmet, rate limiting, payload size limits, 404 handler
 
 ---
 
