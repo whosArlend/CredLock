@@ -3,22 +3,24 @@ import type { ComponentType } from 'react';
 
 export interface NavItem {
   name: string;
+  desktopName?: string;
   to: string;
   icon: ComponentType<{ className?: string }>;
 }
 
 export const DEFAULT_NAV_ITEM: NavItem = {
   name: 'Home',
+  desktopName: 'Home',
   to: '/',
   icon: Home,
 };
 
 export const NAV_ITEMS: NavItem[] = [
   DEFAULT_NAV_ITEM,
-  { name: 'Analyze', to: '/analyzer', icon: ShieldCheck },
-  { name: 'Generate', to: '/generator', icon: KeyRound },
-  { name: 'Breach', to: '/breach-checker', icon: AlertTriangle },
-  { name: 'About', to: '/profile', icon: User },
+  { name: 'Analyze', desktopName: 'Analyzer', to: '/analyzer', icon: ShieldCheck },
+  { name: 'Generate', desktopName: 'Generator', to: '/generator', icon: KeyRound },
+  { name: 'Breach', desktopName: 'Breach Checker', to: '/breach-checker', icon: AlertTriangle },
+  { name: 'About', desktopName: 'About', to: '/profile', icon: User },
 ];
 
 /**
