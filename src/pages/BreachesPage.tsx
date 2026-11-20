@@ -395,7 +395,7 @@ export function BreachesPage() {
                             {breach.data_classes.slice(0, 2).map((dc) => (
                               <span
                                 key={dc}
-                                className="px-1.5 py-0.2 rounded bg-background-base border border-border/50 text-[10px] text-muted"
+                                className="px-1.5 py-0.5 rounded bg-background-base border border-border/50 text-[10px] text-muted"
                               >
                                 {dc}
                               </span>

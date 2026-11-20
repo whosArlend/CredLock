@@ -109,7 +109,7 @@ export function BottomNav() {
             </span>
             <span className="w-1 h-1 rounded-full bg-border-strong shrink-0" aria-hidden="true" />
             <div className="flex items-center gap-1 text-muted group-hover:text-accent transition-colors pr-1 shrink-0">
-              <span className="text-[10px] font-mono uppercase tracking-wider hidden xs:inline">Menu</span>
+              <span className="text-[10px] font-mono uppercase tracking-wider hidden sm:inline">Menu</span>
               <ChevronUp className="w-4 h-4 transition-transform group-hover:-translate-y-0.5" />
             </div>
           </button>

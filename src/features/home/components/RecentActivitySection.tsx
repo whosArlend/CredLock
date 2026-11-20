@@ -101,13 +101,13 @@ export function RecentActivitySection() {
                 <Card
                   key={`analysis-${rec.id}`}
                   variant="default"
-                  padding="sm"
+                  padding="none"
                   isInteractive
-                  className="border-border hover:border-border-subtle group bg-surface"
+                  className="border-border hover:border-border-subtle group bg-surface overflow-hidden"
                 >
                   <Link
                     to={`/analysis-history/${rec.id}`}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 focus:outline-none p-3"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 focus:outline-none p-3.5 sm:p-4"
                     aria-label={`Inspect analysis record #${rec.id.slice(0, 8)}`}
                   >
                     <div className="flex items-center gap-3">
@@ -159,13 +159,13 @@ export function RecentActivitySection() {
               <Card
                 key={`breach-${rec.id}`}
                 variant="default"
-                padding="sm"
+                padding="none"
                 isInteractive
-                className="border-border hover:border-border-subtle group bg-surface"
+                className="border-border hover:border-border-subtle group bg-surface overflow-hidden"
               >
                 <Link
                   to={`/breach-history/${rec.id}`}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 focus:outline-none p-3"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 focus:outline-none p-3.5 sm:p-4"
                   aria-label={`Inspect breach query record #${rec.id.slice(0, 8)}`}
                 >
                   <div className="flex items-center gap-3">

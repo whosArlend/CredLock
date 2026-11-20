@@ -1,29 +1,30 @@
 import { Link } from 'react-router-dom';
-import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { AlertCircle, Home } from 'lucide-react';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
 
 export function NotFoundPage() {
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <Card className="max-w-md w-full text-center">
-        <CardHeader className="items-center">
-          <div className="p-3 rounded-full bg-cyber-rose-muted text-cyber-rose mb-2">
-            <AlertCircle className="w-8 h-8" />
-          </div>
-          <CardTitle className="text-xl">404 — Page Not Found</CardTitle>
-          <CardDescription>
-            The requested security endpoint or audit record does not exist.
-          </CardDescription>
-        </CardHeader>
-        <CardFooter className="justify-center border-t-0 pt-2">
+    <div className="flex items-center justify-center min-h-[60vh] px-4 animate-in fade-in duration-200 text-left">
+      <div className="max-w-md w-full text-center py-10 px-6 rounded-2xl bg-surface border border-border/80 shadow-lg space-y-4">
+        <div className="mx-auto w-12 h-12 rounded-xl bg-status-danger/10 text-status-danger border border-status-danger/20 flex items-center justify-center">
+          <AlertCircle className="w-6 h-6" />
+        </div>
+        <div className="space-y-1.5">
+          <h1 className="text-xl font-bold font-sans tracking-tight text-foreground">
+            404 — Endpoint Not Found
+          </h1>
+          <p className="text-xs text-muted max-w-sm mx-auto leading-relaxed font-sans">
+            The requested security route or audit record identifier does not exist or has been relocated.
+          </p>
+        </div>
+        <div className="pt-2">
           <Link to="/">
-            <Button variant="primary" leftIcon={<Home className="w-4 h-4" />}>
+            <Button variant="primary" size="sm" leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}>
               Return to Security Center
             </Button>
           </Link>
-        </CardFooter>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

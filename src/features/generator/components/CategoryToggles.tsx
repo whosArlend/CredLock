@@ -126,7 +126,7 @@ export const CategoryToggles: React.FC<CategoryTogglesProps> = ({
                   <span className={`text-xs font-semibold ${isChecked ? 'text-accent' : 'text-muted'}`}>
                     {cat.label}
                   </span>
-                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-background-base text-muted-dim border border-border/40">
+                  <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-background-base text-muted-dim border border-border/40">
                     {cat.tag}
                   </span>
                 </div>
