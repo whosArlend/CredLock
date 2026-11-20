@@ -326,7 +326,7 @@ export function SecurityIntelligenceSection() {
           </Card>
 
           {/* 3. Recent Verified Breaches Feed */}
-          {data.recentBreaches.length > 0 && (
+          {data.recentBreaches.length > 0 ? (
             <Card variant="default" padding="sm" className="border-border space-y-3 bg-surface">
               <div className="flex items-center justify-between pb-1 border-b border-border/50">
                 <div className="flex items-center gap-1.5">
@@ -392,6 +392,12 @@ export function SecurityIntelligenceSection() {
                   </div>
                 ))}
               </div>
+            </Card>
+          ) : (
+            <Card variant="inset" padding="sm" className="border-border py-4 text-center bg-surface">
+              <p className="text-xs font-mono text-muted">
+                No recent breach incidents reported in the intelligence telemetry.
+              </p>
             </Card>
           )}
 

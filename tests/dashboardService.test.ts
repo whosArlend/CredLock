@@ -197,6 +197,34 @@ describe('Phase 3.4B — DashboardService', () => {
       assert.strictEqual(breach.breach_date, null);
       assert.strictEqual(breach.pwn_count, null);
     });
+
+    it('handles zero values and empty recentBreaches array gracefully', async () => {
+      const emptySummary: DashboardSummaryData = {
+        statistics: {
+          totalBreaches: 0,
+          totalExposedAccounts: 0,
+          totalRecommendations: 0,
+          totalArticles: 0,
+        },
+        breachesBySeverity: {
+          critical: 0,
+          high: 0,
+          medium: 0,
+          low: 0,
+        },
+        recentBreaches: [],
+      };
+
+      const client = makeSuccessClient({ success: true, data: emptySummary });
+      const service = new DashboardService(client);
+
+      const result = await service.getSummary();
+
+      assert.strictEqual(result.statistics.totalBreaches, 0);
+      assert.strictEqual(result.statistics.totalExposedAccounts, 0);
+      assert.strictEqual(result.breachesBySeverity.critical, 0);
+      assert.strictEqual(result.recentBreaches.length, 0);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -242,7 +270,7 @@ describe('Phase 3.4B — DashboardService', () => {
         (err: unknown) => {
           assert.ok(err instanceof ApiClientError, 'should be ApiClientError');
           assert.strictEqual((err as ApiClientError).type, 'HTTP_ERROR');
-          assert.strictEqual((err as ApiClientError).statusCode, 500);
+          assert.strictEqual((err as ApiClientError).status, 500);
           return true;
         }
       );
@@ -260,7 +288,7 @@ describe('Phase 3.4B — DashboardService', () => {
         (err: unknown) => {
           assert.ok(err instanceof ApiClientError);
           assert.strictEqual((err as ApiClientError).type, 'HTTP_ERROR');
-          assert.strictEqual((err as ApiClientError).statusCode, 404);
+          assert.strictEqual((err as ApiClientError).status, 404);
           return true;
         }
       );
@@ -278,7 +306,7 @@ describe('Phase 3.4B — DashboardService', () => {
         (err: unknown) => {
           assert.ok(err instanceof ApiClientError);
           assert.strictEqual((err as ApiClientError).type, 'HTTP_ERROR');
-          assert.strictEqual((err as ApiClientError).statusCode, 503);
+          assert.strictEqual((err as ApiClientError).status, 503);
           return true;
         }
       );
