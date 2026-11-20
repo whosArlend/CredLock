@@ -1,12 +1,14 @@
 import { app } from './app.js';
 import { env } from './config/env.js';
 
-const server = app.listen(env.PORT, () => {
+const HOST = '0.0.0.0';
+
+const server = app.listen(env.PORT, HOST, () => {
   console.log('====================================================');
   console.log(` CredLock Security Intelligence API`);
   console.log(` Environment : ${env.NODE_ENV}`);
-  console.log(` Listening on: http://localhost:${env.PORT}`);
-  console.log(` Health check: http://localhost:${env.PORT}/api/health`);
+  console.log(` Listening on: http://${HOST}:${env.PORT}`);
+  console.log(` Health check: http://${HOST}:${env.PORT}/api/health`);
   console.log('====================================================');
 });
 

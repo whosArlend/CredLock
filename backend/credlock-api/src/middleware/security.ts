@@ -14,9 +14,10 @@ export const helmetMiddleware = helmet({
 
 /**
  * CORS configuration restricting origins to configured frontend URLs.
+ * Supports single origin or comma-separated origins (e.g. for Vercel production + previews).
  */
 const allowedOrigins = [
-  env.FRONTEND_URL,
+  ...env.FRONTEND_URL.split(',').map((url) => url.trim().replace(/\/+$/, '')),
   'http://localhost:5173',
   'http://127.0.0.1:5173',
 ].filter(Boolean);
@@ -27,7 +28,8 @@ export const corsOptions: CorsOptions = {
     if (!origin) {
       return callback(null, true);
     }
-    if (allowedOrigins.includes(origin) || env.NODE_ENV === 'development') {
+    const normalizedOrigin = origin.trim().replace(/\/+$/, '');
+    if (allowedOrigins.includes(normalizedOrigin) || env.NODE_ENV === 'development') {
       return callback(null, true);
     }
     return callback(new Error(`CORS blocked request from origin: ${origin}`));

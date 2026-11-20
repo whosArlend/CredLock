@@ -16,7 +16,6 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.119.2",
     "cors": "^2.8.5",
-    "credlock": "file:../..",
     "dotenv": "^16.4.7",
     "express": "^5.0.1",
     "express-rate-limit": "^7.5.0",
