@@ -26,7 +26,7 @@ export function Header() {
                 CredLock
               </span>
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-elevated text-muted border border-border hidden sm:inline-block">
-                v0.1.0
+                v1.0.0
               </span>
             </div>
           </Link>
