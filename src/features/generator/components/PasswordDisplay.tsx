@@ -36,27 +36,27 @@ export const PasswordDisplay: React.FC<PasswordDisplayProps> = ({
   return (
     <div className="space-y-3">
       {/* Generated Password Box */}
-      <div className="relative rounded-xl border border-border bg-background-surface/80 p-4 transition-all focus-within:border-cyber-cyan focus-within:ring-1 focus-within:ring-cyber-cyan shadow-sm">
-        <div className="flex items-center justify-between gap-2 mb-2">
+      <div className="relative rounded-xl border border-border bg-surface p-4 transition-all focus-within:border-accent focus-within:ring-1 focus-within:ring-accent shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
           <div className="flex items-center gap-2">
-            <KeyRound className="w-4 h-4 text-cyber-cyan" aria-hidden="true" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-              Generated Password (In-Memory Only)
+            <KeyRound className="w-4 h-4 text-accent" aria-hidden="true" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted font-mono">
+              Generated Credential
             </span>
           </div>
 
           {result && result.password.length > 0 && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <Badge variant="cyan" size="sm">
-                {result.length} characters
+                <span className="font-mono">{result.length}</span> chars
               </Badge>
               <Badge variant="neutral" size="sm">
-                {result.poolSize}-char pool
+                <span className="font-mono">{result.poolSize}</span>-char pool
               </Badge>
-              <Tooltip content="Theoretical pool-based entropy estimate: length * log2(poolSize). Upper-bound estimate assuming unconstrained uniform selection; category requirements slightly restrict the keyspace.">
+              <Tooltip content="Theoretical pool-based entropy estimate: length * log2(poolSize). Upper-bound estimate assuming unconstrained uniform selection.">
                 <div>
                   <Badge variant="emerald" size="sm">
-                    ~{result.theoreticalPoolEntropyBits} bits (Pool Est.)
+                    ~<span className="font-mono">{result.theoreticalPoolEntropyBits}</span> bits
                   </Badge>
                 </div>
               </Tooltip>
@@ -65,18 +65,18 @@ export const PasswordDisplay: React.FC<PasswordDisplayProps> = ({
         </div>
 
         {/* Password Output Area */}
-        <div className="min-h-[56px] flex items-center justify-between rounded-lg bg-background-base/90 px-4 py-3 border border-border/60">
+        <div className="min-h-[52px] flex items-center justify-between rounded-lg bg-background-base px-3.5 py-2.5 border border-border/80">
           {result && result.password.length > 0 ? (
             <div
-              className="font-mono text-base md:text-lg tracking-wider text-cyber-cyan font-medium break-all select-all selection:bg-cyber-cyan selection:text-background"
+              className="font-mono text-base sm:text-lg tracking-wider text-accent font-semibold break-all select-all selection:bg-accent selection:text-background-base"
               aria-live="polite"
               aria-label={isVisible ? 'Generated password' : 'Generated password hidden'}
             >
               {isVisible ? result.password : '•'.repeat(result.length)}
             </div>
           ) : (
-            <div className="text-xs md:text-sm text-foreground-muted/60 italic font-mono select-none">
-              No password in memory. Click "Generate Password" below.
+            <div className="text-xs sm:text-sm text-muted/60 italic font-mono select-none">
+              Memory purged. Click "Generate" below to create a credential.
             </div>
           )}
         </div>
@@ -95,9 +95,9 @@ export const PasswordDisplay: React.FC<PasswordDisplayProps> = ({
                   aria-label={isVisible ? 'Hide password' : 'Show password'}
                   leftIcon={
                     isVisible ? (
-                      <EyeOff className="w-4 h-4 text-foreground-muted" />
+                      <EyeOff className="w-3.5 h-3.5 text-muted" />
                     ) : (
-                      <Eye className="w-4 h-4 text-foreground-muted" />
+                      <Eye className="w-3.5 h-3.5 text-muted" />
                     )
                   }
                 >
@@ -113,10 +113,10 @@ export const PasswordDisplay: React.FC<PasswordDisplayProps> = ({
                   size="sm"
                   onClick={onClear}
                   aria-label="Clear password from memory"
-                  className="text-foreground-muted hover:text-cyber-rose"
-                  leftIcon={<Trash2 className="w-4 h-4" />}
+                  className="text-muted hover:text-danger"
+                  leftIcon={<Trash2 className="w-3.5 h-3.5" />}
                 >
-                  <span className="text-xs">Clear</span>
+                  <span className="text-xs">Purge</span>
                 </Button>
               </Tooltip>
             )}
@@ -131,7 +131,7 @@ export const PasswordDisplay: React.FC<PasswordDisplayProps> = ({
               aria-label="Generate new password"
               leftIcon={
                 <RotateCw
-                  className={`w-4 h-4 text-cyber-cyan transition-transform ${
+                  className={`w-3.5 h-3.5 text-accent transition-transform ${
                     isSpinning ? 'rotate-180 duration-300' : ''
                   }`}
                 />
@@ -145,20 +145,20 @@ export const PasswordDisplay: React.FC<PasswordDisplayProps> = ({
             {hasPassword && (
               <Tooltip content="Copy password to device clipboard">
                 <Button
-                  variant={isCopied ? 'outline' : 'primary'}
+                  variant={isCopied ? 'secondary' : 'primary'}
                   size="sm"
                   onClick={onCopy}
                   aria-label={isCopied ? 'Password copied' : 'Copy password to clipboard'}
                   leftIcon={
                     isCopied ? (
-                      <Check className="w-4 h-4 text-cyber-emerald" />
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
                     ) : (
-                      <Copy className="w-4 h-4" />
+                      <Copy className="w-3.5 h-3.5" />
                     )
                   }
                 >
                   <span className="text-xs font-semibold">
-                    {isCopied ? 'Copied!' : 'Copy'}
+                    {isCopied ? 'Copied' : 'Copy'}
                   </span>
                 </Button>
               </Tooltip>
@@ -171,15 +171,13 @@ export const PasswordDisplay: React.FC<PasswordDisplayProps> = ({
       {isCopied && (
         <div
           role="status"
-          className="rounded-lg border border-cyber-cyan/30 bg-cyber-cyan/5 px-3 py-2 text-xs text-cyber-cyan-hover flex items-start gap-2 animate-in fade-in duration-150"
+          className="rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-accent flex items-start gap-2 animate-in fade-in duration-150"
         >
-          <Check className="w-4 h-4 mt-0.5 shrink-0 text-cyber-cyan" aria-hidden="true" />
+          <Check className="w-4 h-4 mt-0.5 shrink-0 text-accent" aria-hidden="true" />
           <div>
             <span className="font-semibold">Copied to clipboard. </span>
-            <span className="text-foreground-muted">
-              Device clipboard contents may be accessible to other running applications or
-              system clipboard managers. Paste into your target application and clear your
-              clipboard when finished.
+            <span className="text-foreground/80">
+              Clear your clipboard history after pasting into your password manager or login form.
             </span>
           </div>
         </div>

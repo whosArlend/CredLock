@@ -126,7 +126,7 @@ export function GeneratorPage() {
   const isConfigValid = !validationError;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div className="space-y-5 animate-in fade-in duration-200">
       <PageHeader
         title="Secure Password Generator"
         description="High-entropy random password generation powered exclusively by the Web Crypto API."
@@ -147,12 +147,12 @@ export function GeneratorPage() {
       {validationError && (
         <div
           role="alert"
-          className="rounded-xl border border-cyber-rose/40 bg-cyber-rose/10 p-4 text-xs text-cyber-rose flex items-start gap-3"
+          className="rounded-xl border border-danger/40 bg-danger/10 p-3 text-xs text-danger flex items-start gap-2.5"
         >
-          <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" aria-hidden="true" />
-          <div className="space-y-1">
-            <h4 className="font-semibold text-sm">Configuration Required</h4>
-            <p className="text-foreground-muted">{validationError}</p>
+          <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
+          <div className="space-y-0.5">
+            <h4 className="font-semibold text-xs font-mono uppercase tracking-wider">Configuration Required</h4>
+            <p className="text-muted">{validationError}</p>
           </div>
         </div>
       )}
@@ -169,17 +169,17 @@ export function GeneratorPage() {
         />
       </div>
 
-      {/* Optional Transition: Test in Password Analyzer */}
+      {/* Bridge Transition: Test in Password Analyzer */}
       {result && result.password && (
-        <div className="rounded-xl border border-border/80 bg-background-surface/40 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="rounded-xl border border-border bg-surface p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
           <div className="flex items-center gap-2.5">
-            <ShieldCheck className="w-5 h-5 text-cyber-emerald shrink-0" aria-hidden="true" />
+            <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" aria-hidden="true" />
             <div>
               <p className="text-xs font-semibold text-foreground">
-                Want to evaluate this password's resilience against attacks?
+                Evaluate this credential's resilience against attacks?
               </p>
-              <p className="text-[11px] text-foreground-muted">
-                Analyze estimated crack times, dictionary resilience, and composition.
+              <p className="text-[11px] text-muted">
+                Inspect estimated crack times across 4 attack vectors and dictionary resilience.
               </p>
             </div>
           </div>
@@ -188,14 +188,14 @@ export function GeneratorPage() {
             size="sm"
             onClick={handleAnalyzeGeneratedPassword}
             rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-            className="shrink-0"
+            className="shrink-0 w-full sm:w-auto"
           >
             Test in Analyzer
           </Button>
         </div>
       )}
 
-      {/* Security & Privacy Notice */}
+      {/* Security & Cryptographic Notice */}
       <GeneratorNoticeCard />
     </div>
   );

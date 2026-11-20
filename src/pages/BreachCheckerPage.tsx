@@ -4,7 +4,6 @@ import { History } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { useToast } from '@/hooks/useToast';
 import { addBreachRecord } from '@/services/historyStorage';
 import {
@@ -152,11 +151,11 @@ export function BreachCheckerPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
+    <div className="space-y-5 max-w-3xl mx-auto animate-in fade-in duration-200">
       {/* Page Header */}
       <PageHeader
         title="Password Breach Checker"
-        description="Verify password exposure against known data leaks using the k-Anonymity mathematical privacy model."
+        description="Verify password exposure against 800M+ known data leaks using the k-Anonymity privacy model."
         badge={
           <Badge variant="rose" size="sm" dot>
             k-Anonymity Range API
@@ -171,27 +170,16 @@ export function BreachCheckerPage() {
         }
       />
 
-      {/* Main Interactive Chamber */}
-      <Card variant="default" padding="lg" className="border-border">
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-sans">
-              Check your password exposure.
-            </h2>
-            <p className="text-xs sm:text-sm text-muted max-w-2xl leading-relaxed">
-              Find out whether a password appears in known breach datasets using a privacy-preserving lookup.
-            </p>
-          </div>
-
-          <BreachPasswordInput
-            value={password}
-            onChange={handlePasswordChange}
-            onClear={handleClear}
-            onSubmit={executeCheck}
-            isLoading={status === 'loading'}
-          />
-        </div>
-      </Card>
+      {/* Main Interactive Query Chamber */}
+      <div className="p-4 sm:p-5 rounded-xl border border-border bg-surface shadow-sm">
+        <BreachPasswordInput
+          value={password}
+          onChange={handlePasswordChange}
+          onClear={handleClear}
+          onSubmit={executeCheck}
+          isLoading={status === 'loading'}
+        />
+      </div>
 
       {/* Dynamic Query Result Component */}
       <BreachResult

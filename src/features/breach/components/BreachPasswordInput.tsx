@@ -41,15 +41,15 @@ export function BreachPasswordInput({
       <div className="flex items-center justify-between">
         <label
           htmlFor={inputId}
-          className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-2 font-mono"
+          className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5 font-mono"
         >
           <KeyRound className="w-3.5 h-3.5 text-accent" />
-          <span>CREDENTIAL QUERY CHAMBER</span>
+          <span>Credential Query Chamber</span>
         </label>
         <div className="flex items-center gap-2">
           {!isInputEmpty && (
             <Badge variant="neutral" size="sm">
-              <span className="font-mono">{value.length}</span> chars
+              <span className="font-mono">{value.length}</span> {value.length === 1 ? 'char' : 'chars'}
             </Badge>
           )}
           <Badge variant="amber" size="sm" dot>
@@ -67,25 +67,25 @@ export function BreachPasswordInput({
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={disabled || isLoading}
-          placeholder="Enter a password to check exposure against 800M+ breach records..."
+          placeholder="Enter a password to check exposure against 800M+ leaks..."
           autoComplete="off"
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
           className={cn(
-            'w-full h-12 pl-4 pr-24 bg-surface text-foreground placeholder:text-muted text-sm sm:text-base font-mono rounded-lg border border-border transition-colors duration-150',
+            'w-full h-11 pl-3.5 pr-20 bg-background-base text-foreground placeholder:text-muted/60 text-sm sm:text-base font-mono rounded-lg border border-border transition-colors duration-150',
             'focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent',
             'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
         />
 
-        <div className="absolute right-2.5 flex items-center gap-1">
+        <div className="absolute right-2 flex items-center gap-1">
           {!isInputEmpty && (
             <button
               type="button"
               onClick={onClear}
               disabled={isLoading || disabled}
-              className="p-1.5 rounded text-muted hover:text-foreground hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent disabled:opacity-40"
+              className="p-1 rounded text-muted hover:text-foreground hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent disabled:opacity-40"
               aria-label="Clear password input"
               title="Clear input"
             >
@@ -97,7 +97,7 @@ export function BreachPasswordInput({
             type="button"
             onClick={() => setShowPassword((prev) => !prev)}
             disabled={disabled}
-            className="p-1.5 rounded text-muted hover:text-foreground hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+            className="p-1 rounded text-muted hover:text-foreground hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
             title={showPassword ? 'Hide password' : 'Show password'}
           >
@@ -109,21 +109,21 @@ export function BreachPasswordInput({
       {/* Action Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
         <div className="flex items-center gap-2 text-[11px] text-muted">
-          <ShieldCheck className="w-3.5 h-3.5 text-accent" />
+          <ShieldCheck className="w-3.5 h-3.5 text-accent shrink-0" />
           <span>Local SHA-1 digest calculated in memory. Only 5-character prefix is transmitted.</span>
         </div>
 
         <Button
           type="button"
           variant="primary"
-          size="md"
+          size="sm"
           isLoading={isLoading}
           disabled={isInputEmpty || disabled || isLoading}
           onClick={onSubmit}
-          rightIcon={<ArrowRight className="w-4 h-4" />}
+          rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
           className="w-full sm:w-auto"
         >
-          Check Password
+          Check Exposure
         </Button>
       </div>
     </div>

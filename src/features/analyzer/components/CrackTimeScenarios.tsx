@@ -42,36 +42,36 @@ export function CrackTimeScenarios({
   ];
 
   return (
-    <div className="space-y-3 p-4 rounded-card bg-background-surface/80 border border-border">
+    <div className="space-y-3 p-4 rounded-xl bg-surface border border-border">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground-dim flex items-center gap-1.5 font-mono">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5 font-mono">
           <Clock className="w-3.5 h-3.5 text-accent" />
-          Estimated Crack Time by Attack Scenario
+          <span>Estimated Crack Times</span>
         </h3>
-        <span className="text-[11px] font-mono text-foreground-dim">Threat Models</span>
+        <span className="text-[10px] font-mono text-muted-dim">4 Attack Models</span>
       </div>
 
-      {/* Compact 4-scenario layout */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+      {/* Compact 2x2 grid (or 4 on wide view) */}
+      <div className="grid grid-cols-2 gap-2">
         {scenarios.map((sc) => {
           const Icon = sc.icon;
           return (
             <div
               key={sc.title}
-              className="p-3 rounded-lg bg-background-elevated/40 border border-border/50 flex flex-col justify-between space-y-2"
+              className="p-2.5 rounded-lg bg-surface-elevated/40 border border-border/50 flex flex-col justify-between gap-1.5"
             >
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                  <Icon className="w-3.5 h-3.5 text-muted shrink-0" />
-                  <span className="truncate">{sc.title}</span>
+                  <Icon className="w-3 h-3 text-muted shrink-0" />
+                  <span className="truncate text-[11px]">{sc.title}</span>
                 </div>
-                <div className="font-mono text-[10px] text-muted">
+                <div className="font-mono text-[9px] text-muted-dim">
                   {sc.rate}
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-border/40">
-                <span className="text-[10px] text-muted-dim block font-mono">Estimated Time</span>
+              <div className="pt-1.5 border-t border-border/40">
+                <span className="text-[9px] text-muted-dim block font-mono">Crack Time</span>
                 <span className="font-mono text-xs font-bold text-accent tracking-tight truncate block">
                   {sc.time}
                 </span>
@@ -90,14 +90,14 @@ export function CrackTimeScenarios({
         <div className="mt-2.5 space-y-2 text-[11px] text-muted leading-relaxed">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {scenarios.map((sc) => (
-              <div key={sc.title} className="p-2 rounded bg-background-base/60 border border-border/50">
-                <strong className="text-foreground block">{sc.title} ({sc.rate})</strong>
-                <span>{sc.methodology}</span>
+              <div key={sc.title} className="p-2 rounded bg-surface-elevated/60 border border-border/50">
+                <strong className="text-foreground block text-[11px]">{sc.title} ({sc.rate})</strong>
+                <span className="text-[10px] text-muted">{sc.methodology}</span>
               </div>
             ))}
           </div>
           <p className="text-[10px] text-muted-dim font-mono pt-1">
-            * Methodology & Limitations: Crack times depend on assumed attack rates and heuristic patterns from zxcvbn. They represent theoretical benchmarks and do not constitute absolute security guarantees against tailored dictionaries or emerging hardware.
+            * Methodology: Crack times derived from zxcvbn entropy calculations across standard hardware hashes. Benchmarks assume sustained brute-force attack rates without factoring in unknown offline dictionary optimizations.
           </p>
         </div>
       </details>

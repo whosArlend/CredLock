@@ -4,7 +4,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
-import { History, Save } from 'lucide-react';
+import { History, Save, Sparkles, Shield, Cpu, Lock } from 'lucide-react';
 import {
   analyzePassword,
   createSanitizedAnalysisRecord,
@@ -67,68 +67,138 @@ export function AnalyzerPage() {
         }
       />
 
-      {/* Password Input Card */}
-      <div className="p-4 sm:p-5 rounded-card bg-background-surface/80 border border-border shadow-card">
-        <PasswordInput
-          value={password}
-          onChange={setPassword}
-          onClear={handleClear}
-        />
-      </div>
-
-      {/* Strength Gauge & Estimator Metrics */}
-      <StrengthMeter
-        score={analysisResult.score}
-        isEmpty={isEmpty}
-        crackDifficultyBits={analysisResult.crackDifficultyBits}
-        guesses={analysisResult.guesses}
-        calculationTimeMs={analysisResult.calculationTimeMs}
-      />
-
-      {/* Character Composition */}
-      <CharacterCompositionBadges composition={analysisResult.composition} />
-
-      {/* Attack Scenario Crack Times */}
-      <CrackTimeScenarios
-        crackTimes={analysisResult.crackTimes}
-        isEmpty={isEmpty}
-      />
-
-      {/* Feedback & Detected Patterns */}
-      <FeedbackCard
-        warning={analysisResult.feedback.warning}
-        suggestions={analysisResult.feedback.suggestions}
-        patterns={analysisResult.patternsDetected}
-        isEmpty={isEmpty}
-      />
-
-      {/* Actions Toolbar */}
-      {!isEmpty && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-card bg-background-surface/80 border border-border">
-          <div className="text-xs text-foreground-muted">
-            <span>Ready to archive this evaluation? Only sanitized metadata will be preserved.</span>
+      {/* 2-Column Responsive Diagnostic Workbench */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Left Column: Input, Gauge & Metrics (7 cols on desktop) */}
+        <div className="lg:col-span-6 space-y-4">
+          {/* Password Input Card */}
+          <div className="p-4 rounded-xl bg-surface border border-border shadow-sm">
+            <PasswordInput
+              value={password}
+              onChange={setPassword}
+              onClear={handleClear}
+            />
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button
-              variant="primary"
-              size="sm"
-              leftIcon={<Save className="w-4 h-4" />}
-              onClick={handleSaveToHistory}
-              className="w-full sm:w-auto"
-            >
-              Save to Analysis History
-            </Button>
-            <Link to="/analysis-history" className="w-full sm:w-auto">
-              <Button variant="secondary" size="sm" className="w-full sm:w-auto">
-                Inspect History
-              </Button>
-            </Link>
-          </div>
+
+          {/* Strength Gauge & Estimator Metrics */}
+          <StrengthMeter
+            score={analysisResult.score}
+            isEmpty={isEmpty}
+            crackDifficultyBits={analysisResult.crackDifficultyBits}
+            guesses={analysisResult.guesses}
+            calculationTimeMs={analysisResult.calculationTimeMs}
+          />
+
+          {/* Character Diversity Badges */}
+          <CharacterCompositionBadges composition={analysisResult.composition} />
+
+          {/* Actions Toolbar */}
+          {!isEmpty && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-xl bg-surface border border-border">
+              <div className="text-xs text-muted">
+                <span>Preserve evaluation? Only sanitized metadata is recorded.</span>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Save className="w-4 h-4" />}
+                  onClick={handleSaveToHistory}
+                  className="w-full sm:w-auto"
+                >
+                  Save to History
+                </Button>
+                <Link to="/analysis-history" className="w-full sm:w-auto">
+                  <Button variant="secondary" size="sm" className="w-full sm:w-auto">
+                    Inspect
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Privacy Notice Card */}
+          <PrivacyNoticeCard />
         </div>
-      )}
 
-      {/* Privacy Notice Card */}
-      <PrivacyNoticeCard />
+        {/* Right Column: Feedback & Crack Scenarios (5 cols on desktop) */}
+        <div className="lg:col-span-6 space-y-4">
+          {!isEmpty ? (
+            <>
+              {/* Feedback & Detected Patterns at the top for immediate visibility */}
+              <FeedbackCard
+                warning={analysisResult.feedback.warning}
+                suggestions={analysisResult.feedback.suggestions}
+                patterns={analysisResult.patternsDetected}
+                isEmpty={isEmpty}
+              />
+
+              {/* Attack Scenario Crack Times */}
+              <CrackTimeScenarios
+                crackTimes={analysisResult.crackTimes}
+                isEmpty={isEmpty}
+              />
+            </>
+          ) : (
+            /* Empty State: Standby Guidance Panel */
+            <div className="p-5 rounded-xl bg-surface/60 border border-border/80 space-y-4 text-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-border/40">
+                <div className="flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-wider text-accent">
+                  <Shield className="w-4 h-4" />
+                  <span>Evaluation Engine Ready</span>
+                </div>
+                <Badge variant="neutral" size="sm">zxcvbn Heuristic</Badge>
+              </div>
+
+              <p className="text-muted leading-relaxed">
+                CredLock performs exhaustive client-side cryptographic analysis as you type. Real-time metrics will render automatically across multiple threat vectors:
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                <div className="p-3 rounded-lg bg-surface-elevated/40 border border-border/40 space-y-1">
+                  <span className="font-mono text-accent text-[11px] font-semibold flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Entropy & Guesses
+                  </span>
+                  <p className="text-[11px] text-muted leading-snug">
+                    Log2 keyspace calculations and raw guess-work estimations under optimal cracking models.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-lg bg-surface-elevated/40 border border-border/40 space-y-1">
+                  <span className="font-mono text-accent text-[11px] font-semibold flex items-center gap-1.5">
+                    <Cpu className="w-3.5 h-3.5" />
+                    4 Threat Scenarios
+                  </span>
+                  <p className="text-[11px] text-muted leading-snug">
+                    Projected times against unthrottled online attacks, GPU clusters, and slow adaptive hashes.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-lg bg-surface-elevated/40 border border-border/40 space-y-1">
+                  <span className="font-mono text-accent text-[11px] font-semibold flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5" />
+                    Pattern Recognition
+                  </span>
+                  <p className="text-[11px] text-muted leading-snug">
+                    Detection of dictionary words, keyboard walks, leetspeak substitutions, and dates.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-lg bg-surface-elevated/40 border border-border/40 space-y-1">
+                  <span className="font-mono text-accent text-[11px] font-semibold flex items-center gap-1.5">
+                    <History className="w-3.5 h-3.5" />
+                    Zero Persistence
+                  </span>
+                  <p className="text-[11px] text-muted leading-snug">
+                    Passwords live only in transient volatile memory. Archival saves only sanitized audit stats.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

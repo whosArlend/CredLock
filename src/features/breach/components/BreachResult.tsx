@@ -48,24 +48,24 @@ export function BreachResult({
   // State C: Loading
   if (status === 'loading') {
     return (
-      <Card variant="inset" padding="lg" className="border-border">
-        <div className="flex flex-col items-center justify-center py-8 space-y-4 text-center">
+      <Card variant="inset" padding="md" className="border-border">
+        <div className="flex flex-col items-center justify-center py-6 space-y-3 text-center">
           <div className="relative">
-            <div className="w-12 h-12 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
+            <div className="w-10 h-10 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
             <div className="absolute inset-0 flex items-center justify-center">
-              <Lock className="w-5 h-5 text-accent" />
+              <Lock className="w-4 h-4 text-accent" />
             </div>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <div className="font-mono text-xs font-semibold uppercase tracking-wider text-accent">
               [ HIBP RANGE QUERY // IN PROGRESS ]
             </div>
-            <p className="text-sm font-medium text-foreground">
+            <p className="text-xs sm:text-sm font-medium text-foreground">
               Transmitting 5-character prefix to Have I Been Pwned...
             </p>
-            <p className="text-xs text-muted max-w-md">
-              Matching suffixes will be evaluated client-side in your browser. Zero plaintext credentials leave your device.
+            <p className="text-[11px] text-muted max-w-md">
+              Matching suffixes will be evaluated client-side in memory. Zero plaintext credentials leave your device.
             </p>
           </div>
         </div>
@@ -76,20 +76,20 @@ export function BreachResult({
   // State D: Error
   if (status === 'error') {
     return (
-      <Card variant="default" padding="lg" className="border-amber-500/40 bg-surface">
+      <Card variant="default" padding="md" className="border-amber-500/40 bg-surface">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-500 shrink-0 mt-0.5 sm:mt-0">
-              <AlertTriangle className="w-5 h-5" />
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-500 shrink-0 mt-0.5 sm:mt-0">
+              <AlertTriangle className="w-4 h-4" />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               <div className="flex items-center gap-2">
                 <span className="font-mono text-xs font-semibold uppercase tracking-wider text-amber-500">
                   VERIFICATION ERROR
                 </span>
                 <Badge variant="amber" size="sm">Query Interrupted</Badge>
               </div>
-              <h3 className="text-sm sm:text-base font-bold text-foreground">
+              <h3 className="text-sm font-bold text-foreground">
                 Unable to complete breach lookup
               </h3>
               <p className="text-xs text-muted max-w-xl leading-relaxed">
@@ -103,7 +103,7 @@ export function BreachResult({
             variant="outline"
             size="sm"
             onClick={onRetry}
-            leftIcon={<RefreshCw className="w-4 h-4" />}
+            leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
             className="w-full sm:w-auto shrink-0"
           >
             Retry Query
@@ -118,21 +118,21 @@ export function BreachResult({
     if (result.isBreached) {
       // State B: Found in Breaches
       return (
-        <Card variant="default" padding="lg" className="border-danger/40 bg-surface space-y-6">
+        <Card variant="default" padding="md" className="border-danger/40 bg-surface space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-border">
-            <div className="flex items-start gap-3.5">
-              <div className="p-2.5 rounded-lg bg-danger/10 border border-danger/30 text-danger shrink-0">
-                <ShieldAlert className="w-6 h-6" />
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-danger/10 border border-danger/30 text-danger shrink-0">
+                <ShieldAlert className="w-5 h-5" />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs font-semibold uppercase tracking-wider text-danger">
-                    BREACH DETECTED // HIGH EXPOSURE RISK
+                    BREACH DETECTED // HIGH EXPOSURE
                   </span>
                   <Badge variant="rose" size="sm" dot>Compromised</Badge>
                 </div>
-                <h3 className="text-lg font-bold text-foreground">
-                  This password appears in known data breaches
+                <h3 className="text-base font-bold text-foreground">
+                  This password appears in known data leaks
                 </h3>
                 <p className="text-xs text-muted max-w-xl leading-relaxed">
                   The local hash suffix matched a record in public credential dumps. Automated credential-stuffing tools test these lists constantly.
@@ -140,45 +140,45 @@ export function BreachResult({
               </div>
             </div>
 
-            <div className="flex flex-col items-start sm:items-end p-3 rounded-lg bg-background-base border border-border shrink-0">
-              <span className="font-mono text-[10px] text-muted uppercase tracking-wider">
+            <div className="flex flex-col items-start sm:items-end p-2.5 rounded-lg bg-background-base border border-border shrink-0">
+              <span className="font-mono text-[9px] text-muted uppercase tracking-wider">
                 RECORDED EXPOSURES
               </span>
-              <span className="font-mono text-2xl font-bold text-danger tabular-nums">
+              <span className="font-mono text-xl sm:text-2xl font-bold text-danger tabular-nums">
                 {result.breachCount.toLocaleString()}
               </span>
-              <span className="font-mono text-[10px] text-muted-dim">
+              <span className="font-mono text-[9px] text-muted-dim">
                 public database occurrences
               </span>
             </div>
           </div>
 
           {/* Actionable Guidance */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-lg bg-background-base/60 border border-border space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            <div className="p-3 rounded-lg bg-background-base/60 border border-border space-y-1.5">
               <span className="font-mono text-xs font-semibold text-accent uppercase tracking-wider flex items-center gap-1.5">
                 <ShieldAlert className="w-3.5 h-3.5" />
                 IMMEDIATE ACTIONS REQUIRED
               </span>
-              <ul className="text-xs text-muted space-y-1.5 list-disc pl-4 leading-relaxed">
+              <ul className="text-xs text-muted space-y-1 list-disc pl-4 leading-relaxed">
                 <li><strong className="text-foreground">Stop using this password</strong> on any personal or work accounts.</li>
                 <li>Change passwords immediately on any services sharing this credential.</li>
                 <li>Enable Multi-Factor Authentication (MFA / 2FA) wherever available.</li>
               </ul>
             </div>
 
-            <div className="p-4 rounded-lg bg-background-base/60 border border-border flex flex-col justify-between gap-3">
+            <div className="p-3 rounded-lg bg-background-base/60 border border-border flex flex-col justify-between gap-2.5">
               <div>
                 <span className="font-mono text-xs font-semibold text-accent uppercase tracking-wider flex items-center gap-1.5">
                   <KeyRound className="w-3.5 h-3.5" />
                   GENERATE REPLACEMENT
                 </span>
-                <p className="text-xs text-muted mt-1 leading-relaxed">
-                  Use CredLock's cryptographically secure generator to create an unbiased, high-entropy credential.
+                <p className="text-xs text-muted mt-0.5 leading-relaxed">
+                  Create an unbiased, cryptographically high-entropy credential using CSPRNG.
                 </p>
               </div>
               <Link to="/generator">
-                <Button variant="outline" size="sm" leftIcon={<KeyRound className="w-4 h-4" />} className="w-full">
+                <Button variant="outline" size="sm" leftIcon={<KeyRound className="w-3.5 h-3.5" />} className="w-full">
                   Open Secure Generator
                 </Button>
               </Link>
@@ -186,7 +186,7 @@ export function BreachResult({
           </div>
 
           {/* History Archival Toolbar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
             <span className="text-xs text-muted">
               Preserve this query result? Only exposure status and count are saved.
             </span>
@@ -197,13 +197,13 @@ export function BreachResult({
                 size="sm"
                 disabled={isSaved || isSaving}
                 onClick={handleSave}
-                leftIcon={isSaved ? <Check className="w-4 h-4 text-emerald-500" /> : <Save className="w-4 h-4" />}
+                leftIcon={isSaved ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Save className="w-3.5 h-3.5" />}
                 className="w-full sm:w-auto"
               >
                 {isSaved ? 'Saved to History' : 'Save to Breach History'}
               </Button>
               <Link to="/breach-history" className="w-full sm:w-auto">
-                <Button variant="secondary" size="sm" leftIcon={<History className="w-4 h-4" />} className="w-full sm:w-auto">
+                <Button variant="secondary" size="sm" leftIcon={<History className="w-3.5 h-3.5" />} className="w-full sm:w-auto">
                   View History
                 </Button>
               </Link>
@@ -215,20 +215,20 @@ export function BreachResult({
 
     // State A: Not Found in Breaches
     return (
-      <Card variant="default" padding="lg" className="border-emerald-500/30 bg-surface space-y-6">
+      <Card variant="default" padding="md" className="border-emerald-500/30 bg-surface space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-border">
-          <div className="flex items-start gap-3.5">
-            <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 shrink-0">
-              <ShieldCheck className="w-6 h-6" />
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 shrink-0">
+              <ShieldCheck className="w-5 h-5" />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs font-semibold uppercase tracking-wider text-emerald-500">
+                <span className="font-mono text-xs font-semibold uppercase tracking-wider text-emerald-400">
                   NO MATCH FOUND // QUERY VERIFIED
                 </span>
                 <Badge variant="emerald" size="sm" dot>Not Exposed</Badge>
               </div>
-              <h3 className="text-lg font-bold text-foreground">
+              <h3 className="text-base font-bold text-foreground">
                 No breach records found for this password
               </h3>
               <p className="text-xs text-muted max-w-xl leading-relaxed">
@@ -237,21 +237,21 @@ export function BreachResult({
             </div>
           </div>
 
-          <div className="flex flex-col items-start sm:items-end p-3 rounded-lg bg-background-base border border-border shrink-0">
-            <span className="font-mono text-[10px] text-muted uppercase tracking-wider">
+          <div className="flex flex-col items-start sm:items-end p-2.5 rounded-lg bg-background-base border border-border shrink-0">
+            <span className="font-mono text-[9px] text-muted uppercase tracking-wider">
               DATABASE OCCURRENCES
             </span>
-            <span className="font-mono text-2xl font-bold text-emerald-500 tabular-nums">
+            <span className="font-mono text-xl sm:text-2xl font-bold text-emerald-400 tabular-nums">
               0
             </span>
-            <span className="font-mono text-[10px] text-muted-dim">
+            <span className="font-mono text-[9px] text-muted-dim">
               clean in queried dataset
             </span>
           </div>
         </div>
 
         {/* Security Warning Notice */}
-        <div className="p-4 rounded-lg bg-background-base/60 border border-border space-y-2">
+        <div className="p-3 rounded-lg bg-background-base/60 border border-border space-y-1.5">
           <span className="font-mono text-xs font-semibold text-accent uppercase tracking-wider flex items-center gap-1.5">
             <Lock className="w-3.5 h-3.5" />
             CRITICAL SECURITY CONTEXT
@@ -259,7 +259,7 @@ export function BreachResult({
           <p className="text-xs text-muted leading-relaxed">
             Absence from public breach compilations <strong className="text-foreground">does not guarantee</strong> that a password is safe or mathematically resilient. Passwords with low entropy, dictionary patterns, or short lengths can still be rapidly cracked in offline brute-force attacks.
           </p>
-          <div className="pt-1">
+          <div className="pt-0.5">
             <Link to="/analyzer" className="text-xs text-accent hover:underline inline-flex items-center gap-1 font-mono">
               Evaluate full heuristic strength in Password Analyzer &rarr;
             </Link>
@@ -267,7 +267,7 @@ export function BreachResult({
         </div>
 
         {/* History Archival Toolbar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
           <span className="text-xs text-muted">
             Preserve this clean verification in your session audit history?
           </span>
@@ -278,13 +278,13 @@ export function BreachResult({
               size="sm"
               disabled={isSaved || isSaving}
               onClick={handleSave}
-              leftIcon={isSaved ? <Check className="w-4 h-4 text-emerald-500" /> : <Save className="w-4 h-4" />}
+              leftIcon={isSaved ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Save className="w-3.5 h-3.5" />}
               className="w-full sm:w-auto"
             >
               {isSaved ? 'Saved to History' : 'Save to Breach History'}
             </Button>
             <Link to="/breach-history" className="w-full sm:w-auto">
-              <Button variant="secondary" size="sm" leftIcon={<History className="w-4 h-4" />} className="w-full sm:w-auto">
+              <Button variant="secondary" size="sm" leftIcon={<History className="w-3.5 h-3.5" />} className="w-full sm:w-auto">
                 View History
               </Button>
             </Link>

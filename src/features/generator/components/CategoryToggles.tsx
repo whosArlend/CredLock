@@ -80,23 +80,23 @@ export const CategoryToggles: React.FC<CategoryTogglesProps> = ({
   const hasNoCategories = selectedCount === 0;
 
   return (
-    <div className="rounded-xl border border-border bg-background-surface/80 p-4 space-y-4 shadow-sm">
+    <div className="rounded-xl border border-border bg-surface p-4 space-y-3.5 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-cyber-cyan" aria-hidden="true" />
-          <h3 className="text-sm font-semibold text-foreground">
-            Character Sets & Pool Metrics
+          <Sparkles className="w-4 h-4 text-accent" aria-hidden="true" />
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted font-mono">
+            Character Sets & Pool
           </h3>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Badge variant={hasNoCategories ? 'rose' : 'cyan'} size="sm">
-            Pool: {poolSize} chars
+            Pool: <span className="font-mono">{poolSize}</span>
           </Badge>
-          <Tooltip content="Theoretical pool-based entropy estimate: length * log2(poolSize). Upper bound assuming unconstrained uniform selection; category constraints slightly restrict the keyspace.">
+          <Tooltip content="Theoretical pool-based entropy estimate: length * log2(poolSize). Upper bound assuming unconstrained uniform selection.">
             <div>
               <Badge variant={hasNoCategories ? 'rose' : 'emerald'} size="sm">
-                ~{theoreticalPoolEntropyBits} bits (Pool Est.)
+                ~<span className="font-mono">{theoreticalPoolEntropyBits}</span> bits
               </Badge>
             </div>
           </Tooltip>
@@ -104,7 +104,7 @@ export const CategoryToggles: React.FC<CategoryTogglesProps> = ({
       </div>
 
       {/* Category Selection Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {CATEGORIES.map((cat) => {
           const isChecked = options[cat.key];
           return (
@@ -115,36 +115,36 @@ export const CategoryToggles: React.FC<CategoryTogglesProps> = ({
               aria-checked={isChecked}
               disabled={disabled}
               onClick={() => handleToggle(cat.key)}
-              className={`flex items-start justify-between p-3 rounded-lg border text-left transition-all select-none ${
+              className={`flex items-start justify-between p-2.5 rounded-lg border text-left transition-all select-none ${
                 isChecked
-                  ? 'border-cyber-cyan/50 bg-cyber-cyan/5 hover:border-cyber-cyan text-foreground'
-                  : 'border-border/60 bg-background-base/60 hover:border-border text-foreground-muted'
-              } disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyber-cyan`}
+                  ? 'border-accent/50 bg-accent/10 hover:border-accent text-foreground'
+                  : 'border-border/60 bg-background-base/60 hover:border-border text-muted'
+              } disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent`}
             >
-              <div className="space-y-1 pr-2">
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-semibold ${isChecked ? 'text-cyber-cyan' : 'text-foreground-muted'}`}>
+              <div className="space-y-0.5 pr-2">
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-xs font-semibold ${isChecked ? 'text-accent' : 'text-muted'}`}>
                     {cat.label}
                   </span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-background-base text-foreground-muted border border-border/40">
+                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-background-base text-muted-dim border border-border/40">
                     {cat.tag}
                   </span>
                 </div>
-                <div className="font-mono text-[11px] text-foreground-muted/70 truncate max-w-[190px]">
+                <div className="font-mono text-[10px] text-muted-dim truncate max-w-[170px]">
                   {cat.examples}
                 </div>
               </div>
 
               {/* Styled Check Indicator */}
               <div
-                className={`mt-0.5 shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                className={`mt-0.5 shrink-0 w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors ${
                   isChecked
-                    ? 'border-cyber-cyan bg-cyber-cyan text-background'
-                    : 'border-border bg-background-surface text-transparent'
+                    ? 'border-accent bg-accent text-background-base'
+                    : 'border-border bg-surface text-transparent'
                 }`}
                 aria-hidden="true"
               >
-                <Check className="w-3 h-3 stroke-[3]" />
+                <Check className="w-2.5 h-2.5 stroke-[3]" />
               </div>
             </button>
           );
@@ -155,11 +155,11 @@ export const CategoryToggles: React.FC<CategoryTogglesProps> = ({
       {hasNoCategories && (
         <div
           role="alert"
-          className="rounded-lg border border-cyber-rose/30 bg-cyber-rose/10 p-3 text-xs text-cyber-rose flex items-center gap-2"
+          className="rounded-lg border border-danger/30 bg-danger/10 p-2.5 text-xs text-danger flex items-center gap-2"
         >
           <ShieldAlert className="w-4 h-4 shrink-0" aria-hidden="true" />
           <span>
-            <strong>Invalid Configuration:</strong> Select at least one character category to generate a password.
+            <strong>Configuration Required:</strong> Select at least one character category.
           </span>
         </div>
       )}

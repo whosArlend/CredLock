@@ -22,20 +22,22 @@ export function PasswordInput({
   const inputId = useId();
 
   return (
-    <div className={cn('w-full flex flex-col gap-2', className)}>
+    <div className={cn('w-full flex flex-col gap-2.5', className)}>
       <div className="flex items-center justify-between">
         <label
           htmlFor={inputId}
-          className="text-xs font-semibold uppercase tracking-wider text-foreground-dim flex items-center gap-1.5"
+          className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5 font-mono"
         >
-          <Lock className="w-3.5 h-3.5 text-cyber-emerald" />
-          Password to Evaluate
+          <Lock className="w-3.5 h-3.5 text-accent" />
+          <span>Password Evaluation Chamber</span>
         </label>
         <div className="flex items-center gap-2">
-          {value.length > 0 && (
+          {value.length > 0 ? (
             <Badge variant="neutral" size="sm">
-              {value.length} {value.length === 1 ? 'character' : 'characters'}
+              <span className="font-mono">{value.length}</span> {value.length === 1 ? 'char' : 'chars'}
             </Badge>
+          ) : (
+            <span className="text-[11px] font-mono text-muted-dim">Ready for input</span>
           )}
         </div>
       </div>
@@ -53,8 +55,8 @@ export function PasswordInput({
           autoCorrect="off"
           spellCheck={false}
           className={cn(
-            'w-full h-12 pl-4 pr-24 bg-background-surface text-foreground placeholder:text-foreground-dim text-sm sm:text-base font-mono rounded-lg border border-border transition-colors duration-150',
-            'focus:outline-none focus:border-cyber-emerald focus:ring-1 focus:ring-cyber-emerald',
+            'w-full h-11 pl-3.5 pr-20 bg-background-base text-foreground placeholder:text-muted/60 text-sm sm:text-base font-mono rounded-lg border border-border transition-colors duration-150',
+            'focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent',
             'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
         />
@@ -64,7 +66,7 @@ export function PasswordInput({
             <button
               type="button"
               onClick={onClear}
-              className="p-1.5 rounded text-foreground-dim hover:text-foreground hover:bg-background-elevated transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyber-emerald"
+              className="p-1 rounded text-muted hover:text-foreground hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
               aria-label="Clear password input"
               title="Clear input"
             >
@@ -75,7 +77,7 @@ export function PasswordInput({
           <button
             type="button"
             onClick={() => setShowPassword((prev) => !prev)}
-            className="p-1.5 rounded text-foreground-dim hover:text-foreground hover:bg-background-elevated transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyber-emerald"
+            className="p-1 rounded text-muted hover:text-foreground hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
             title={showPassword ? 'Hide password' : 'Show password'}
           >
@@ -83,8 +85,8 @@ export function PasswordInput({
           </button>
         </div>
       </div>
-      <p className="text-[11px] text-foreground-dim leading-relaxed">
-        Password analysis runs locally in your browser memory. Input is never transmitted or saved.
+      <p className="text-[11px] text-muted-dim leading-snug">
+        Client-side evaluation in memory. Keystrokes are never transmitted or logged.
       </p>
     </div>
   );
