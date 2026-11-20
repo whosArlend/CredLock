@@ -538,7 +538,13 @@ npm test
 npm run test:watch
 ```
 
-Cakupan pengujian (99 test cases lintas 7 test suites):
+Cakupan pengujian (112 test cases lintas 8 test suites):
+- `tests/audit.test.ts` (13 tests — Phase 3.3E Integration & Security Audit):
+  - Unit test `sanitizeSearchTerm`: pembersihan karakter kontrol ASCII, konversi delimiter PostgREST `,()":` ke spasi, escaping wildcard SQL `%` dan `_`, serta escaping backslash `\`
+  - Pengujian integrasi proteksi pencarian pada Breaches, Recommendations, dan Articles
+  - Uji penolakan input query pencarian berlebih (> 100 karakter) dengan HTTP 400
+  - Verifikasi konsistensi amplop respon (`success`, `data`, `pagination`, `timestamp`) lintas seluruh endpoint list
+  - Verifikasi respon error 404 identik dan aman tanpa bocoran data internal
 - `tests/articles.test.ts` (30 tests):
   - Paginasi default (page 1, limit 10), penyesuaian limit/halaman, dan kalkulasi pagination metadata
   - Filter kategori (`category=guide`, `analysis`, `news`, `explainer`)

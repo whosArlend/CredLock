@@ -6,6 +6,7 @@ import type {
   RecommendationQueryOptions,
 } from '../types/recommendation.js';
 import type { AppError } from '../middleware/errorHandler.js';
+import { sanitizeSearchTerm } from '../utils/sanitize.js';
 
 export class RecommendationRepository {
   /**
@@ -38,7 +39,7 @@ export class RecommendationRepository {
 
     // Apply case-insensitive search across title, summary, and category
     if (options.search) {
-      const sanitized = options.search.replace(/[,()":]/g, ' ').trim();
+      const sanitized = sanitizeSearchTerm(options.search);
       if (sanitized.length > 0) {
         query = query.or(
           `title.ilike.%${sanitized}%,summary.ilike.%${sanitized}%,category.ilike.%${sanitized}%`

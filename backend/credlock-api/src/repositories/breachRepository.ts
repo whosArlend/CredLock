@@ -6,6 +6,7 @@ import type {
   BreachQueryOptions,
 } from '../types/breach.js';
 import type { AppError } from '../middleware/errorHandler.js';
+import { sanitizeSearchTerm } from '../utils/sanitize.js';
 
 export class BreachRepository {
   /**
@@ -33,7 +34,7 @@ export class BreachRepository {
 
     // Apply safe search across title, organization, and domain
     if (options.search) {
-      const sanitized = options.search.replace(/[,()":]/g, ' ').trim();
+      const sanitized = sanitizeSearchTerm(options.search);
       if (sanitized.length > 0) {
         query = query.or(
           `title.ilike.%${sanitized}%,organization.ilike.%${sanitized}%,domain.ilike.%${sanitized}%`
