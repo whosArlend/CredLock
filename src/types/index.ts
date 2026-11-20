@@ -89,3 +89,7 @@ export interface IModule1Service {
   getBreachHistory(): Promise<SanitizedBreachRecord[]>;
   getBreachDetail(id: string): Promise<SanitizedBreachRecord | null>;
 }
+
+// Dashboard Security Intelligence Types (Phase 3.4B)
+export * from './dashboard.ts';
+
