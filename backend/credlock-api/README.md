@@ -417,6 +417,115 @@ curl -i "http://localhost:4000/api/v1/recommendations/aktifkan-autentikasi-dua-f
 
 ---
 
+### E. Security Articles Endpoints (Phase 3.3D)
+
+#### 1. `GET /api/v1/articles` (Daftar Artikel Keamanan Terpaginasi)
+Mengambil panduan edukatif, artikel analisa, dan berita keamanan siber yang dipublikasikan (`is_published: true`) dengan dukungan pencarian multi-kolom, penyaringan kategori, pengurutan terindeks, dan paginasi level database.
+
+> **Catatan Optimasi Payload**: Pada endpoint list, kolom `content` (Markdown teks panjang) disembunyikan agar transfer payload jaringan tetap efisien dan hemat bandwidth klien. Kolom `content` lengkap tersedia pada endpoint detail.
+
+**Query Parameters:**
+
+| Parameter | Tipe | Default | Deskripsi |
+| :--- | :--- | :--- | :--- |
+| `page` | Integer | `1` | Nomor halaman (minimal 1) |
+| `limit` | Integer | `10` | Jumlah artikel per halaman (1 hingga 50) |
+| `search` | String | - | Pencarian kata kunci pada `title`, `summary`, atau `category` (maksimal 100 karakter) |
+| `category` | Enum | - | Filter kategori: `guide`, `analysis`, `news`, `explainer` |
+| `sort` | Enum | `published_at` | Kolom pengurutan: `title`, `category`, `published_at`, `read_time_minutes` |
+| `order` | Enum | `desc` | Arah urutan: `asc`, `desc` |
+
+**Contoh Respon Sukses (HTTP 200) — *Nilai Ilustratif*:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "20000000-0000-0000-0000-000000000001",
+      "title": "Anatomi Password yang Kuat: Lebih dari Sekadar Karakter Acak",
+      "slug": "anatomi-password-yang-kuat",
+      "category": "guide",
+      "summary": "Pelajari bagaimana entropi, panjang karakter, dan kombinasi kata membentuk pertahanan matematis.",
+      "author_name": "Tim Keamanan CredLock",
+      "read_time_minutes": 4,
+      "tags": ["passwords", "entropy", "security-hygiene", "guide"],
+      "published_at": "2026-11-15T10:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "totalItems": 6,
+    "totalPages": 1,
+    "hasNextPage": false,
+    "hasPreviousPage": false
+  },
+  "timestamp": "2026-11-20T12:00:00.000Z"
+}
+```
+
+#### 2. `GET /api/v1/articles/:slug` (Detail Artikel Lengkap & Markdown Preserved)
+Mengambil detail lengkap satu artikel keamanan terpublikasi berdasarkan `slug`, dengan teks artikel asli (`content`) berformat Markdown yang dipertahankan seutuhnya tanpa kompromi format (line breaks, math equations, code blocks tetap utuh).
+
+**Contoh Respon Sukses (HTTP 200) — *Nilai Ilustratif*:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "20000000-0000-0000-0000-000000000001",
+    "title": "Anatomi Password yang Kuat: Lebih dari Sekadar Karakter Acak",
+    "slug": "anatomi-password-yang-kuat",
+    "category": "guide",
+    "summary": "Pelajari bagaimana entropi, panjang karakter, dan kombinasi kata membentuk pertahanan matematis.",
+    "content": "# Anatomi Password yang Kuat\n\nBanyak pengguna mengira bahwa...",
+    "author_name": "Tim Keamanan CredLock",
+    "read_time_minutes": 4,
+    "tags": ["passwords", "entropy", "security-hygiene", "guide"],
+    "published_at": "2026-11-15T10:00:00.000Z"
+  },
+  "timestamp": "2026-11-20T12:00:00.000Z"
+}
+```
+
+**Respon Error Not Found (HTTP 404):**  
+Jika `slug` tidak ditemukan, atau berstatus *draft/unpublished* (`is_published: false`), API mengembalikan respon 404 identik guna mencegah *data enumeration*:
+```json
+{
+  "success": false,
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Article with slug 'example-slug' not found"
+  },
+  "timestamp": "2026-11-20T12:00:00.000Z"
+}
+```
+
+**Respon Parameter Tidak Valid (HTTP 400 Bad Request):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Limit must be between 1 and 50"
+  },
+  "timestamp": "2026-11-20T12:00:00.000Z"
+}
+```
+
+### Menguji Artikel dengan `curl`
+```bash
+# Ambil daftar artikel dengan filter kategori dan limit
+curl -i "http://localhost:4000/api/v1/articles?category=guide&limit=5"
+
+# Cari artikel dengan kata kunci dan urutkan berdasarkan waktu baca
+curl -i "http://localhost:4000/api/v1/articles?search=Anatomi&sort=read_time_minutes&order=asc"
+
+# Ambil detail artikel lengkap beserta konten Markdown
+curl -i "http://localhost:4000/api/v1/articles/anatomi-password-yang-kuat"
+```
+
+---
+
 ## 6. Menjalankan Pengujian (Testing)
 
 Pengujian unit dan integrasi HTTP menggunakan **Vitest** dan **Supertest** (seluruh dependensi database di-mock agar pengujian berjalan cepat, deterministik, dan bebas kebocoran kunci):
@@ -429,27 +538,32 @@ npm test
 npm run test:watch
 ```
 
-Cakupan pengujian (69 test cases lintas 6 test suites):
+Cakupan pengujian (99 test cases lintas 7 test suites):
+- `tests/articles.test.ts` (30 tests):
+  - Paginasi default (page 1, limit 10), penyesuaian limit/halaman, dan kalkulasi pagination metadata
+  - Filter kategori (`category=guide`, `analysis`, `news`, `explainer`)
+  - Pencarian multi-kolom (`title`, `summary`, `category`)
+  - Pengurutan terindeks (`sort=title`, `category`, `published_at`, `read_time_minutes` dengan `order=asc/desc`)
+  - Validasi ketat query parameter HTTP 400 (halaman < 1, limit > 50, sort column di luar allowlist, kategori invalid, search > 100 karakter)
+  - Aturan visibilitas publik: artikel *draft* (`is_published: false`) tidak pernah muncul di list maupun dihitung dalam total count
+  - Ketiadaan kolom `content` dan `is_published` pada DTO response list untuk payload hygiene
+  - Detail endpoint HTTP 200 mengembalikan konten Markdown seutuhnya dan metadata lengkap
+  - Detail endpoint HTTP 404 identik untuk slug yang tidak ada atau berstatus *unpublished*
 - `tests/recommendations.test.ts` (27 tests):
   - Paginasi default (page 1, limit 10), penyesuaian limit/halaman, dan kalkulasi pagination metadata
   - Filter kategori (`category=password`, `auth`, `device`, `network`, `incident_response`)
   - Filter prioritas (`priority=critical`, `high`, `medium`, `low`)
   - Pencarian multi-kolom (`title`, `summary`, `category`)
   - Pengurutan terindeks (`sort=title`, `category`, `priority`, `created_at` dengan `order=asc/desc`)
-  - Validasi ketat query parameter HTTP 400 (halaman < 1, limit > 50, sort column di luar allowlist, kategori/prioritas invalid, search > 100 karakter)
-  - Aturan visibilitas publik: item *draft* (`is_published: false`) tidak pernah muncul di list maupun dihitung dalam total count
-  - Ketiadaan kolom `action_steps` dan `is_published` pada DTO response list untuk payload hygiene
-  - Detail endpoint HTTP 200 mengembalikan struktur `action_steps` utuh dan metadata lengkap
-  - Detail endpoint HTTP 404 identik untuk slug yang tidak ada atau berstatus *unpublished*
+  - Validasi ketat query parameter HTTP 400
+  - Aturan visibilitas publik & safe 404
 - `tests/breaches.test.ts` (18 tests):
   - List paginasi default, kustomisasi limit/page, kalkulasi metadata
   - Pencarian multi-kolom (title, organization, domain)
   - Penyaringan keparahan (`severity`)
   - Pengurutan multi-level (`sort` & `order`)
-  - Validasi query parameter HTTP 400 (halaman < 1, limit > 50, sort column di luar allowlist, severity invalid)
-  - Aturan visibilitas publik: data draf/unverified tidak pernah masuk hasil atau total count
-  - Ketiadaan kolom audit internal pada respon list maupun detail
-  - Detail endpoint HTTP 200 untuk slug valid dan HTTP 404 identik untuk record yang tidak ada / draf / unverified
+  - Validasi query parameter HTTP 400
+  - Aturan visibilitas publik & safe 404
 - `tests/dashboard.test.ts` (7 tests): Aggregasi dashboard summary, breakdown severity, limit 5 recent breaches
 - `tests/health.test.ts` (6 tests): Basic liveness probe dan database readiness probe
 - `tests/supabase.test.ts` (7 tests): Validasi skema Zod environment untuk `SUPABASE_SECRET_KEY`
