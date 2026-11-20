@@ -1,8 +1,11 @@
-import helmet from 'helmet';
+import * as helmetModule from 'helmet';
 import cors, { type CorsOptions } from 'cors';
 import { rateLimit } from 'express-rate-limit';
 import { env } from '../config/env.js';
 import { errorResponse } from '../utils/response.js';
+
+// Support both ESM and CommonJS export bindings for Helmet under NodeNext resolution
+const helmet = helmetModule.default;
 
 /**
  * Helmet middleware configuration for HTTP security headers.
