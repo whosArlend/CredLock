@@ -162,53 +162,7 @@ This document tracks the testing strategies, test matrices, and verification run
 
 ---
 
-## Phase 2.7B.1 — Modul 1 (Sales-API) Integration Verification
-
-### 1. Functional & Privacy Test Matrix (`tests/module1Api.test.ts`)
-
-| # | Test Area | Test Description | Invariant Verified | Status |
-| :-: | :--- | :--- | :--- | :---: |
-| **1** | **Default Endpoint Path** | Path resolution | Uses `/modul1-api/api/reports/total` matching Vite development proxy | **PASS** |
-| **2** | **Custom Endpoint Override** | Parameter override | Respects custom URL strings passed to service | **PASS** |
-| **3** | **Bare Numeric Parsing** | Express `res.json(count)` format | Accurately parses bare integer responses (e.g. `42`, `0`) | **PASS** |
-| **4** | **Zero Count Parsing** | Empty database state | Correctly parses `0` without falsy coercion errors | **PASS** |
-| **5** | **JSON Object Parsing** | Wrapped count formats | Correctly extracts count from `{ count: 128 }` and `{ total: 55 }` | **PASS** |
-| **6** | **HTTP 500 Error Handling** | Backend database error | Gracefully parses JSON error message without throwing uncaught exceptions | **PASS** |
-| **7** | **HTTP 404 Route Not Found** | Missing endpoint | Returns descriptive `HTTP Error 404 Not Found` failure object | **PASS** |
-| **8** | **Network Offline Resilience**| Backend disconnected | Handles connection refusal (`TypeError: Failed to fetch`) and flags `isOffline: true` | **PASS** |
-| **9** | **Timeout Handling** | Request exceeding 5000ms | Aborts request cleanly via `AbortController` signal and flags `isOffline: true` | **PASS** |
-| **10** | **Malformed Response Defense**| Non-numeric strings / negatives | Discards invalid formats and returns clean descriptive error | **PASS** |
-| **11** | **Privacy & Zero-Knowledge** | Request inspection | Asserts NO request body, NO passwords, NO hashes, and NO secrets are ever sent | **PASS** |
-
-### 2. Manual End-to-End Verification Matrix (Approved by User)
-
-| Test Item | Verification Procedure | Observed Outcome | Status |
-| :--- | :--- | :--- | :---: |
-| **Backend Service** | Start Express backend at port 3000 (`npm run dev` in `Sales-API`) | Server starts successfully; listens on `http://localhost:3000` | **PASS** |
-| **Supabase Setup** | Supabase database connection and schema provisioned | Schemas for `categories`, `products`, `customers`, `transactions` active | **PASS** |
-| **Endpoint Response** | Query `GET /api/reports/total` | Returns `0` (expected and verified: `customers` table is empty) | **PASS** |
-| **Vite Dev Proxy** | Request `/modul1-api/api/reports/total` from browser client | Successfully proxied to port 3000 without browser CORS errors | **PASS** |
-| **Dashboard Widget** | Mount Home Dashboard (`/`) in browser | `Modul1IntegrationWidget` displays `Sales-API Online`, `0` customers, latency ms | **PASS** |
-| **Manual Refresh** | Click "Refresh API" button | Disables button during query, spins icon, updates timestamp upon resolution | **PASS** |
-| **Error Handling** | Test offline state (stop backend) and restart | Widget transitions to rose `Sales-API Offline`, recovers to `Online` upon restart | **PASS** |
-| **Console Cleanliness** | Inspect Browser DevTools and terminal sessions | Zero runtime errors, zero unhandled rejections, zero CORS warnings | **PASS** |
-
-### 3. Automated Pipeline Verification
-
-| Tool / Check | Command | Result | Verification Notes |
-| :--- | :--- | :---: | :--- |
-| **Unit Test Suite** | `npm test` | **PASS (77/77 tests pass)** | Runs 33 test suites in ~592 ms. |
-| **TypeScript Compiler** | `npx tsc --noEmit` | **PASS (0 errors)** | Zero type errors across all application and test files. |
-| **ESLint Linter** | `npm run lint` | **PASS (0 errors, 0 warnings)** | Clean lint pass across entire codebase. |
-| **Vite Production Build** | `npm run build` | **PASS** | Production bundle compiled cleanly in 5.89s. |
-
-> **Production Deployment Notice:** The Vite development proxy (`/modul1-api`) operates exclusively during local development (`npm run dev`). Production static deployments do not include Vite's development server proxy; production integration requires an appropriate reverse proxy, serverless route, or backend CORS configuration.
-
----
-
 ## Verification Method Distinctions
-
-
 
 * **Automated Node & Build Checks:** Verified compilation, linting, packaging, and cryptographic/heuristic algorithm outputs using automated test runs.
 * **Component Code Audits:** Verified accessible attributes (`aria-label`, `htmlFor`, `:focus-visible`, `role="progressbar"`, reduced motion media queries) directly in source code.

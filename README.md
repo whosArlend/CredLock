@@ -73,37 +73,26 @@ A unified interface for navigating CredLock's security tools and viewing applica
 - Adaptive capsule navigation that changes appearance during scrolling.
 - Minimal, privacy-oriented interface.
 
-### 6. REST API Integration
+### 6. Security Intelligence REST API Integration
 
-CredLock integrates with **Sales-API Modul 1**, an external Express.js REST API connected to a Supabase database.
+CredLock integrates with the **CredLock Security Intelligence API**, an Express.js + TypeScript service connected to Supabase PostgreSQL.
 
-The integration demonstrates real-world API communication as part of the application's academic requirements.
-
-- Retrieves total customer count through `GET /api/reports/total`.
-- Uses a Vite development proxy to communicate with the local Sales-API backend.
-- Displays API connection status and returned customer count.
-- Supports manual refresh.
-- Includes loading, timeout, and error-handling states.
-- Read-only integration scope.
-- Does not access or display individual customer records.
-- Does not persist API data in CredLock's local history.
+- Provides live cybersecurity intelligence including breach incident feeds, security recommendations, and research advisories.
+- Live dashboard KPIs summarizing global threat telemetry.
+- Published-only visibility with Row-Level Security (RLS) policies.
+- Type-safe centralized API client with structured error mapping and exponential backoff retry.
 
 **Integration flow:**
 
 ```text
-CredLock Frontend
+CredLock Frontend (PWA)
        │
        ▼
-Vite Development Proxy
+CredLock Security Intelligence API (Express.js / TypeScript)
        │
        ▼
-Sales-API (Express.js)
-       │
-       ▼
-Supabase Database
+Supabase Managed PostgreSQL
 ```
-
-> **Deployment limitation:** The current Vite proxy is development-only. Production deployment requires an appropriate backend, serverless function, reverse proxy, or secure API configuration. The Sales-API backend must not be exposed publicly without appropriate authentication and security controls.
 
 ## Technology Stack
 
@@ -118,8 +107,8 @@ Supabase Database
 | zxcvbn-ts | Password strength estimation |
 | IndexedDB | Local sanitized history persistence |
 | PWA | Installable web application |
-| Express.js | External Sales-API backend |
-| Supabase | Database for Sales-API integration |
+| Express.js | CredLock Security Intelligence backend |
+| Supabase | Database for Security Intelligence |
 | Vitest / Node test runner | Automated testing |
 
 ## Project Architecture
@@ -199,17 +188,15 @@ npm run lint      # Run ESLint checks
 npm test          # Run automated test suite
 ```
 
-### Running the Modul 1 API Integration Locally
+### Running the Backend API Locally
 
-The Modul 1 API integration requires the Sales-API backend to be running separately.
+CredLock Security Intelligence API runs alongside the frontend:
 
-1. Start the Sales-API backend in its own terminal, configured with the required Supabase environment variables.
-2. Ensure Sales-API is running on the expected local port (`3000`).
-3. Start CredLock using `npm run dev`.
-4. Open CredLock in your browser.
-5. Navigate to the Home Dashboard and verify the Modul 1 API integration widget.
-
-The integration uses the Vite development proxy to forward requests to the local Sales-API backend.
+1. Navigate to the backend directory: `cd backend/credlock-api`
+2. Configure `.env` with your Supabase credentials.
+3. Start the API service: `npm run dev` (starts on port `4000`).
+4. Start the frontend: `npm run dev` (starts on port `5173`).
+5. Open CredLock in your browser to see live Security Intelligence telemetry.
 
 **Important:** Never expose Supabase Secret Keys in the frontend, source code, public repository, or client-side environment variables.
 
@@ -224,9 +211,7 @@ CredLock is designed with a privacy-oriented approach:
 - Generated passwords exist strictly in client RAM and are never written to storage, logs, or history.
 - Breach checking uses the k-anonymity protocol in transient memory.
 - Sensitive API responses and password inputs must not be cached by the PWA.
-- External API integration is limited to read-only customer count retrieval.
 - Supabase backend credentials are isolated from the frontend.
-- The current Modul 1 integration is intended for local development and academic demonstration.
 
 CredLock does not claim absolute security or complete anonymity. Password strength estimates and breach detection results should be interpreted within their technical limitations.
 

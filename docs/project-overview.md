@@ -20,7 +20,7 @@ CredLock provides a client-side cryptographic security utility empowering users 
 | **Password Estimator** | @zxcvbn-ts/core (v4.2.0) | Local heuristic strength estimation, pattern detection, and guess-difficulty modeling. |
 | **Random Number Generation** | Web Crypto API (CSPRNG) | `crypto.getRandomValues()` with rejection sampling for unbiased password generation. |
 | **Local Persistence** | IndexedDB (`credlock-db`) | Native client-side storage for sanitized non-reversible evaluation and breach logs. |
-| **REST API Integration** | Express.js + Supabase (Sales-API) | Read-only aggregate telemetry integration via Vite development reverse proxy. |
+| **REST API Integration** | Express.js + Supabase PostgreSQL | CredLock Security Intelligence API (breaches, recommendations, advisories, telemetry). |
 | **Test Runner** | Node.js Test Runner | Native ESM automated test execution (`node --test`). |
 
 ## 3. Strict Scope Enforcement
@@ -30,6 +30,6 @@ CredLock strictly delivers the following verified capabilities:
 2. **Secure Password Generator (IMPLEMENTED - Phase 2.4):** Cryptographically secure uniform randomness using Web Crypto API rejection sampling, CSPRNG Fisher-Yates shuffle, guaranteed category coverage, and in-memory zero-knowledge handling.
 3. **Password Breach Checker (IMPLEMENTED - Phase 2.5):** k-Anonymity privacy-preserving verification using SHA-1 range queries against Have I Been Pwned.
 4. **Persistent History Layer (IMPLEMENTED - Phase 2.6):** Native IndexedDB (`credlock-db`) with store isolation and zero-knowledge sanitization.
-5. **Modul 1 REST API Integration (IMPLEMENTED & APPROVED - Phase 2.7B.1):** Read-only integration with the user's Express.js + Supabase Sales-API (`GET /api/reports/total`) via Vite development proxy, displaying connection status and total customer count on the Home Dashboard. (Note: The Vite proxy is a local development utility; production deployment requires a dedicated backend or server-side proxy rule).
+5. **Security Intelligence REST API Integration (Phases 3.4A–3.4F):** Dedicated Express.js + Supabase service delivering live breach intelligence feeds, actionable security recommendations, peer-reviewed research advisories, and global threat telemetry.
 
 Unrelated modules (such as AI advisors, educational quizzes, or generic marketing portals) are explicitly excluded from this system.

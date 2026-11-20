@@ -68,28 +68,6 @@ export interface GeneratorValidationResult {
   error?: string;
 }
 
-// Modul 1 (Sales-API) Integration Types (Phase 2.7B.1)
-export type Module1ConnectionStatus = 'idle' | 'loading' | 'online' | 'offline' | 'error';
-
-export interface Module1ReportResult {
-  success: boolean;
-  totalCustomers: number | null;
-  responseTimeMs: number;
-  timestamp: string; // ISO 8601 string of request completion
-  error?: string;
-  isOffline?: boolean;
-}
-
-// REST API Adapter Interface (Prepared for Module 1 Integration)
-export interface IModule1Service {
-  saveAnalysisRecord(record: SanitizedAnalysisRecord): Promise<boolean>;
-  getAnalysisHistory(): Promise<SanitizedAnalysisRecord[]>;
-  getAnalysisDetail(id: string): Promise<SanitizedAnalysisRecord | null>;
-  saveBreachRecord(record: SanitizedBreachRecord): Promise<boolean>;
-  getBreachHistory(): Promise<SanitizedBreachRecord[]>;
-  getBreachDetail(id: string): Promise<SanitizedBreachRecord | null>;
-}
-
 // Dashboard Security Intelligence Types (Phase 3.4B)
 export * from './dashboard.ts';
 

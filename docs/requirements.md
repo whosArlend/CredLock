@@ -10,7 +10,7 @@
 | **List Pages** | At least 2 main list pages | 1. `/analysis-history` (Sanitized Analysis Records)<br>2. `/breach-history` (Sanitized Breach Query Records). |
 | **List-to-Detail Interaction** | Every list item clickable to detail | Flow 1: `/analysis-history` $\rightarrow$ `/analysis-history/:id`<br>Flow 2: `/breach-history` $\rightarrow$ `/breach-history/:id`. Both flows support deep parameterization, empty states, and graceful fallback for missing IDs. |
 | **Profile/About Page** | At least one dedicated page | `/profile` detailing developer profile, academic matrix, security statement, and cache purge. |
-| **Custom REST API** | Integrate Module 1 Web Service | **IMPLEMENTED & APPROVED (Phase 2.7B.1):** Live read-only telemetry from Express.js + Supabase Sales-API (`GET /api/reports/total`) via Vite dev proxy; end-to-end verified with active database. |
+| **Custom REST API** | Integrate Dedicated REST Backend | **IMPLEMENTED (Phases 3.4A–3.4F):** CredLock Security Intelligence API (Express.js + Supabase PostgreSQL) providing live breaches, recommendations, advisories, and dashboard telemetry. |
 | **Source Publication** | GitHub repository | Intentionally postponed until Phase 2 completion. |
 | **Deployment** | Free PWA hosting | PWA build pipeline configured; hosting postponed to deployment phase. |
 

@@ -5,7 +5,6 @@
 -- Description: Creates core tables (breaches, recommendations, articles),
 --              indexes, updated_at trigger, explicit SQL privileges, and
 --              Row Level Security (RLS) policies.
--- Safe Execution: Does NOT touch Sales-API tables (categories, products, customers, transactions).
 -- Idempotency: Uses IF NOT EXISTS, DROP IF EXISTS, and wraps in a transaction.
 -- ============================================================================
 

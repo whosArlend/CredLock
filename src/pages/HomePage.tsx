@@ -1,7 +1,6 @@
 import { HeroMasterInput } from '@/features/home/components/HeroMasterInput';
 import { SecurityFeatureIndex } from '@/features/home/components/SecurityFeatureIndex';
 import { SecurityIntelligenceSection } from '@/features/home/components/SecurityIntelligenceSection';
-import { Modul1IntegrationWidget } from '@/features/home/components/Modul1IntegrationWidget';
 import { RecentActivitySection } from '@/features/home/components/RecentActivitySection';
 
 export function HomePage() {
@@ -36,15 +35,8 @@ export function HomePage() {
       {/* 3. Security Intelligence — Live Backend API Telemetry */}
       <SecurityIntelligenceSection />
 
-      {/* 4. Bottom Row: Recent Local Activity & Modul 1 Adapter */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        <div className="lg:col-span-7 xl:col-span-8">
-          <RecentActivitySection />
-        </div>
-        <div className="lg:col-span-5 xl:col-span-4">
-          <Modul1IntegrationWidget />
-        </div>
-      </div>
+      {/* 4. Bottom Row: Recent Local Activity */}
+      <RecentActivitySection />
     </div>
   );
 }

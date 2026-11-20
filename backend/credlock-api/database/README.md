@@ -6,9 +6,8 @@ Dokumentasi arsitektur, skema tabel, Row Level Security (RLS), hak akses SQL (gr
 
 ## 1. Arsitektur Database
 
-Database ini berjalan di atas instance **Supabase Managed PostgreSQL** yang berbagi project yang sama dengan Modul 1 (Sales-API), namun **terisolasi secara logis dan aman**:
+Database ini berjalan di atas instance **Supabase Managed PostgreSQL**:
 
-- **Tabel Modul 1 (Sales-API)**: `categories`, `products`, `customers`, `transactions`.
 - **Tabel CredLock (Security Intelligence)**: `breaches`, `recommendations`, `articles`.
 
 Skema CredLock didesain murni sebagai penyedia intelijen siber dan materi edukasi. Tidak ada data kredensial, password, master hash, ataupun session pengguna yang disimpan di dalam database ini (*Zero-Knowledge Client Invariant*).
@@ -17,12 +16,11 @@ Skema CredLock didesain murni sebagai penyedia intelijen siber dan materi edukas
 +-----------------------------------------------------------------------------------------+
 |                                  Supabase PostgreSQL                                    |
 |                                                                                         |
-|  [Modul 1: Sales-API Tables]               [CredLock Security Intelligence Tables]       |
-|  - categories                              - breaches                                   |
-|  - products                                - recommendations                            |
-|  - customers                               - articles                                   |
-|  - transactions                                                                         |
-|                                            (Isolated schemas, separate RLS & grants)    |
+|  [CredLock Security Intelligence Tables]                                                |
+|  - breaches                                                                             |
+|  - recommendations                                                                      |
+|  - articles                                                                             |
+|  (Isolated schemas, dedicated RLS & grants)                                             |
 +-----------------------------------------------------------------------------------------+
 ```
 
@@ -237,7 +235,7 @@ ORDER BY event_object_table;
 
 ## 8. Panduan Rollback Aman
 
-Jika ingin membersihkan tabel CredLock tanpa memengaruhi tabel Sales-API:
+Jika ingin membersihkan tabel CredLock:
 
 ```sql
 BEGIN;

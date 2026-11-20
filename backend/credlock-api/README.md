@@ -98,7 +98,6 @@ SUPABASE_SECRET_KEY=your-supabase-secret-key-here
 | `SUPABASE_SECRET_KEY` | Secret Key server-side Supabase (`sb_secret_...`) | Ya (DB Ops) | - |
 
 > Port default **4000** memastikan tidak terjadi konflik dengan:
-> - **Sales-API Modul 1**: Port `3000`
 > - **CredLock PWA (Vite)**: Port `5173`
 
 ---

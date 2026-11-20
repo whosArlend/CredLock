@@ -27,12 +27,5 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
-    proxy: {
-      '/modul1-api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/modul1-api/, ''),
-      },
-    },
   },
 });

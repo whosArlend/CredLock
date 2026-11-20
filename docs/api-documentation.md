@@ -1,79 +1,33 @@
-# Custom REST API Integration Strategy — CredLock
+# REST API Integration Strategy — CredLock
 
-## Current Integration Status: Phase 2.7B.1 Minimal Integration Verified
+## Current Integration Status: Security Intelligence API (Phases 3.4A–3.4F) & HIBP Range API
 
-CredLock integrates with the user's **Modul 1 (Sales-API)** REST Web Service via a decoupled, read-only adapter architecture.
-
----
-
-## 1. Modul 1 (Sales-API) Integration Overview
-
-* **Service Name:** Sales-API (Express.js + Supabase backend)
-* **Integration Phase:** Phase 2.7B.1 Minimal Integration
-* **Integrated Endpoint:** `GET /api/reports/total`
-* **Purpose:** Demonstrates live client-to-backend REST API communication by retrieving the aggregate customer count from the Modul 1 database and surfacing live connection telemetry on the CredLock Home Dashboard.
-
-### Technical Contract:
-* **HTTP Method:** `GET`
-* **Request Headers:** `Accept: application/json`
-* **Request Body:** None (zero payload)
-* **Response Format:** Numeric count (e.g. `42`) or JSON object with count (`{ "count": 42 }` or `{ "total": 42 }`)
-* **Error Response:** JSON with error message (`{ "error": "..." }`) or standard HTTP status codes
+CredLock integrates with:
+1. **CredLock Security Intelligence API**: Dedicated Express.js + TypeScript service backed by Supabase PostgreSQL.
+2. **Have I Been Pwned (HIBP) Range API**: Zero-knowledge k-anonymity breach verification service.
 
 ---
 
-## 2. Local Development & Vite Proxy Configuration
+## 1. CredLock Security Intelligence API Overview
 
-Because Sales-API operates locally on port `3000` without Cross-Origin Resource Sharing (`cors`) headers, CredLock configures a **Vite development proxy** to eliminate browser origin blocks during local evaluation:
+* **Service Name:** CredLock API (`backend/credlock-api`)
+* **Base URL:** `http://localhost:4000/api/v1` (configurable via `VITE_CREDLOCK_API_URL`)
+* **Technology:** Express.js, TypeScript, Supabase Managed PostgreSQL
+* **Security Model:** Row-Level Security (RLS) policies, CORS origin whitelisting, published-only visibility
 
-```typescript
-// vite.config.ts
-server: {
-  port: 5173,
-  host: true,
-  proxy: {
-    '/modul1-api': {
-      target: 'http://localhost:3000',
-      changeOrigin: true,
-      rewrite: (path) => path.replace(/^\/modul1-api/, ''),
-    },
-  },
-}
-```
-
-### Running the Services Locally:
-1. **Start Sales-API (Backend):**
-   Navigate to `Praktikum PPB/Mod. 1/Sales-API` and run:
-   ```bash
-   npm run dev
-   # Starts Express server on http://localhost:3000
-   ```
-2. **Start CredLock (Frontend):**
-   In the CredLock workspace, run:
-   ```bash
-   npm run dev
-   # Starts Vite PWA dev server on http://localhost:5173
-   ```
-3. **Local Route Resolution:**
-   The frontend requests `/modul1-api/api/reports/total`. Vite proxies the request to `http://localhost:3000/api/reports/total`.
-
-### Known Production Limitation:
-> **Important:** The Vite development proxy (`server.proxy`) exists **only** during local development (`npm run dev`). In a production static deployment (e.g., Vercel, Netlify, GitHub Pages), this proxy is not present. For production deployment, a dedicated reverse proxy rule, serverless proxy route, or backend CORS configuration must be provisioned.
+### Endpoints:
+* `GET /api/v1/dashboard/summary` — Aggregated KPIs, global threat metrics, and cataloged intelligence telemetry.
+* `GET /api/v1/breaches` — Paginated list of verified cybersecurity breach incidents with search, filtering, and sorting.
+* `GET /api/v1/breaches/:slug` — Comprehensive incident detail by slug.
+* `GET /api/v1/recommendations` — Actionable hardening playbooks and guidance by category/priority.
+* `GET /api/v1/recommendations/:slug` — Recommendation detail and step-by-step implementation playbooks.
+* `GET /api/v1/articles` — Peer-reviewed cybersecurity research advisories.
+* `GET /api/v1/articles/:slug` — Full Markdown advisory content with math formulas and syntax blocks.
+* `GET /health` — Service health probe.
 
 ---
 
-## 3. Privacy & Zero-Knowledge Invariants
-
-The Modul 1 integration strictly maintains CredLock's local security boundaries:
-* **Read-Only Scope:** Only the aggregate non-sensitive total customer count is queried.
-* **Zero Credential Exposure:** Plaintext passwords, hashes, prefixes, and breach records are NEVER transmitted to Sales-API.
-* **No Persistence:** API telemetry and customer counts exist solely in transient React component state and are never written to IndexedDB or localStorage.
-* **Timeout Guarantee:** All requests use an `AbortController` signal enforcing a strict 5-second deadline, preventing UI hangs.
-* **Graceful Degradation:** When Sales-API is offline, the widget displays a clean `Sales-API Offline` indicator without breaking any core security features.
-
----
-
-## 4. External Privacy-Preserving API: Have I Been Pwned (HIBP) Range API
+## 2. External Privacy-Preserving API: Have I Been Pwned (HIBP) Range API
 
 ### 1. Endpoint Specification
 * **URL:** `https://api.pwnedpasswords.com/range/{first5HashCharacters}`
