@@ -99,3 +99,6 @@ export * from './breach.ts';
 // Security Recommendations API Types (Phase 3.4D)
 export * from './recommendation.ts';
 
+// Security Articles API Types (Phase 3.4E)
+export * from './article.ts';
+

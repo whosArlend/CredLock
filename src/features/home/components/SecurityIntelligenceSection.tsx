@@ -242,20 +242,27 @@ export function SecurityIntelligenceSection() {
             </Card>
 
             {/* Card 4: Security Articles */}
-            <Card variant="default" padding="sm" className="space-y-2 border-border bg-surface">
-              <div className="flex items-center justify-between text-muted">
-                <span className="text-[11px] font-mono uppercase tracking-wider">Advisory Articles</span>
-                <BookOpen className="w-3.5 h-3.5 text-status-info" />
-              </div>
-              <div className="space-y-0.5">
-                <p className="text-2xl font-bold font-mono text-foreground tracking-tight">
-                  {data.statistics.totalArticles}
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-muted-dim">Guides & research</span>
-                  <Badge variant="cyan" size="sm">Advisories</Badge>
+            <Card
+              variant="default"
+              padding="sm"
+              isInteractive
+              className="space-y-2 border-border bg-surface hover:border-accent/40 transition-colors"
+            >
+              <Link to="/articles" className="block focus:outline-none space-y-2" aria-label="Explore Security Advisories">
+                <div className="flex items-center justify-between text-muted">
+                  <span className="text-[11px] font-mono uppercase tracking-wider">Advisory Articles</span>
+                  <BookOpen className="w-3.5 h-3.5 text-status-info" />
                 </div>
-              </div>
+                <div className="space-y-0.5">
+                  <p className="text-2xl font-bold font-mono text-foreground tracking-tight">
+                    {data.statistics.totalArticles}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-muted-dim">Guides & research</span>
+                    <Badge variant="cyan" size="sm">Advisories</Badge>
+                  </div>
+                </div>
+              </Link>
             </Card>
           </div>
 
