@@ -1,626 +1,225 @@
 # CredLock Security Intelligence API — Backend
 
-REST API backend untuk **CredLock Security Intelligence**, dibangun dengan Node.js, Express 5, TypeScript, Zod, dan Supabase JS Client. Backend ini bertindak sebagai penyedia intelijen siber publik dan analitika keamanan terverifikasi untuk aplikasi CredLock PWA.
+REST API backend for **CredLock Security Intelligence**, built with **Node.js**, **Express 5**, **TypeScript** (NodeNext ESM), **Zod**, and the **Supabase JavaScript Client**.
+
+This service provides verified cybersecurity threat intelligence, breach incident feeds, security hardening recommendations, and research advisories to the CredLock Progressive Web Application (PWA).
 
 ---
 
-## 1. Arsitektur Backend & Database Connection
+## 1. Production Service & Live Endpoints
 
-Backend ini menerapkan arsitektur berlapis (*layered modular architecture*) yang memisahkan konfigurasi aplikasi, repositori akses data, layanan bisnis (*service*), pengontrol HTTP (*controller*), validator skema Zod, dan perutean versi (*versioned routing*):
+- **Production Base URL:** `https://credlock-api.vercel.app`
+- **Development Base URL:** `http://localhost:4000`
+- **API Version:** `v1`
+- **Hosting Target:** Vercel Serverless Functions (`@vercel/node`)
+- **Database:** Supabase Managed PostgreSQL
 
-```
+| Endpoint | Method | Purpose |
+|---|:---:|---|
+| `/` | `GET` | Root API directory and service status. |
+| `/api/health` | `GET` | Basic liveness probe (independent of database availability). |
+| `/api/health/db` | `GET` | Database readiness probe checking Supabase round-trip latency. |
+| `/api/v1/dashboard/summary` | `GET` | Aggregated threat KPIs, severity breakdown, and 5 recent breaches. |
+| `/api/v1/breaches` | `GET` | Paginated catalog of verified breaches with search, severity filter, and sorting. |
+| `/api/v1/breaches/:slug` | `GET` | Full incident detail including affected data classes and source references. |
+| `/api/v1/recommendations` | `GET` | Paginated security hardening guidance with category/priority filters. |
+| `/api/v1/recommendations/:slug` | `GET` | Step-by-step implementation playbooks and suggested tools. |
+| `/api/v1/articles` | `GET` | Paginated cybersecurity research advisories. |
+| `/api/v1/articles/:slug` | `GET` | Complete research advisory text with Markdown formatting. |
+
+---
+
+## 2. Architecture & Folder Structure
+
+The backend follows a layered modular architecture ensuring clean separation between HTTP handling, input validation, business logic, and database access:
+
+```text
 backend/credlock-api/
+├── api/                         # Vercel serverless function entry point
+│   └── index.ts                 # Handler exporting Express app
+├── database/                    # Supabase SQL schema migrations and seed scripts
+│   ├── 001_create_credlock_tables.sql
+│   ├── 002_seed_credlock_data.sql
+│   └── README.md
 ├── src/
-│   ├── config/          # Validasi skema Zod (env.ts) & Supabase Client (supabase.ts)
-│   ├── controllers/     # HTTP Request/Response Controllers
+│   ├── app.ts                   # Express app initialization & middleware configuration
+│   ├── server.ts                # Conventional HTTP server listener for local dev
+│   ├── index.ts                 # Application factory for serverless environments
+│   ├── config/                  # Zod environment validation (env.ts) & Supabase client
+│   │   ├── env.ts
+│   │   └── supabase.ts
+│   ├── controllers/             # HTTP request handlers & response dispatchers
 │   │   ├── dashboardController.ts
-│   │   └── breachController.ts
-│   ├── services/        # Business Logic, Data Formatting & Calculations
+│   │   ├── breachController.ts
+│   │   ├── recommendationController.ts
+│   │   └── articleController.ts
+│   ├── services/                # Business logic, aggregation & metric calculation
 │   │   ├── dashboardService.ts
-│   │   └── breachService.ts
-│   ├── repositories/    # Database Queries & Strict Visibility Filtering
+│   │   ├── breachService.ts
+│   │   ├── recommendationService.ts
+│   │   └── articleService.ts
+│   ├── repositories/            # Database queries with strict visibility filtering
 │   │   ├── dashboardRepository.ts
-│   │   └── breachRepository.ts
-│   ├── validators/      # Zod Query & Param Validators
-│   │   └── breachValidator.ts
-│   ├── types/           # TypeScript DTOs & Interfaces
+│   │   ├── breachRepository.ts
+│   │   ├── recommendationRepository.ts
+│   │   └── articleRepository.ts
+│   ├── validators/              # Zod query & parameter validators
+│   │   ├── breachValidator.ts
+│   │   ├── recommendationValidator.ts
+│   │   └── articleValidator.ts
+│   ├── types/                   # TypeScript DTOs and data models
 │   │   ├── dashboard.ts
-│   │   └── breach.ts
-│   ├── middleware/      # Keamanan (Helmet, CORS, Rate Limit), Error Handler, Logger
-│   ├── routes/          # Perutean endpoint (/api/health, /api/health/db, /api/v1)
+│   │   ├── breach.ts
+│   │   ├── recommendation.ts
+│   │   └── article.ts
+│   ├── middleware/              # Security (Helmet, CORS, Rate Limit), Error Handler, Logger
+│   │   ├── security.ts
+│   │   ├── errorHandler.ts
+│   │   ├── notFoundHandler.ts
+│   │   └── logger.ts
+│   ├── routes/                  # Express route definitions
+│   │   ├── health.ts
+│   │   ├── index.ts
 │   │   └── v1/
 │   │       ├── dashboard.ts
 │   │       ├── breaches.ts
+│   │       ├── recommendations.ts
+│   │       ├── articles.ts
 │   │       └── index.ts
-│   ├── utils/           # Helper amplop respon JSON standar
-│   ├── app.ts           # Inisialisasi Express & konfigurasi middleware
-│   └── server.ts        # Entry point startup HTTP listener
-├── tests/               # Pengujian unit & integrasi HTTP (Vitest + Supertest)
-├── database/            # Migrasi SQL & Seed Supabase PostgreSQL
-├── .env.example         # Template konfigurasi environment
+│   └── utils/                   # Standard JSON envelope helpers & text sanitizers
+│       ├── response.ts
+│       └── sanitize.ts
+├── tests/                       # Automated test suites (Vitest + Supertest)
+│   ├── health.test.ts
+│   ├── dashboard.test.ts
+│   ├── breaches.test.ts
+│   ├── recommendations.test.ts
+│   ├── articles.test.ts
+│   ├── security.test.ts
+│   ├── supabase.test.ts
+│   ├── vercel.test.ts
+│   └── audit.test.ts
+├── .env.example                 # Environment configuration template
 ├── package.json
-└── tsconfig.json
+├── tsconfig.json                # TypeScript NodeNext ESM configuration
+└── vercel.json                  # Vercel serverless routing rewrite rules
 ```
-
-### Keamanan Kunci Rahasia Supabase (`SUPABASE_SECRET_KEY`)
-Proyek ini mendukung format kunci API terbaru Supabase:
-- **`SUPABASE_PUBLISHABLE_KEY` (`sb_publishable_...`)**: Digunakan untuk akses publik/browser (tidak digunakan untuk backend privileged).
-- **`SUPABASE_SECRET_KEY` (`sb_secret_...`)**: Kunci rahasia server-side dengan izin administratif penuh.
-
-> [!WARNING]
-> **Aturan Keamanan Kunci Rahasia & Bypass RLS**:
-> 1. `SUPABASE_SECRET_KEY` **hanya boleh berada di file `.env` server backend** (`backend/credlock-api/.env`).
-> 2. **DILARANG KERAS** menggunakan `SUPABASE_SECRET_KEY` di kode frontend PWA atau menamainya dengan prefix `VITE_`.
-> 3. Kunci rahasia ini memiliki izin istimewa yang melewati *Row Level Security* (RLS). Karena itu, seluruh kueri database publik di lapisan repositori **WAJIB** menerapkan aturan visibilitas eksplisit:
->    - `breaches`: wajib memfilter `.eq('is_published', true).eq('is_verified', true)`
->    - `recommendations`: wajib memfilter `.eq('is_published', true)`
->    - `articles`: wajib memfilter `.eq('is_published', true)`
-> 4. Backend dilarang mencatat (`console.log`) atau mengembalikan nilai kunci ini melalui respon endpoint API.
 
 ---
 
-## 2. Instalasi Dependensi
+## 3. Security Middleware & Defensive Controls
 
-Navigasikan ke folder `backend/credlock-api/`:
+1. **HTTP Security Headers (`helmet` v8.3.0)**:
+   - Configured in `src/middleware/security.ts`.
+   - Sets `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, and `Cross-Origin-Resource-Policy: cross-origin`.
+   - `contentSecurityPolicy` is disabled on the API backend because it serves JSON data rather than rendering HTML.
+   - Dual-resolution helper ensures strict type safety under NodeNext ESM without suppressing errors with `any` or `@ts-ignore`.
+2. **CORS Origin Filtering (`cors`)**:
+   - Reads `FRONTEND_URL` from environment.
+   - Restricts cross-origin requests to configured frontend origins (supports comma-separated origins, e.g. production domain + preview deployments).
+   - Local origins `http://localhost:5173` and `http://127.0.0.1:5173` are allowed for development.
+3. **Rate Limiting (`express-rate-limit`)**:
+   - Limits clients to **100 requests per 15 minutes per IP**.
+   - Emits standard `RateLimit-*` headers and returns HTTP 429 when exceeded.
+4. **Proxy Trust**:
+   - `app.set('trust proxy', 1)` enables accurate client IP resolution behind Vercel reverse proxies.
+5. **Payload Size Constraints**:
+   - Restricts JSON and URL-encoded request bodies to `100kb`.
+6. **Supabase Privileged Key Isolation & Immutable Visibility Filters**:
+   - The backend uses `SUPABASE_SECRET_KEY` (service role) isolated from browser bundles.
+   - To prevent accidental exposure of draft or unverified data, the repository layer strictly enforces:
+     - `breaches`: `.eq('is_published', true).eq('is_verified', true)`
+     - `recommendations`: `.eq('is_published', true)`
+     - `articles`: `.eq('is_published', true)`
 
+---
+
+## 4. Environment Variables
+
+Configure environment variables in `.env` (or Vercel Project Settings for production):
+
+| Variable | Required | Default / Example | Purpose |
+|---|:---:|---|---|
+| `NODE_ENV` | Optional | `development` | Runtime mode (`development`, `production`, `test`). |
+| `PORT` | Optional | `4000` | Port for local HTTP listener (`src/server.ts`). |
+| `FRONTEND_URL` | **Yes** (Prod) | `http://localhost:5173` | Allowed CORS origin(s). Supports comma-separated list. |
+| `SUPABASE_URL` | **Yes** (DB) | `https://your-project.supabase.co` | Supabase project URL endpoint. |
+| `SUPABASE_SECRET_KEY` | **Yes** (DB) | `sb_secret_...` | Supabase privileged service role secret key. |
+
+---
+
+## 5. Local Development Setup
+
+### Prerequisites
+- Node.js 18 or higher (tested on Node 20 / 22)
+- npm 9 or higher
+
+### Installation
 ```bash
 cd backend/credlock-api
 npm install
 ```
 
----
-
-## 3. Konfigurasi Environment Lokal
-
-Salin file `.env.example` menjadi `.env`:
-
+### Environment Configuration
+Copy `.env.example` to `.env`:
 ```bash
 cp .env.example .env
 ```
+Fill in your `SUPABASE_URL` and `SUPABASE_SECRET_KEY`.
 
-Isi konfigurasi pada file `.env` lokal Anda:
-
-```env
-NODE_ENV=development
-PORT=4000
-FRONTEND_URL=http://localhost:5173
-
-SUPABASE_URL=https://your-project-id.supabase.co
-SUPABASE_SECRET_KEY=your-supabase-secret-key-here
-```
-
-| Variabel | Deskripsi | Wajib | Default |
-| :--- | :--- | :--- | :--- |
-| `NODE_ENV` | Mode lingkungan (`development`, `production`, `test`) | Tidak | `development` |
-| `PORT` | Port server backend Express | Tidak | `4000` |
-| `FRONTEND_URL`| Origin URL frontend PWA untuk whitelist CORS | Tidak | `http://localhost:5173` |
-| `SUPABASE_URL` | URL Endpoint Supabase Project Anda | Ya (DB Ops) | - |
-| `SUPABASE_SECRET_KEY` | Secret Key server-side Supabase (`sb_secret_...`) | Ya (DB Ops) | - |
-
-> Port default **4000** memastikan tidak terjadi konflik dengan:
-> - **CredLock PWA (Vite)**: Port `5173`
-
----
-
-## 4. Menjalankan Server Pengembangan (Development)
-
-Menjalankan server dalam mode *hot-reload* menggunakan `tsx watch`:
-
+### Running Locally
 ```bash
+# Start development server with hot-reload (port 4000)
 npm run dev
-```
 
----
-
-## 5. Dokumentasi API Endpoints
-
-### A. Health & Readiness Endpoints
-
-#### `GET /api/health` (Basic Liveness Probe)
-Memeriksa status keaktifan proses server Express secara mandiri tanpa tergantung database.
-
-**Respon Sukses (HTTP 200):**
-```json
-{
-  "success": true,
-  "message": "CredLock API is running",
-  "timestamp": "2026-11-20T12:00:00.000Z",
-  "environment": "development"
-}
-```
-
-#### `GET /api/health/db` (Database Readiness Probe)
-Memverifikasi konektivitas ke database Supabase PostgreSQL menggunakan kueri ringan (*lightweight probe*) pada tabel `breaches` (membaca 1 ID tanpa mengubah data).
-
-**Respon Saat Terhubung (HTTP 200):**
-```json
-{
-  "success": true,
-  "message": "Database is connected and healthy",
-  "database": {
-    "status": "connected",
-    "latencyMs": 28
-  },
-  "timestamp": "2026-11-20T12:00:00.000Z"
-}
-```
-
----
-
-### B. Dashboard Summary Endpoint (Phase 3.3A)
-
-#### `GET /api/v1/dashboard/summary`
-Mengambil ringkasan statistik keamanan siber, klasifikasi insiden kebocoran berdasarkan keparahan (*severity*), dan daftar insiden terbaru.
-
-**Contoh Respon Sukses (HTTP 200) — *Nilai Ilustratif*:**
-```json
-{
-  "success": true,
-  "data": {
-    "statistics": {
-      "totalBreaches": 12,
-      "totalExposedAccounts": 450000000,
-      "totalRecommendations": 8,
-      "totalArticles": 6
-    },
-    "breachesBySeverity": {
-      "critical": 4,
-      "high": 5,
-      "medium": 2,
-      "low": 1
-    },
-    "recentBreaches": [ ... ]
-  },
-  "timestamp": "2026-11-20T12:00:00.000Z"
-}
-```
-
----
-
-### C. Breach Intelligence Endpoints (Phase 3.3B)
-
-#### 1. `GET /api/v1/breaches` (Daftar Insiden Terpaginasi)
-Mengambil katalog insiden kebocoran terverifikasi dan dipublikasikan dengan dukungan pencarian, penyaringan keparahan, pengurutan, dan paginasi level database.
-
-**Query Parameters:**
-
-| Parameter | Tipe | Default | Deskripsi |
-| :--- | :--- | :--- | :--- |
-| `page` | Integer | `1` | Nomor halaman (minimal 1) |
-| `limit` | Integer | `10` | Jumlah data per halaman (1 hingga 50) |
-| `search` | String | - | Pencarian pada judul, organisasi, atau domain |
-| `severity`| Enum | - | Filter keparahan: `critical`, `high`, `medium`, `low` |
-| `sort` | Enum | `added_date`| Kolom urutan: `added_date`, `breach_date`, `pwn_count`, `title` |
-| `order` | Enum | `desc` | Arah urutan: `asc`, `desc` |
-
-**Contoh Respon Sukses (HTTP 200) — *Nilai Ilustratif*:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "d6aa41f0-ef6d-448f-bcb5-373c2e05f3e1",
-      "title": "Example E-Commerce Breach (2020)",
-      "slug": "example-ecommerce-2020",
-      "domain": "example.com",
-      "organization": "Example Corp",
-      "breach_date": "2020-03-01",
-      "added_date": "2020-05-02",
-      "pwn_count": 91000000,
-      "data_classes": ["Email addresses", "Password hashes"],
-      "severity": "critical",
-      "logo_url": null
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 10,
-    "totalItems": 1,
-    "totalPages": 1,
-    "hasNextPage": false,
-    "hasPreviousPage": false
-  },
-  "timestamp": "2026-11-20T12:00:00.000Z"
-}
-```
-
-#### 2. `GET /api/v1/breaches/:slug` (Detail Insiden Kebocoran)
-Mengambil informasi lengkap dari satu insiden kebocoran terverifikasi berdasarkan `slug`.
-
-**Contoh Respon Sukses (HTTP 200) — *Nilai Ilustratif*:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "d6aa41f0-ef6d-448f-bcb5-373c2e05f3e1",
-    "title": "Example E-Commerce Breach (2020)",
-    "slug": "example-ecommerce-2020",
-    "domain": "example.com",
-    "organization": "Example Corp",
-    "breach_date": "2020-03-01",
-    "added_date": "2020-05-02",
-    "pwn_count": 91000000,
-    "description": "Kronologi lengkap insiden kebocoran data...",
-    "data_classes": ["Email addresses", "Password hashes"],
-    "severity": "critical",
-    "source_url": "https://zdnet.com/article/example",
-    "logo_url": null
-  },
-  "timestamp": "2026-11-20T12:00:00.000Z"
-}
-```
-
-**Respon Error Not Found (HTTP 404):**  
-Jika `slug` tidak ditemukan, atau catatan terkait berstatus draf (*unpublished*) atau belum diverifikasi (*unverified*), API mengembalikan respon 404 identik guna mencegah *data existence enumeration*:
-```json
-{
-  "success": false,
-  "error": {
-    "code": "NOT_FOUND",
-    "message": "Breach with slug 'example-slug' not found"
-  },
-  "timestamp": "2026-11-20T12:00:00.000Z"
-}
-```
-
-**Respon Parameter Tidak Valid (HTTP 400 Bad Request):**
-```json
-{
-  "success": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Limit cannot exceed 50"
-  },
-  "timestamp": "2026-11-20T12:00:00.000Z"
-}
-```
-
-### Menguji dengan `curl`
-```bash
-# Ambil daftar insiden dengan paginasi dan filter
-curl -i "http://localhost:4000/api/v1/breaches?limit=5&sort=pwn_count&order=desc"
-
-# Cari insiden berdasarkan kata kunci
-curl -i "http://localhost:4000/api/v1/breaches?search=tokopedia"
-
-# Ambil detail insiden berdasarkan slug
-curl -i "http://localhost:4000/api/v1/breaches/tokopedia-2020"
-```
-
----
-
-### D. Security Recommendations Endpoints (Phase 3.3C)
-
-#### 1. `GET /api/v1/recommendations` (Daftar Rekomendasi Terpaginasi)
-Mengambil panduan keamanan siber yang dipublikasikan (`is_published: true`) dengan dukungan pencarian multi-kolom, penyaringan kategori, prioritas, pengurutan terindeks, dan paginasi level database.
-
-> **Catatan Optimasi Payload**: Pada endpoint list, kolom `action_steps` diringkas/dihilangkan agar transfer payload jaringan tetap efisien dan ringan bagi klien seluler/PWA. Kolom `action_steps` lengkap tersedia pada endpoint detail.
-
-**Query Parameters:**
-
-| Parameter | Tipe | Default | Deskripsi |
-| :--- | :--- | :--- | :--- |
-| `page` | Integer | `1` | Nomor halaman (minimal 1) |
-| `limit` | Integer | `10` | Jumlah item per halaman (1 hingga 50) |
-| `search` | String | - | Pencarian kata kunci pada `title`, `summary`, atau `category` (maksimal 100 karakter) |
-| `category` | Enum | - | Filter kategori: `password`, `auth`, `device`, `network`, `incident_response` |
-| `priority` | Enum | - | Filter prioritas: `critical`, `high`, `medium`, `low` |
-| `sort` | Enum | `created_at` | Kolom pengurutan: `title`, `category`, `priority`, `created_at` |
-| `order` | Enum | `desc` | Arah urutan: `asc`, `desc` |
-
-**Contoh Respon Sukses (HTTP 200) — *Nilai Ilustratif*:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "e7bb41f0-ef6d-448f-bcb5-373c2e05f3e2",
-      "title": "Aktifkan Autentikasi Dua Faktor (2FA)",
-      "slug": "aktifkan-autentikasi-dua-faktor",
-      "category": "auth",
-      "priority": "critical",
-      "summary": "Tingkatkan keamanan akun digital Anda dengan mengaktifkan verifikasi dua langkah menggunakan aplikasi authenticator.",
-      "target_audience": "Semua pengguna akun daring",
-      "tags": ["2fa", "security", "authentication"],
-      "created_at": "2026-11-20T10:00:00.000Z"
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 10,
-    "totalItems": 1,
-    "totalPages": 1,
-    "hasNextPage": false,
-    "hasPreviousPage": false
-  },
-  "timestamp": "2026-11-20T12:00:00.000Z"
-}
-```
-
-#### 2. `GET /api/v1/recommendations/:slug` (Detail Rekomendasi Lengkap)
-Mengambil detail lengkap satu panduan rekomendasi keamanan terpublikasi berdasarkan `slug`, termasuk struktur utuh objek instruksi langkah kerja (`action_steps`).
-
-**Contoh Respon Sukses (HTTP 200) — *Nilai Ilustratif*:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "e7bb41f0-ef6d-448f-bcb5-373c2e05f3e2",
-    "title": "Aktifkan Autentikasi Dua Faktor (2FA)",
-    "slug": "aktifkan-autentikasi-dua-faktor",
-    "category": "auth",
-    "priority": "critical",
-    "summary": "Tingkatkan keamanan akun digital Anda dengan mengaktifkan verifikasi dua langkah menggunakan aplikasi authenticator.",
-    "action_steps": [
-      {
-        "step_number": 1,
-        "title": "Unduh Aplikasi Authenticator",
-        "description": "Pasang aplikasi seperti Google Authenticator, Microsoft Authenticator, atau Aegis pada ponsel pintar Anda."
-      },
-      {
-        "step_number": 2,
-        "title": "Pindai Kode QR Keamanan",
-        "description": "Buka pengaturan keamanan akun Anda, pilih Two-Factor Authentication, lalu pindai barcode yang disediakan."
-      },
-      {
-        "step_number": 3,
-        "title": "Simpan Kode Cadangan (Backup Codes)",
-        "description": "Catat atau cetak kode pemulihan darurat dan simpan di lokasi aman offline."
-      }
-    ],
-    "target_audience": "Semua pengguna akun daring",
-    "tags": ["2fa", "security", "authentication"],
-    "created_at": "2026-11-20T10:00:00.000Z",
-    "updated_at": "2026-11-20T10:00:00.000Z"
-  },
-  "timestamp": "2026-11-20T12:00:00.000Z"
-}
-```
-
-**Respon Error Not Found (HTTP 404):**  
-Jika `slug` tidak ditemukan, atau berstatus *draft/unpublished* (`is_published: false`), API mengembalikan respon 404 identik guna mencegah *data enumeration*:
-```json
-{
-  "success": false,
-  "error": {
-    "code": "NOT_FOUND",
-    "message": "Recommendation with slug 'example-slug' not found"
-  },
-  "timestamp": "2026-11-20T12:00:00.000Z"
-}
-```
-
-**Respon Parameter Tidak Valid (HTTP 400 Bad Request):**
-```json
-{
-  "success": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Limit must be between 1 and 50"
-  },
-  "timestamp": "2026-11-20T12:00:00.000Z"
-}
-```
-
-### Menguji Rekomendasi dengan `curl`
-```bash
-# Ambil daftar rekomendasi dengan filter kategori dan limit
-curl -i "http://localhost:4000/api/v1/recommendations?category=password&limit=5"
-
-# Cari rekomendasi dengan kata kunci dan urutkan berdasarkan prioritas
-curl -i "http://localhost:4000/api/v1/recommendations?search=autentikasi&sort=priority&order=asc"
-
-# Ambil detail rekomendasi lengkap beserta action_steps
-curl -i "http://localhost:4000/api/v1/recommendations/aktifkan-autentikasi-dua-faktor"
-```
-
----
-
-### E. Security Articles Endpoints (Phase 3.3D)
-
-#### 1. `GET /api/v1/articles` (Daftar Artikel Keamanan Terpaginasi)
-Mengambil panduan edukatif, artikel analisa, dan berita keamanan siber yang dipublikasikan (`is_published: true`) dengan dukungan pencarian multi-kolom, penyaringan kategori, pengurutan terindeks, dan paginasi level database.
-
-> **Catatan Optimasi Payload**: Pada endpoint list, kolom `content` (Markdown teks panjang) disembunyikan agar transfer payload jaringan tetap efisien dan hemat bandwidth klien. Kolom `content` lengkap tersedia pada endpoint detail.
-
-**Query Parameters:**
-
-| Parameter | Tipe | Default | Deskripsi |
-| :--- | :--- | :--- | :--- |
-| `page` | Integer | `1` | Nomor halaman (minimal 1) |
-| `limit` | Integer | `10` | Jumlah artikel per halaman (1 hingga 50) |
-| `search` | String | - | Pencarian kata kunci pada `title`, `summary`, atau `category` (maksimal 100 karakter) |
-| `category` | Enum | - | Filter kategori: `guide`, `analysis`, `news`, `explainer` |
-| `sort` | Enum | `published_at` | Kolom pengurutan: `title`, `category`, `published_at`, `read_time_minutes` |
-| `order` | Enum | `desc` | Arah urutan: `asc`, `desc` |
-
-**Contoh Respon Sukses (HTTP 200) — *Nilai Ilustratif*:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "20000000-0000-0000-0000-000000000001",
-      "title": "Anatomi Password yang Kuat: Lebih dari Sekadar Karakter Acak",
-      "slug": "anatomi-password-yang-kuat",
-      "category": "guide",
-      "summary": "Pelajari bagaimana entropi, panjang karakter, dan kombinasi kata membentuk pertahanan matematis.",
-      "author_name": "Tim Keamanan CredLock",
-      "read_time_minutes": 4,
-      "tags": ["passwords", "entropy", "security-hygiene", "guide"],
-      "published_at": "2026-11-15T10:00:00.000Z"
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 10,
-    "totalItems": 6,
-    "totalPages": 1,
-    "hasNextPage": false,
-    "hasPreviousPage": false
-  },
-  "timestamp": "2026-11-20T12:00:00.000Z"
-}
-```
-
-#### 2. `GET /api/v1/articles/:slug` (Detail Artikel Lengkap & Markdown Preserved)
-Mengambil detail lengkap satu artikel keamanan terpublikasi berdasarkan `slug`, dengan teks artikel asli (`content`) berformat Markdown yang dipertahankan seutuhnya tanpa kompromi format (line breaks, math equations, code blocks tetap utuh).
-
-**Contoh Respon Sukses (HTTP 200) — *Nilai Ilustratif*:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "20000000-0000-0000-0000-000000000001",
-    "title": "Anatomi Password yang Kuat: Lebih dari Sekadar Karakter Acak",
-    "slug": "anatomi-password-yang-kuat",
-    "category": "guide",
-    "summary": "Pelajari bagaimana entropi, panjang karakter, dan kombinasi kata membentuk pertahanan matematis.",
-    "content": "# Anatomi Password yang Kuat\n\nBanyak pengguna mengira bahwa...",
-    "author_name": "Tim Keamanan CredLock",
-    "read_time_minutes": 4,
-    "tags": ["passwords", "entropy", "security-hygiene", "guide"],
-    "published_at": "2026-11-15T10:00:00.000Z"
-  },
-  "timestamp": "2026-11-20T12:00:00.000Z"
-}
-```
-
-**Respon Error Not Found (HTTP 404):**  
-Jika `slug` tidak ditemukan, atau berstatus *draft/unpublished* (`is_published: false`), API mengembalikan respon 404 identik guna mencegah *data enumeration*:
-```json
-{
-  "success": false,
-  "error": {
-    "code": "NOT_FOUND",
-    "message": "Article with slug 'example-slug' not found"
-  },
-  "timestamp": "2026-11-20T12:00:00.000Z"
-}
-```
-
-**Respon Parameter Tidak Valid (HTTP 400 Bad Request):**
-```json
-{
-  "success": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Limit must be between 1 and 50"
-  },
-  "timestamp": "2026-11-20T12:00:00.000Z"
-}
-```
-
-### Menguji Artikel dengan `curl`
-```bash
-# Ambil daftar artikel dengan filter kategori dan limit
-curl -i "http://localhost:4000/api/v1/articles?category=guide&limit=5"
-
-# Cari artikel dengan kata kunci dan urutkan berdasarkan waktu baca
-curl -i "http://localhost:4000/api/v1/articles?search=Anatomi&sort=read_time_minutes&order=asc"
-
-# Ambil detail artikel lengkap beserta konten Markdown
-curl -i "http://localhost:4000/api/v1/articles/anatomi-password-yang-kuat"
-```
-
----
-
-## 6. Menjalankan Pengujian (Testing)
-
-Pengujian unit dan integrasi HTTP menggunakan **Vitest** dan **Supertest** (seluruh dependensi database di-mock agar pengujian berjalan cepat, deterministik, dan bebas kebocoran kunci):
-
-```bash
-# Menjalankan seluruh test suite sekali jalan
-npm test
-
-# Menjalankan test dalam mode watch interaktif
-npm run test:watch
-```
-
-Cakupan pengujian (112 test cases lintas 8 test suites):
-- `tests/audit.test.ts` (13 tests — Phase 3.3E Integration & Security Audit):
-  - Unit test `sanitizeSearchTerm`: pembersihan karakter kontrol ASCII, konversi delimiter PostgREST `,()":` ke spasi, escaping wildcard SQL `%` dan `_`, serta escaping backslash `\`
-  - Pengujian integrasi proteksi pencarian pada Breaches, Recommendations, dan Articles
-  - Uji penolakan input query pencarian berlebih (> 100 karakter) dengan HTTP 400
-  - Verifikasi konsistensi amplop respon (`success`, `data`, `pagination`, `timestamp`) lintas seluruh endpoint list
-  - Verifikasi respon error 404 identik dan aman tanpa bocoran data internal
-- `tests/articles.test.ts` (30 tests):
-  - Paginasi default (page 1, limit 10), penyesuaian limit/halaman, dan kalkulasi pagination metadata
-  - Filter kategori (`category=guide`, `analysis`, `news`, `explainer`)
-  - Pencarian multi-kolom (`title`, `summary`, `category`)
-  - Pengurutan terindeks (`sort=title`, `category`, `published_at`, `read_time_minutes` dengan `order=asc/desc`)
-  - Validasi ketat query parameter HTTP 400 (halaman < 1, limit > 50, sort column di luar allowlist, kategori invalid, search > 100 karakter)
-  - Aturan visibilitas publik: artikel *draft* (`is_published: false`) tidak pernah muncul di list maupun dihitung dalam total count
-  - Ketiadaan kolom `content` dan `is_published` pada DTO response list untuk payload hygiene
-  - Detail endpoint HTTP 200 mengembalikan konten Markdown seutuhnya dan metadata lengkap
-  - Detail endpoint HTTP 404 identik untuk slug yang tidak ada atau berstatus *unpublished*
-- `tests/recommendations.test.ts` (27 tests):
-  - Paginasi default (page 1, limit 10), penyesuaian limit/halaman, dan kalkulasi pagination metadata
-  - Filter kategori (`category=password`, `auth`, `device`, `network`, `incident_response`)
-  - Filter prioritas (`priority=critical`, `high`, `medium`, `low`)
-  - Pencarian multi-kolom (`title`, `summary`, `category`)
-  - Pengurutan terindeks (`sort=title`, `category`, `priority`, `created_at` dengan `order=asc/desc`)
-  - Validasi ketat query parameter HTTP 400
-  - Aturan visibilitas publik & safe 404
-- `tests/breaches.test.ts` (18 tests):
-  - List paginasi default, kustomisasi limit/page, kalkulasi metadata
-  - Pencarian multi-kolom (title, organization, domain)
-  - Penyaringan keparahan (`severity`)
-  - Pengurutan multi-level (`sort` & `order`)
-  - Validasi query parameter HTTP 400
-  - Aturan visibilitas publik & safe 404
-- `tests/dashboard.test.ts` (7 tests): Aggregasi dashboard summary, breakdown severity, limit 5 recent breaches
-- `tests/health.test.ts` (6 tests): Basic liveness probe dan database readiness probe
-- `tests/supabase.test.ts` (7 tests): Validasi skema Zod environment untuk `SUPABASE_SECRET_KEY`
-- `tests/security.test.ts` (4 tests): Header Helmet, rate limiting, payload size limits, 404 handler
-
----
-
-## 7. Build Produksi dan Menjalankan
-
-```bash
-# 1. Typechecking
+# Run TypeScript compilation check
 npm run typecheck
 
-# 2. Kompilasi TypeScript ke JavaScript (dist/)
+# Build production bundle to dist/
 npm run build
 
-# 3. Menjalankan server hasil build lokal
+# Start compiled production server
 npm start
 ```
 
 ---
 
-## 8. Panduan Deployment Produksi ke Vercel (Serverless Functions)
+## 6. Testing
 
-Backend CredLock dapat di-deploy secara mudah dan gratis ke **Vercel** menggunakan arsitektur *Serverless Function* (tanpa memerlukan kartu kredit / *payment-card verification*).
+The backend includes a comprehensive automated test suite powered by **Vitest** and **Supertest**:
 
-### Konfigurasi Vercel Dashboard
+```bash
+# Run all backend tests once
+npm test
 
-1. Buka [Vercel Dashboard](https://vercel.com/dashboard) dan klik **Add New...** > **Project**.
-2. Pilih repositori **CredLock** Anda.
-3. Pada halaman **Configure Project**:
-   - **Project Name**: `credlock-api` (atau nama pilihan Anda).
-   - **Framework Preset**: Pilih **Other**.
-   - **Root Directory**: Klik **Edit** dan pilih folder `backend/credlock-api`.
-   - **Build & Development Settings**:
-     - **Build Command**: Biarkan aktif / default: `npm run build` (atau `tsc -p tsconfig.json`).
-     - **Output Directory**: Biarkan default.
-     - **Install Command**: `npm install`.
-4. Pada bagian **Environment Variables**, tambahkan:
-   - `NODE_ENV` = `production`
-   - `SUPABASE_URL` = URL project Supabase Anda (contoh: `https://xyzproject.supabase.co`)
-   - `SUPABASE_SECRET_KEY` = Service role secret key Supabase Anda (`sb_secret_...`)
-   - `FRONTEND_URL` = URL domain frontend Vercel Anda (contoh: `https://credlock.vercel.app` atau kosongkan dahulu untuk preview)
-5. Klik **Deploy**.
+# Run tests in watch mode
+npm run test:watch
+```
 
-### Verifikasi Endpoint Setelah Deploy
-Setelah proses deployment selesai, periksa endpoint backend:
-- Root API discovery: `https://<your-vercel-domain>.vercel.app/` -> mengembalikan JSON status operasional.
-- Health probe: `https://<your-vercel-domain>.vercel.app/api/health` -> mengembalikan HTTP 200 `{ "success": true, ... }`.
-- Database readiness: `https://<your-vercel-domain>.vercel.app/api/health/db` -> mengembalikan status koneksi Supabase.
+### Verified Test Suites (118 / 118 Tests Passed):
+- `tests/health.test.ts` (6 tests): Liveness and database readiness probes.
+- `tests/dashboard.test.ts` (7 tests): KPI calculations and severity distribution.
+- `tests/breaches.test.ts` (18 tests): Pagination, search, severity filters, sorting, detail.
+- `tests/recommendations.test.ts` (27 tests): Category and priority filtering, detail.
+- `tests/articles.test.ts` (30 tests): Category filtering, search, detail.
+- `tests/security.test.ts` (4 tests): CORS origin reflection, Helmet headers, rate limiting.
+- `tests/supabase.test.ts` (7 tests): Client initialization and connection checks.
+- `tests/vercel.test.ts` (6 tests): Serverless function export compatibility.
+- `tests/audit.test.ts` (13 tests): Defensive security and schema constraints.
 
-### Konfigurasi CORS Setelah Frontend Ter-deploy
-Setelah frontend selesai di-deploy ke Vercel (misal `https://credlock.vercel.app`), update environment variable `FRONTEND_URL` di Vercel Dashboard Backend (`credlock-api` > Settings > Environment Variables) dengan URL frontend tersebut, lalu lakukan **Redeploy** untuk mengaplikasikan whitelist CORS.
-Backend juga mendukung multiple URL yang dipisahkan tanda koma (contoh: `https://credlock.vercel.app,https://credlock-preview.vercel.app`).
+---
 
+## 7. Vercel Serverless Deployment
+
+1. **Vercel Project Setup**:
+   - **Root Directory**: `backend/credlock-api`
+   - **Build Command**: `npm run build` (`tsc -p tsconfig.json`)
+   - **Install Command**: `npm install --include=dev`
+   - **Output Directory**: `dist` (or leave default)
+2. **Environment Variables**:
+   - In Vercel Project Settings, add `NODE_ENV`, `FRONTEND_URL`, `SUPABASE_URL`, and `SUPABASE_SECRET_KEY`.
+3. **Deployment Troubleshooting**:
+   - **Issue:** `tsc: command not found` on Vercel build.  
+     **Fix:** Ensure Install Command is set to `npm install --include=dev` so `typescript` is installed.
+   - **Issue:** `error TS2349: This expression is not callable` with Helmet.  
+     **Fix:** Resolved via explicit `HelmetCallable = typeof import('helmet').default` typing helper in `src/middleware/security.ts`.
