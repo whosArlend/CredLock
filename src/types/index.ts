@@ -96,3 +96,6 @@ export * from './dashboard.ts';
 // Breach Intelligence API Types (Phase 3.4C)
 export * from './breach.ts';
 
+// Security Recommendations API Types (Phase 3.4D)
+export * from './recommendation.ts';
+

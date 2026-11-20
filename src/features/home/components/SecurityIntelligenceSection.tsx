@@ -218,20 +218,27 @@ export function SecurityIntelligenceSection() {
             </Card>
 
             {/* Card 3: Security Recommendations */}
-            <Card variant="default" padding="sm" className="space-y-2 border-border bg-surface">
-              <div className="flex items-center justify-between text-muted">
-                <span className="text-[11px] font-mono uppercase tracking-wider">Hardening Playbooks</span>
-                <ShieldCheck className="w-3.5 h-3.5 text-status-success" />
-              </div>
-              <div className="space-y-0.5">
-                <p className="text-2xl font-bold font-mono text-foreground tracking-tight">
-                  {data.statistics.totalRecommendations}
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-muted-dim">Action playbooks</span>
-                  <Badge variant="emerald" size="sm">Best Practice</Badge>
+            <Card
+              variant="default"
+              padding="sm"
+              isInteractive
+              className="space-y-2 border-border bg-surface hover:border-accent/40 transition-colors"
+            >
+              <Link to="/recommendations" className="block focus:outline-none space-y-2" aria-label="Explore Hardening Playbooks">
+                <div className="flex items-center justify-between text-muted">
+                  <span className="text-[11px] font-mono uppercase tracking-wider">Hardening Playbooks</span>
+                  <ShieldCheck className="w-3.5 h-3.5 text-status-success" />
                 </div>
-              </div>
+                <div className="space-y-0.5">
+                  <p className="text-2xl font-bold font-mono text-foreground tracking-tight">
+                    {data.statistics.totalRecommendations}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-muted-dim">Action playbooks</span>
+                    <Badge variant="emerald" size="sm">Best Practice</Badge>
+                  </div>
+                </div>
+              </Link>
             </Card>
 
             {/* Card 4: Security Articles */}
