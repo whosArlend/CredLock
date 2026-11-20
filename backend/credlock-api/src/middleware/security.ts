@@ -4,8 +4,20 @@ import { rateLimit } from 'express-rate-limit';
 import { env } from '../config/env.js';
 import { errorResponse } from '../utils/response.js';
 
-// Support both ESM and CommonJS export bindings for Helmet under NodeNext resolution
-const helmet = helmetModule.default;
+/**
+ * Helmet export typing helper.
+ * Under TypeScript NodeNext resolution for hybrid CJS/ESM packages,
+ * `helmetModule`'s default export may be typed as the module namespace object,
+ * causing TS2349 (no call signatures). Resolving explicitly to `typeof import('helmet').default`
+ * restores the callable Helmet function signature across both ESM and CommonJS runtimes.
+ */
+type HelmetCallable = typeof import('helmet').default;
+
+const helmet: HelmetCallable = (
+  typeof (helmetModule as unknown as { default: HelmetCallable }).default === 'function'
+    ? (helmetModule as unknown as { default: HelmetCallable }).default
+    : (helmetModule as unknown as HelmetCallable)
+);
 
 /**
  * Helmet middleware configuration for HTTP security headers.
