@@ -3,9 +3,13 @@
 -- Project: CredLock Security Intelligence API
 -- Database: Supabase PostgreSQL
 -- Description: Creates core tables (breaches, recommendations, articles),
---              indexes, updated_at trigger, and Row Level Security (RLS) policies.
+--              indexes, updated_at trigger, explicit SQL privileges, and
+--              Row Level Security (RLS) policies.
 -- Safe Execution: Does NOT touch Sales-API tables (categories, products, customers, transactions).
+-- Idempotency: Uses IF NOT EXISTS, DROP IF EXISTS, and wraps in a transaction.
 -- ============================================================================
+
+BEGIN;
 
 -- 1. Ensure required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -21,18 +25,18 @@ $$ LANGUAGE plpgsql;
 
 -- ============================================================================
 -- Table: breaches
--- Description: Historical and known security breach incident intelligence.
+-- Description: Historical and verified cybersecurity breach intelligence.
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS breaches (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title TEXT NOT NULL,
-    slug TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL CHECK (length(trim(title)) > 0),
+    slug TEXT NOT NULL UNIQUE CHECK (length(trim(slug)) > 0),
     domain TEXT,
     organization TEXT,
     breach_date DATE,
     added_date DATE NOT NULL DEFAULT CURRENT_DATE,
     pwn_count BIGINT CHECK (pwn_count >= 0),
-    description TEXT NOT NULL,
+    description TEXT NOT NULL CHECK (length(trim(description)) > 0),
     data_classes TEXT[] NOT NULL DEFAULT '{}',
     severity TEXT NOT NULL CHECK (severity IN ('low', 'medium', 'high', 'critical')),
     is_verified BOOLEAN NOT NULL DEFAULT false,
@@ -49,11 +53,11 @@ CREATE TABLE IF NOT EXISTS breaches (
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS recommendations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title TEXT NOT NULL,
-    slug TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL CHECK (length(trim(title)) > 0),
+    slug TEXT NOT NULL UNIQUE CHECK (length(trim(slug)) > 0),
     category TEXT NOT NULL CHECK (category IN ('password', 'auth', 'device', 'network', 'incident_response')),
     priority TEXT NOT NULL CHECK (priority IN ('low', 'medium', 'high', 'critical')),
-    summary TEXT NOT NULL,
+    summary TEXT NOT NULL CHECK (length(trim(summary)) > 0),
     action_steps JSONB NOT NULL DEFAULT '[]'::JSONB,
     target_audience TEXT,
     tags TEXT[] NOT NULL DEFAULT '{}',
@@ -68,12 +72,12 @@ CREATE TABLE IF NOT EXISTS recommendations (
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS articles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title TEXT NOT NULL,
-    slug TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL CHECK (length(trim(title)) > 0),
+    slug TEXT NOT NULL UNIQUE CHECK (length(trim(slug)) > 0),
     category TEXT NOT NULL CHECK (category IN ('guide', 'analysis', 'news', 'explainer')),
-    summary TEXT NOT NULL,
-    content TEXT NOT NULL,
-    author_name TEXT NOT NULL,
+    summary TEXT NOT NULL CHECK (length(trim(summary)) > 0),
+    content TEXT NOT NULL CHECK (length(trim(content)) > 0),
+    author_name TEXT NOT NULL CHECK (length(trim(author_name)) > 0),
     read_time_minutes INTEGER NOT NULL CHECK (read_time_minutes > 0),
     tags TEXT[] NOT NULL DEFAULT '{}',
     is_published BOOLEAN NOT NULL DEFAULT false,
@@ -127,6 +131,21 @@ CREATE TRIGGER trigger_articles_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
+-- Explicit SQL Privileges (Defense-in-Depth)
+-- Separate control from RLS: public cannot perform INSERT/UPDATE/DELETE at
+-- the SQL privilege layer regardless of RLS state.
+-- ============================================================================
+
+-- Revoke all privileges from public/untrusted roles first
+REVOKE ALL ON TABLE breaches, recommendations, articles FROM anon, authenticated, public;
+
+-- Grant SELECT only to anon and authenticated
+GRANT SELECT ON TABLE breaches, recommendations, articles TO anon, authenticated;
+
+-- Grant full administrative permissions to service_role and postgres
+GRANT ALL ON TABLE breaches, recommendations, articles TO service_role, postgres;
+
+-- ============================================================================
 -- Row Level Security (RLS) Configuration
 -- ============================================================================
 
@@ -140,7 +159,7 @@ DROP POLICY IF EXISTS "Public read-only verified breaches" ON breaches;
 DROP POLICY IF EXISTS "Public read-only published recommendations" ON recommendations;
 DROP POLICY IF EXISTS "Public read-only published articles" ON articles;
 
--- Policy 1: breaches - Public can only SELECT records that are both published and verified
+-- Policy 1: breaches - Public can only SELECT records that are BOTH published AND verified
 CREATE POLICY "Public read-only verified breaches"
     ON breaches
     FOR SELECT
@@ -161,8 +180,4 @@ CREATE POLICY "Public read-only published articles"
     TO anon, authenticated
     USING (is_published = true);
 
--- Note:
--- Write operations (INSERT, UPDATE, DELETE) have NO public/anon policies.
--- In PostgreSQL RLS, absence of a matching policy defaults to DENY.
--- The CredLock Express API backend will connect with the Supabase Service Role Key
--- (which bypasses RLS) to perform administrative writes safely.
+COMMIT;

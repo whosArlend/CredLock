@@ -5,7 +5,10 @@
 -- Description: Inserts initial verified breach incidents, practical security
 --              recommendations, and educational cybersecurity articles.
 -- Safety: Uses ON CONFLICT (slug) DO NOTHING to allow idempotent re-execution.
+-- Transaction: Wrapped in BEGIN/COMMIT for atomic insertion.
 -- ============================================================================
+
+BEGIN;
 
 -- ============================================================================
 -- 1. SEED: breaches (5 Verified Incidents with Documented Sources)
@@ -34,7 +37,7 @@ INSERT INTO breaches (
     '2020-03-01',
     '2020-05-02',
     91000000,
-    'Pada Maret 2020, basis data pengguna platform e-commerce Tokopedia bocor dan diperjualbelikan di forum dark web oleh kelompok peretas ShinyHunters. Data yang terekspos mencakup nama lengkap, alamat email, nomor telepon, dan hash password (terenkripsi salt). Tokopedia mengonfirmasi insiden tersebut dan mengimbau pengguna untuk segera mengganti password serta mengaktifkan verifikasi dua langkah (OTP).',
+    'Pada Maret 2020, basis data pengguna platform e-commerce Tokopedia diekstraksi dan diperjualbelikan di forum dark web oleh peretas (Whysodank / ShinyHunters). Data yang terekspos mencakup nama lengkap, alamat email, nomor telepon, tanggal lahir, dan hash password (SHA2-384). Tokopedia mengonfirmasi adanya upaya pencurian data dan mengimbau pengguna untuk segera mereset password serta mengaktifkan verifikasi OTP.',
     ARRAY['Email addresses', 'Names', 'Phone numbers', 'Password hashes', 'Dates of birth'],
     'critical',
     true,
@@ -49,7 +52,7 @@ INSERT INTO breaches (
     '2019-03-01',
     '2019-03-17',
     13000000,
-    'Pada awal 2019, peretas dengan alias Gnosticplayers mengklaim telah mengekstrak dan menjual data sekitar 13 juta pengguna Bukalapak di pasar dark web Dream Market. Insiden ini melibatkan kebocoran nama pengguna, email, dan hash password, meskipun pihak Bukalapak menyatakan bahwa data transaksi dan keuangan pengguna tidak tersentuh.',
+    'Pada Maret 2019, peretas dengan alias Gnosticplayers menjual data 13 juta akun Bukalapak di pasar dark web Dream Market. Data tersebut bersumber dari backup cold storage tahun 2017 dan mencakup username, nama lengkap, email, serta hash password. Bukalapak mengonfirmasi insiden akses tidak sah terhadap data historis ini dan menyatakan data transaksi finansial tetap aman.',
     ARRAY['Email addresses', 'Usernames', 'Password hashes', 'Names'],
     'high',
     true,
@@ -64,12 +67,12 @@ INSERT INTO breaches (
     '2019-05-24',
     '2019-05-24',
     137000000,
-    'Pada Mei 2019, platform desain grafis Canva mengalami pembobolan keamanan oleh pelaku ancaman siber Gnosticplayers. Sebanyak 137 juta akun terdampak, di mana penyerang berhasil mengakses email, nama pengguna, nama asli, dan password yang di-hash dengan algoritma bcrypt. Canva merespons dengan mereset token sesi dan menyarankan perubahan kredensial.',
+    'Pada 24 Mei 2019, platform desain grafis Canva disusupi peretas Gnosticplayers yang berhasil mengekstrak data sekitar 137 juta pengguna sebelum server basis data diputus. Data yang bocor meliputi email, nama lengkap, lokasi geografis (kota/negara), serta hash password berformat bcrypt untuk ~61 juta pengguna dan token autentikasi Google.',
     ARRAY['Email addresses', 'Usernames', 'Names', 'Geographic locations', 'Password hashes'],
     'critical',
     true,
     true,
-    'https://www.zdnet.com/article/canva-security-incident-post-mortem/'
+    'https://www.zdnet.com/article/australian-tech-unicorn-canva-suffers-security-breach/'
 ),
 (
     'Dropbox Credential Spill (2012 / Disclosed 2016)',
@@ -79,7 +82,7 @@ INSERT INTO breaches (
     '2012-07-01',
     '2016-08-31',
     68680741,
-    'Pada Juli 2012, Dropbox mengalami kebocoran data akibat penggunaan ulang password seorang karyawan dari kompromi LinkedIn sebelumnya. Basis data lengkap yang mencakup lebih dari 68 juta akun pengguna baru diverifikasi secara publik pada Agustus 2016. Seluruh password disimpan dalam bentuk salted hashes (bcrypt dan SHA-1).',
+    'Pada Juli 2012, Dropbox mengalami pencurian kredensial internal setelah password seorang karyawan yang digunakan ulang dari insiden LinkedIn disusupi penyerang. Pada Agustus 2016, basis data berisi 68.680.741 akun pengguna diverifikasi secara publik oleh Leakbase dan Motherboard. Password pengguna diamankan menggunakan salted hash bcrypt (32 juta akun) dan SHA-1 (36 juta akun).',
     ARRAY['Email addresses', 'Password hashes'],
     'high',
     true,
@@ -93,8 +96,8 @@ INSERT INTO breaches (
     'Adobe Systems Inc.',
     '2013-10-04',
     '2013-10-04',
-    153000000,
-    'Pada Oktober 2013, sistem server Adobe disusupi oleh penyerang yang berhasil mencuri data sekitar 153 juta akun. Password pengguna disimpan menggunakan enkripsi simetris 3DES mode ECB (bukan salt-and-hash modern) dan petunjuk password (password hints) disimpan dalam teks biasa tanpa enkripsi, memungkinkan peneliti keamanan mendekripsi jutaan password dengan mudah.',
+    152989505,
+    'Pada Oktober 2013, sistem server Adobe disusupi oleh penyerang yang mengekstraksi 152.989.505 catatan akun pengguna. Insiden ini menjadi studi kasus kriptografi klasik karena password disimpan menggunakan enkripsi simetris 3DES mode ECB dengan kunci tunggal (menghasilkan ciphertext identik untuk password yang sama) serta petunjuk password (password hints) yang disimpan dalam teks biasa tanpa enkripsi.',
     ARRAY['Email addresses', 'Password hints', 'Password hashes', 'Usernames'],
     'critical',
     true,
@@ -288,7 +291,7 @@ Eksponen panjang ($L$) memiliki dampak eksponensial yang jauh lebih besar terhad
 ## Metode Passphrase: Solusi Praktis Manusiawi
 
 Metode **passphrase** (menggabungkan 4 hingga 6 kata acak yang tidak berhubungan, misalnya: *kelinci-orbit-kopi-lentera*) menawarkan dua keuntungan mutlak:
-1. **Entropi sangat tinggi**: Dengan kamus 7.776 kata acak (standar EFF Diceware), 4 kata menghasilkan $\sim 51$ bit entropi, sementara 5 kata menghasilkan $\sim 65$ bit entropi.
+1. **Entropi sangat tinggi**: Dengan kamus 7.776 kata acak (standar EFF Diceware), 4 kata menghasilkan ~51 bit entropi, sementara 5 kata menghasilkan ~65 bit entropi.
 2. **Mudah dihafal manusia**: Otak manusia jauh lebih mudah mengingat gambaran kata bermakna daripada deretan simbol acak seperti `x7#P!9$q`.
 
 ## Ringkasan Praktik Terbaik
@@ -478,3 +481,5 @@ Bagi pengembang aplikasi modern, tidak ada alasan lagi untuk menggunakan MD5 ata
     TIMEZONE('utc'::TEXT, NOW())
 )
 ON CONFLICT (slug) DO NOTHING;
+
+COMMIT;
