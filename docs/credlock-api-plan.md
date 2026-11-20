@@ -174,7 +174,7 @@ backend/credlock-api/
 ## 6. Database Schema Proposal (Supabase PostgreSQL)
 
 ### 6.1 Entity Relational Strategy
-To keep the schema clean, resilient, and achievable within an academic project scope, the three primary resources are modeled as independent relational tables with standard PostgreSQL types, appropriate constraints, and automatic audit timestamps (`created_at`, `updated_at`).
+To keep the schema clean, resilient, and achievable within an academic project scope, the three primary resources are modeled as independent relational tables with standard PostgreSQL types, appropriate constraints, automatic audit triggers (`created_at`, `updated_at`), and Row Level Security (RLS) policies.
 
 ### 6.2 Table 1: `breaches` (Breach Intelligence)
 Stores public cybersecurity breach records, tracking incident scope, affected entities, and exposure details.
@@ -182,56 +182,59 @@ Stores public cybersecurity breach records, tracking incident scope, affected en
 | Column Name | Data Type | Constraints | Description |
 | :--- | :--- | :--- | :--- |
 | `id` | `UUID` | `PRIMARY KEY DEFAULT gen_random_uuid()` | Unique record identifier |
-| `name` | `VARCHAR(150)` | `NOT NULL` | Incident or entity name (e.g. "Equifax Data Leak") |
-| `organization` | `VARCHAR(150)` | `NOT NULL` | Affected company or institution |
-| `domain` | `VARCHAR(100)` | `NOT NULL` | Primary internet domain (e.g. "equifax.com") |
-| `description` | `TEXT` | `NOT NULL` | Comprehensive incident summary |
-| `breach_date` | `DATE` | `NOT NULL` | Estimated date when breach occurred |
-| `discovery_date` | `DATE` | `NULLABLE` | Date when incident was formally identified |
-| `affected_accounts` | `BIGINT` | `NOT NULL DEFAULT 0 CHECK (affected_accounts >= 0)` | Approximate number of compromised accounts |
-| `exposed_data` | `TEXT[]` | `NOT NULL DEFAULT '{}'` | Array of data classes (e.g. `['Passwords', 'Emails', 'SSN']`) |
-| `severity` | `VARCHAR(20)` | `NOT NULL CHECK (severity IN ('low', 'medium', 'high', 'critical'))` | Impact classification level |
+| `title` | `TEXT` | `NOT NULL` | Incident or entity title (e.g. "Tokopedia Data Breach (2020)") |
+| `slug` | `TEXT` | `NOT NULL UNIQUE` | URL-safe identifier (e.g. "tokopedia-2020") |
+| `domain` | `TEXT` | `NULLABLE` | Primary internet domain (e.g. "tokopedia.com") |
+| `organization` | `TEXT` | `NULLABLE` | Affected company or institution |
+| `breach_date` | `DATE` | `NULLABLE` | Date when breach occurred |
+| `added_date` | `DATE` | `NOT NULL DEFAULT CURRENT_DATE` | Date when record was added to intelligence catalog |
+| `pwn_count` | `BIGINT` | `CHECK (pwn_count >= 0)` | Approximate number of compromised accounts |
+| `description` | `TEXT` | `NOT NULL` | Comprehensive incident summary and impact |
+| `data_classes` | `TEXT[]` | `NOT NULL DEFAULT '{}'` | Array of data types exposed (e.g. `['Email addresses', 'Password hashes']`) |
+| `severity` | `TEXT` | `NOT NULL CHECK (severity IN ('low', 'medium', 'high', 'critical'))` | Impact classification level |
+| `is_verified` | `BOOLEAN` | `NOT NULL DEFAULT false` | Incident verification flag |
+| `is_published` | `BOOLEAN` | `NOT NULL DEFAULT true` | Public visibility status |
 | `source_url` | `TEXT` | `NULLABLE` | Authoritative report or disclosure URL |
-| `remediation_advice`| `TEXT` | `NOT NULL` | Guidance for affected users |
-| `is_verified` | `BOOLEAN` | `NOT NULL DEFAULT true` | Incident verification flag |
-| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Record creation timestamp |
-| `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Record last modification timestamp |
+| `logo_url` | `TEXT` | `NULLABLE` | Entity logo or badge URL |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT TIMEZONE('utc'::text, now())` | Record creation timestamp |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT TIMEZONE('utc'::text, now())` | Record last modification timestamp |
 
 ### 6.3 Table 2: `recommendations` (Security Recommendations)
-Stores actionable, risk-categorized hardening guidance.
+Stores actionable, risk-categorized hardening guidance and emergency playbooks.
 
 | Column Name | Data Type | Constraints | Description |
 | :--- | :--- | :--- | :--- |
 | `id` | `UUID` | `PRIMARY KEY DEFAULT gen_random_uuid()` | Unique recommendation identifier |
-| `title` | `VARCHAR(200)` | `NOT NULL` | Concise rule name (e.g. "Enforce Multi-Factor Authentication") |
-| `summary` | `TEXT` | `NOT NULL` | Executive single-paragraph summary |
-| `category` | `VARCHAR(50)` | `NOT NULL CHECK (category IN ('authentication', 'password_hygiene', 'mfa', 'storage', 'network'))` | Domain category |
-| `risk_level` | `VARCHAR(20)` | `NOT NULL CHECK (risk_level IN ('low', 'medium', 'high', 'critical'))` | Associated risk addressed |
-| `priority` | `SMALLINT` | `NOT NULL DEFAULT 3 CHECK (priority BETWEEN 1 AND 5)` | Implementation priority (1 = highest) |
-| `action_steps` | `JSONB` | `NOT NULL DEFAULT '[]'` | Ordered array of step strings `["Step 1", "Step 2"]` |
-| `target_audience` | `VARCHAR(50)` | `NOT NULL DEFAULT 'general'` | Intended user tier (`general`, `power_user`, `admin`) |
-| `is_active` | `BOOLEAN` | `NOT NULL DEFAULT true` | Visibility flag |
-| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Creation timestamp |
-| `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Last update timestamp |
+| `title` | `TEXT` | `NOT NULL` | Concise title (e.g. "Aktifkan Autentikasi Dua Faktor (2FA / MFA)") |
+| `slug` | `TEXT` | `NOT NULL UNIQUE` | URL-safe identifier |
+| `category` | `TEXT` | `NOT NULL CHECK (category IN ('password', 'auth', 'device', 'network', 'incident_response'))` | Security domain category |
+| `priority` | `TEXT` | `NOT NULL CHECK (priority IN ('low', 'medium', 'high', 'critical'))` | Implementation priority |
+| `summary` | `TEXT` | `NOT NULL` | Single-paragraph action summary |
+| `action_steps` | `JSONB` | `NOT NULL DEFAULT '[]'::jsonb` | Ordered array of actionable step instructions |
+| `target_audience` | `TEXT` | `NULLABLE` | Intended user tier / target group |
+| `tags` | `TEXT[]` | `NOT NULL DEFAULT '{}'` | Search and topic tags |
+| `is_published` | `BOOLEAN` | `NOT NULL DEFAULT false` | Publication flag |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT TIMEZONE('utc'::text, now())` | Creation timestamp |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT TIMEZONE('utc'::text, now())` | Last update timestamp |
 
 ### 6.4 Table 3: `articles` (Security Articles & Advisories)
-Stores educational cybersecurity content and technical advisories.
+Stores educational cybersecurity content, technical guides, and explainers formatted in Markdown.
 
 | Column Name | Data Type | Constraints | Description |
 | :--- | :--- | :--- | :--- |
 | `id` | `UUID` | `PRIMARY KEY DEFAULT gen_random_uuid()` | Unique article identifier |
-| `title` | `VARCHAR(250)` | `NOT NULL` | Editorial article title |
-| `slug` | `VARCHAR(250)` | `NOT NULL UNIQUE` | URL-safe identifier (e.g. "why-length-beats-complexity") |
-| `summary` | `TEXT` | `NOT NULL` | Brief teaser paragraph |
+| `title` | `TEXT` | `NOT NULL` | Editorial article title |
+| `slug` | `TEXT` | `NOT NULL UNIQUE` | URL-safe identifier (e.g. "anatomi-password-yang-kuat") |
+| `category` | `TEXT` | `NOT NULL CHECK (category IN ('guide', 'analysis', 'news', 'explainer'))` | Content category |
+| `summary` | `TEXT` | `NOT NULL` | Teaser / summary paragraph |
 | `content` | `TEXT` | `NOT NULL` | Full article body formatted in Markdown |
-| `category` | `VARCHAR(50)` | `NOT NULL` | Thematic category (e.g. "Cryptography", "Breach Analysis") |
+| `author_name` | `TEXT` | `NOT NULL` | Author attribution |
+| `read_time_minutes`| `INTEGER` | `NOT NULL CHECK (read_time_minutes > 0)` | Estimated reading time in minutes |
 | `tags` | `TEXT[]` | `NOT NULL DEFAULT '{}'` | Search and categorization tags |
-| `author_name` | `VARCHAR(100)` | `NOT NULL DEFAULT 'CredLock Security Team'` | Author attribution |
-| `read_time_minutes`| `SMALLINT` | `NOT NULL DEFAULT 3 CHECK (read_time_minutes > 0)` | Estimated reading time in minutes |
 | `is_published` | `BOOLEAN` | `NOT NULL DEFAULT false` | Publication flag |
 | `published_at` | `TIMESTAMPTZ` | `NULLABLE` | Public release timestamp |
-| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Creation timestamp |
-| `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Last update timestamp |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT TIMEZONE('utc'::text, now())` | Creation timestamp |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT TIMEZONE('utc'::text, now())` | Last update timestamp |
 
 ---
 
