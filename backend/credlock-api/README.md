@@ -1,19 +1,19 @@
 # CredLock Security Intelligence API — Backend
 
-REST API backend untuk **CredLock Security Intelligence**, dibangun dengan Node.js, Express 5, TypeScript, dan Zod. Backend ini bertindak sebagai penyedia intelijen siber publik dan analitika keamanan terverifikasi untuk aplikasi CredLock PWA.
+REST API backend untuk **CredLock Security Intelligence**, dibangun dengan Node.js, Express 5, TypeScript, Zod, dan Supabase JS Client. Backend ini bertindak sebagai penyedia intelijen siber publik dan analitika keamanan terverifikasi untuk aplikasi CredLock PWA.
 
 ---
 
-## 1. Arsitektur Backend
+## 1. Arsitektur Backend & Database Connection
 
-Backend ini menerapkan arsitektur berlapis (*layered modular architecture*) yang memisahkan konfigurasi aplikasi, middleware keamanan, perutean versi (*versioned routing*), dan penanganan error:
+Backend ini menerapkan arsitektur berlapis (*layered modular architecture*) yang memisahkan konfigurasi aplikasi, koneksi database, middleware keamanan, perutean versi (*versioned routing*), dan penanganan error:
 
 ```
 backend/credlock-api/
 ├── src/
-│   ├── config/          # Validasi skema environment dengan Zod (env.ts)
+│   ├── config/          # Validasi skema Zod (env.ts) & Supabase Client (supabase.ts)
 │   ├── middleware/      # Keamanan (Helmet, CORS, Rate Limit), Error Handler, Logger
-│   ├── routes/          # Perutean endpoint (/api/health, /api/v1)
+│   ├── routes/          # Perutean endpoint (/api/health, /api/health/db, /api/v1)
 │   ├── utils/           # Helper amplop respon JSON standar
 │   ├── app.ts           # Inisialisasi Express & konfigurasi middleware
 │   └── server.ts        # Entry point startup HTTP listener
@@ -24,8 +24,13 @@ backend/credlock-api/
 └── tsconfig.json
 ```
 
-- **Pemisahan `app.ts` & `server.ts`**: Memungkinkan pengujian HTTP menggunakan Supertest tanpa harus membuka port soket jaringan sungguhan (*port-free testing*).
-- **Zero-Knowledge Invariant**: Backend ini murni bertindak sebagai penyedia data publik dan analitika. Tidak ada endpoint yang menerima password, hash password, atau master key pengguna.
+### Keamanan Service Role & Zero-Knowledge Invariant
+- **Bypass RLS**: Backend terhubung ke Supabase menggunakan **Service Role Key** server-side. Karena Service Role memiliki hak istimewa `BYPASSRLS` di PostgreSQL, seluruh modul/handler yang melayani kueri publik di masa mendatang **WAJIB** menerapkan filter eksplisit:
+  - `breaches`: wajib menyertakan `.eq('is_published', true).eq('is_verified', true)`.
+  - `recommendations`: wajib menyertakan `.eq('is_published', true)`.
+  - `articles`: wajib menyertakan `.eq('is_published', true)`.
+- **Zero-Knowledge Invariant**: Backend ini murni bertindak sebagai penyedia data publik dan analitika edukatif. Tidak ada endpoint yang menerima, menyimpan, atau memproses password, hash password, atau master key pengguna.
+- **Pencegahan Kebocoran Rahasia**: `SUPABASE_SERVICE_ROLE_KEY` hanya boleh berada di file `.env` server backend dan tidak boleh diawali dengan `VITE_`, diekspos ke frontend, dicatat di log, atau dikembalikan melalui respon API.
 
 ---
 
@@ -40,7 +45,7 @@ npm install
 
 ---
 
-## 3. Konfigurasi Environment
+## 3. Konfigurasi Environment Lokal
 
 Salin file `.env.example` menjadi `.env`:
 
@@ -50,11 +55,13 @@ cp .env.example .env
 
 Variabel yang didukung:
 
-| Variabel | Deskripsi | Default |
-| :--- | :--- | :--- |
-| `NODE_ENV` | Mode lingkungan (`development`, `production`, `test`) | `development` |
-| `PORT` | Port server backend Express | `4000` |
-| `FRONTEND_URL`| Origin URL frontend PWA untuk whitelist CORS | `http://localhost:5173` |
+| Variabel | Deskripsi | Wajib | Default |
+| :--- | :--- | :--- | :--- |
+| `NODE_ENV` | Mode lingkungan (`development`, `production`, `test`) | Tidak | `development` |
+| `PORT` | Port server backend Express | Tidak | `4000` |
+| `FRONTEND_URL`| Origin URL frontend PWA untuk whitelist CORS | Tidak | `http://localhost:5173` |
+| `SUPABASE_URL` | URL Endpoint Supabase Project Anda | Ya (DB Ops) | - |
+| `SUPABASE_SERVICE_ROLE_KEY` | Secret Service Role Key Supabase | Ya (DB Ops) | - |
 
 > Port default **4000** dipilih agar tidak terjadi bentrok dengan:
 > - **Sales-API Modul 1**: Port `3000`
@@ -82,10 +89,10 @@ Output terminal saat server aktif:
 
 ---
 
-## 5. Endpoint Tersedia (Phase 3.1)
+## 5. Endpoint Health & Readiness (Phase 3.2)
 
-### `GET /api/health`
-Memeriksa status keaktifan layanan API (*liveness probe*).
+### A. `GET /api/health` (Basic Liveness Probe)
+Memeriksa status keaktifan proses server Express secara mandiri. **Tidak bergantung pada ketersediaan koneksi database**.
 
 **Respon Sukses (HTTP 200):**
 ```json
@@ -97,17 +104,52 @@ Memeriksa status keaktifan layanan API (*liveness probe*).
 }
 ```
 
+### B. `GET /api/health/db` (Database Readiness Probe)
+Memverifikasi konektivitas nyata ke database Supabase PostgreSQL menggunakan kueri ringan (*lightweight probe*) pada tabel `breaches` (hanya memeriksa keberadaan 1 ID tanpa mengambil data penuh atau mengubah database).
+
+**Respon Saat Terhubung (HTTP 200):**
+```json
+{
+  "success": true,
+  "message": "Database is connected and healthy",
+  "database": {
+    "status": "connected",
+    "latencyMs": 28
+  },
+  "timestamp": "2026-11-20T12:00:00.000Z"
+}
+```
+
+**Respon Saat Database Tidak Tersedia (HTTP 503 Service Unavailable):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "DATABASE_UNAVAILABLE",
+    "message": "Database service is currently unreachable"
+  },
+  "database": {
+    "status": "disconnected"
+  },
+  "timestamp": "2026-11-20T12:00:00.000Z"
+}
+```
+*Catatan Keamanan: Tidak ada informasi sensitif, connection string, stack trace, atau detail internal error Supabase yang dibocorkan ke respon klien saat database gagal.*
+
 ### Menguji dengan `curl`
 ```bash
-# Pengujian lokal via terminal
+# Uji Liveness
 curl -i http://localhost:4000/api/health
+
+# Uji Database Readiness
+curl -i http://localhost:4000/api/health/db
 ```
 
 ---
 
 ## 6. Menjalankan Pengujian (Testing)
 
-Pengujian unit dan integrasi HTTP menggunakan **Vitest** dan **Supertest**:
+Pengujian unit dan integrasi HTTP menggunakan **Vitest** dan **Supertest** (seluruh dependensi database di-mock agar pengujian berjalan cepat dan deterministik tanpa memerlukan koneksi internet aktif):
 
 ```bash
 # Menjalankan seluruh test suite sekali jalan
@@ -117,14 +159,15 @@ npm test
 npm run test:watch
 ```
 
-Cakupan pengujian otomatis meliputi:
-- Health endpoint status HTTP 200
-- Validitas format tanggal ISO dinamis pada timestamp
-- Struktur amplop JSON respon
+Cakupan pengujian (17 test cases):
+- Validasi skema Zod untuk konfigurasi Supabase (URL valid, key non-empty, error saat field absen)
+- Inisialisasi dan isolasi Supabase client
+- Endpoint database readiness `GET /api/health/db` status HTTP 200 saat terhubung
+- Endpoint database readiness `GET /api/health/db` status HTTP 503 saat gagal & verifikasi ketiadaan kebocoran secret
+- Endpoint liveness `GET /api/health` tetap berfungsi normal meski database offline
 - Penanganan 404 pada rute tidak dikenal
-- Penanganan error aman tanpa kebocoran *stack trace* di lingkungan produksi
 - Header keamanan Helmet (`X-Content-Type-Options`, `X-Frame-Options`, dll)
-- Batas ukuran payload request body
+- Batas ukuran payload request body (100 KB limit)
 
 ---
 
