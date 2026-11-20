@@ -290,6 +290,133 @@ curl -i "http://localhost:4000/api/v1/breaches/tokopedia-2020"
 
 ---
 
+### D. Security Recommendations Endpoints (Phase 3.3C)
+
+#### 1. `GET /api/v1/recommendations` (Daftar Rekomendasi Terpaginasi)
+Mengambil panduan keamanan siber yang dipublikasikan (`is_published: true`) dengan dukungan pencarian multi-kolom, penyaringan kategori, prioritas, pengurutan terindeks, dan paginasi level database.
+
+> **Catatan Optimasi Payload**: Pada endpoint list, kolom `action_steps` diringkas/dihilangkan agar transfer payload jaringan tetap efisien dan ringan bagi klien seluler/PWA. Kolom `action_steps` lengkap tersedia pada endpoint detail.
+
+**Query Parameters:**
+
+| Parameter | Tipe | Default | Deskripsi |
+| :--- | :--- | :--- | :--- |
+| `page` | Integer | `1` | Nomor halaman (minimal 1) |
+| `limit` | Integer | `10` | Jumlah item per halaman (1 hingga 50) |
+| `search` | String | - | Pencarian kata kunci pada `title`, `summary`, atau `category` (maksimal 100 karakter) |
+| `category` | Enum | - | Filter kategori: `password`, `auth`, `device`, `network`, `incident_response` |
+| `priority` | Enum | - | Filter prioritas: `critical`, `high`, `medium`, `low` |
+| `sort` | Enum | `created_at` | Kolom pengurutan: `title`, `category`, `priority`, `created_at` |
+| `order` | Enum | `desc` | Arah urutan: `asc`, `desc` |
+
+**Contoh Respon Sukses (HTTP 200) — *Nilai Ilustratif*:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "e7bb41f0-ef6d-448f-bcb5-373c2e05f3e2",
+      "title": "Aktifkan Autentikasi Dua Faktor (2FA)",
+      "slug": "aktifkan-autentikasi-dua-faktor",
+      "category": "auth",
+      "priority": "critical",
+      "summary": "Tingkatkan keamanan akun digital Anda dengan mengaktifkan verifikasi dua langkah menggunakan aplikasi authenticator.",
+      "target_audience": "Semua pengguna akun daring",
+      "tags": ["2fa", "security", "authentication"],
+      "created_at": "2026-11-20T10:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "totalItems": 1,
+    "totalPages": 1,
+    "hasNextPage": false,
+    "hasPreviousPage": false
+  },
+  "timestamp": "2026-11-20T12:00:00.000Z"
+}
+```
+
+#### 2. `GET /api/v1/recommendations/:slug` (Detail Rekomendasi Lengkap)
+Mengambil detail lengkap satu panduan rekomendasi keamanan terpublikasi berdasarkan `slug`, termasuk struktur utuh objek instruksi langkah kerja (`action_steps`).
+
+**Contoh Respon Sukses (HTTP 200) — *Nilai Ilustratif*:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "e7bb41f0-ef6d-448f-bcb5-373c2e05f3e2",
+    "title": "Aktifkan Autentikasi Dua Faktor (2FA)",
+    "slug": "aktifkan-autentikasi-dua-faktor",
+    "category": "auth",
+    "priority": "critical",
+    "summary": "Tingkatkan keamanan akun digital Anda dengan mengaktifkan verifikasi dua langkah menggunakan aplikasi authenticator.",
+    "action_steps": [
+      {
+        "step_number": 1,
+        "title": "Unduh Aplikasi Authenticator",
+        "description": "Pasang aplikasi seperti Google Authenticator, Microsoft Authenticator, atau Aegis pada ponsel pintar Anda."
+      },
+      {
+        "step_number": 2,
+        "title": "Pindai Kode QR Keamanan",
+        "description": "Buka pengaturan keamanan akun Anda, pilih Two-Factor Authentication, lalu pindai barcode yang disediakan."
+      },
+      {
+        "step_number": 3,
+        "title": "Simpan Kode Cadangan (Backup Codes)",
+        "description": "Catat atau cetak kode pemulihan darurat dan simpan di lokasi aman offline."
+      }
+    ],
+    "target_audience": "Semua pengguna akun daring",
+    "tags": ["2fa", "security", "authentication"],
+    "created_at": "2026-11-20T10:00:00.000Z",
+    "updated_at": "2026-11-20T10:00:00.000Z"
+  },
+  "timestamp": "2026-11-20T12:00:00.000Z"
+}
+```
+
+**Respon Error Not Found (HTTP 404):**  
+Jika `slug` tidak ditemukan, atau berstatus *draft/unpublished* (`is_published: false`), API mengembalikan respon 404 identik guna mencegah *data enumeration*:
+```json
+{
+  "success": false,
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Recommendation with slug 'example-slug' not found"
+  },
+  "timestamp": "2026-11-20T12:00:00.000Z"
+}
+```
+
+**Respon Parameter Tidak Valid (HTTP 400 Bad Request):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Limit must be between 1 and 50"
+  },
+  "timestamp": "2026-11-20T12:00:00.000Z"
+}
+```
+
+### Menguji Rekomendasi dengan `curl`
+```bash
+# Ambil daftar rekomendasi dengan filter kategori dan limit
+curl -i "http://localhost:4000/api/v1/recommendations?category=password&limit=5"
+
+# Cari rekomendasi dengan kata kunci dan urutkan berdasarkan prioritas
+curl -i "http://localhost:4000/api/v1/recommendations?search=autentikasi&sort=priority&order=asc"
+
+# Ambil detail rekomendasi lengkap beserta action_steps
+curl -i "http://localhost:4000/api/v1/recommendations/aktifkan-autentikasi-dua-faktor"
+```
+
+---
+
 ## 6. Menjalankan Pengujian (Testing)
 
 Pengujian unit dan integrasi HTTP menggunakan **Vitest** dan **Supertest** (seluruh dependensi database di-mock agar pengujian berjalan cepat, deterministik, dan bebas kebocoran kunci):
@@ -302,7 +429,18 @@ npm test
 npm run test:watch
 ```
 
-Cakupan pengujian (42 test cases lintas 5 test suites):
+Cakupan pengujian (69 test cases lintas 6 test suites):
+- `tests/recommendations.test.ts` (27 tests):
+  - Paginasi default (page 1, limit 10), penyesuaian limit/halaman, dan kalkulasi pagination metadata
+  - Filter kategori (`category=password`, `auth`, `device`, `network`, `incident_response`)
+  - Filter prioritas (`priority=critical`, `high`, `medium`, `low`)
+  - Pencarian multi-kolom (`title`, `summary`, `category`)
+  - Pengurutan terindeks (`sort=title`, `category`, `priority`, `created_at` dengan `order=asc/desc`)
+  - Validasi ketat query parameter HTTP 400 (halaman < 1, limit > 50, sort column di luar allowlist, kategori/prioritas invalid, search > 100 karakter)
+  - Aturan visibilitas publik: item *draft* (`is_published: false`) tidak pernah muncul di list maupun dihitung dalam total count
+  - Ketiadaan kolom `action_steps` dan `is_published` pada DTO response list untuk payload hygiene
+  - Detail endpoint HTTP 200 mengembalikan struktur `action_steps` utuh dan metadata lengkap
+  - Detail endpoint HTTP 404 identik untuk slug yang tidak ada atau berstatus *unpublished*
 - `tests/breaches.test.ts` (18 tests):
   - List paginasi default, kustomisasi limit/page, kalkulasi metadata
   - Pencarian multi-kolom (title, organization, domain)
