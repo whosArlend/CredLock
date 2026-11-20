@@ -232,7 +232,7 @@ describe('Phase 3.4B — DashboardService', () => {
   // -------------------------------------------------------------------------
   describe('3. URL construction', () => {
     it('requests /api/v1/dashboard/summary from the correct path', async () => {
-      let capturedUrl: string | null = null;
+      let capturedUrl = '';
 
       const mockFetch: typeof fetch = async (input) => {
         capturedUrl = typeof input === 'string' ? input : (input as Request).url;
@@ -246,9 +246,9 @@ describe('Phase 3.4B — DashboardService', () => {
       const service = new DashboardService(client);
       await service.getSummary();
 
-      assert.ok(capturedUrl !== null, 'fetch should have been called');
+      assert.ok(capturedUrl.length > 0, 'fetch should have been called');
       assert.ok(
-        capturedUrl!.includes('/api/v1/dashboard/summary'),
+        capturedUrl.includes('/api/v1/dashboard/summary'),
         `Expected URL to include /api/v1/dashboard/summary, got: ${capturedUrl}`
       );
     });
