@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { validateSupabaseEnv } from '../src/config/env.js';
 import {
   checkDatabaseConnection,
@@ -13,20 +13,20 @@ describe('Supabase Configuration & Client Module', () => {
   });
 
   describe('validateSupabaseEnv', () => {
-    it('succeeds with valid URL and service-role key', () => {
+    it('succeeds with valid URL and secret key (sb_secret_...) format', () => {
       const validConfig = {
         SUPABASE_URL: 'https://sampleproject.supabase.co',
-        SUPABASE_SERVICE_ROLE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.valid-mock-key-token',
+        SUPABASE_SECRET_KEY: 'sb_secret_sample_mock_token_for_backend_access',
       };
 
       const result = validateSupabaseEnv(validConfig);
       expect(result.SUPABASE_URL).toBe(validConfig.SUPABASE_URL);
-      expect(result.SUPABASE_SERVICE_ROLE_KEY).toBe(validConfig.SUPABASE_SERVICE_ROLE_KEY);
+      expect(result.SUPABASE_SECRET_KEY).toBe(validConfig.SUPABASE_SECRET_KEY);
     });
 
     it('throws error when SUPABASE_URL is missing', () => {
       const invalidConfig = {
-        SUPABASE_SERVICE_ROLE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.valid-mock-key-token',
+        SUPABASE_SECRET_KEY: 'sb_secret_sample_mock_token_for_backend_access',
       };
 
       expect(() => validateSupabaseEnv(invalidConfig)).toThrow();
@@ -35,16 +35,16 @@ describe('Supabase Configuration & Client Module', () => {
     it('throws error when SUPABASE_URL is not a valid URL', () => {
       const invalidConfig = {
         SUPABASE_URL: 'not-a-valid-url-format',
-        SUPABASE_SERVICE_ROLE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.valid-mock-key-token',
+        SUPABASE_SECRET_KEY: 'sb_secret_sample_mock_token_for_backend_access',
       };
 
       expect(() => validateSupabaseEnv(invalidConfig)).toThrow();
     });
 
-    it('throws error when SUPABASE_SERVICE_ROLE_KEY is missing or too short', () => {
+    it('throws error when SUPABASE_SECRET_KEY is missing or too short', () => {
       const invalidConfig = {
         SUPABASE_URL: 'https://sampleproject.supabase.co',
-        SUPABASE_SERVICE_ROLE_KEY: 'short',
+        SUPABASE_SECRET_KEY: 'short',
       };
 
       expect(() => validateSupabaseEnv(invalidConfig)).toThrow();

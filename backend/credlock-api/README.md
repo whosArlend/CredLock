@@ -24,19 +24,26 @@ backend/credlock-api/
 └── tsconfig.json
 ```
 
-### Keamanan Service Role & Zero-Knowledge Invariant
-- **Bypass RLS**: Backend terhubung ke Supabase menggunakan **Service Role Key** server-side. Karena Service Role memiliki hak istimewa `BYPASSRLS` di PostgreSQL, seluruh modul/handler yang melayani kueri publik di masa mendatang **WAJIB** menerapkan filter eksplisit:
-  - `breaches`: wajib menyertakan `.eq('is_published', true).eq('is_verified', true)`.
-  - `recommendations`: wajib menyertakan `.eq('is_published', true)`.
-  - `articles`: wajib menyertakan `.eq('is_published', true)`.
-- **Zero-Knowledge Invariant**: Backend ini murni bertindak sebagai penyedia data publik dan analitika edukatif. Tidak ada endpoint yang menerima, menyimpan, atau memproses password, hash password, atau master key pengguna.
-- **Pencegahan Kebocoran Rahasia**: `SUPABASE_SERVICE_ROLE_KEY` hanya boleh berada di file `.env` server backend dan tidak boleh diawali dengan `VITE_`, diekspos ke frontend, dicatat di log, atau dikembalikan melalui respon API.
+### Keamanan Kunci Rahasia Supabase (`SUPABASE_SECRET_KEY`)
+Proyek ini mendukung format kunci API terbaru Supabase:
+- **`SUPABASE_PUBLISHABLE_KEY` (`sb_publishable_...`)**: Digunakan untuk akses publik/browser (tidak digunakan untuk backend privileged).
+- **`SUPABASE_SECRET_KEY` (`sb_secret_...`)**: Kunci rahasia server-side dengan izin administratif penuh.
+
+> [!WARNING]
+> **Aturan Keamanan Kunci Rahasia**:
+> 1. `SUPABASE_SECRET_KEY` **hanya boleh berada di file `.env` server backend** (`backend/credlock-api/.env`).
+> 2. **DILARANG KERAS** menggunakan `SUPABASE_SECRET_KEY` di kode frontend PWA atau menamainya dengan prefix `VITE_`.
+> 3. Kunci rahasia ini memiliki izin istimewa yang melewati *Row Level Security* (RLS). Karena itu, seluruh handler API publik di masa mendatang **WAJIB** menerapkan penyaringan manual:
+>    - `breaches`: wajib memfilter `.eq('is_published', true).eq('is_verified', true)`
+>    - `recommendations`: wajib memfilter `.eq('is_published', true)`
+>    - `articles`: wajib memfilter `.eq('is_published', true)`
+> 4. Backend dilarang mencatat (`console.log`) atau mengembalikan nilai kunci ini melalui respon endpoint API.
 
 ---
 
 ## 2. Instalasi Dependensi
 
-Untuk menginstal dependensi backend, navigasikan ke folder `backend/credlock-api/`:
+Navigasikan ke folder `backend/credlock-api/`:
 
 ```bash
 cd backend/credlock-api
@@ -53,7 +60,16 @@ Salin file `.env.example` menjadi `.env`:
 cp .env.example .env
 ```
 
-Variabel yang didukung:
+Isi konfigurasi pada file `.env` lokal Anda:
+
+```env
+NODE_ENV=development
+PORT=4000
+FRONTEND_URL=http://localhost:5173
+
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_SECRET_KEY=your-supabase-secret-key-here
+```
 
 | Variabel | Deskripsi | Wajib | Default |
 | :--- | :--- | :--- | :--- |
@@ -61,9 +77,9 @@ Variabel yang didukung:
 | `PORT` | Port server backend Express | Tidak | `4000` |
 | `FRONTEND_URL`| Origin URL frontend PWA untuk whitelist CORS | Tidak | `http://localhost:5173` |
 | `SUPABASE_URL` | URL Endpoint Supabase Project Anda | Ya (DB Ops) | - |
-| `SUPABASE_SERVICE_ROLE_KEY` | Secret Service Role Key Supabase | Ya (DB Ops) | - |
+| `SUPABASE_SECRET_KEY` | Secret Key server-side Supabase (`sb_secret_...`) | Ya (DB Ops) | - |
 
-> Port default **4000** dipilih agar tidak terjadi bentrok dengan:
+> Port default **4000** memastikan tidak terjadi konflik dengan:
 > - **Sales-API Modul 1**: Port `3000`
 > - **CredLock PWA (Vite)**: Port `5173`
 
@@ -89,7 +105,7 @@ Output terminal saat server aktif:
 
 ---
 
-## 5. Endpoint Health & Readiness (Phase 3.2)
+## 5. Endpoint Health & Readiness
 
 ### A. `GET /api/health` (Basic Liveness Probe)
 Memeriksa status keaktifan proses server Express secara mandiri. **Tidak bergantung pada ketersediaan koneksi database**.
@@ -105,7 +121,7 @@ Memeriksa status keaktifan proses server Express secara mandiri. **Tidak bergant
 ```
 
 ### B. `GET /api/health/db` (Database Readiness Probe)
-Memverifikasi konektivitas nyata ke database Supabase PostgreSQL menggunakan kueri ringan (*lightweight probe*) pada tabel `breaches` (hanya memeriksa keberadaan 1 ID tanpa mengambil data penuh atau mengubah database).
+Memverifikasi konektivitas ke database Supabase PostgreSQL menggunakan kueri ringan (*lightweight probe*) pada tabel `breaches` (hanya memeriksa keberadaan 1 ID tanpa mengambil data penuh atau mengubah database).
 
 **Respon Saat Terhubung (HTTP 200):**
 ```json
@@ -134,22 +150,13 @@ Memverifikasi konektivitas nyata ke database Supabase PostgreSQL menggunakan kue
   "timestamp": "2026-11-20T12:00:00.000Z"
 }
 ```
-*Catatan Keamanan: Tidak ada informasi sensitif, connection string, stack trace, atau detail internal error Supabase yang dibocorkan ke respon klien saat database gagal.*
-
-### Menguji dengan `curl`
-```bash
-# Uji Liveness
-curl -i http://localhost:4000/api/health
-
-# Uji Database Readiness
-curl -i http://localhost:4000/api/health/db
-```
+*Catatan Keamanan: Tidak ada informasi sensitif, connection string, kunci rahasia, stack trace, atau detail internal error Supabase yang dibocorkan ke respon klien saat database gagal.*
 
 ---
 
 ## 6. Menjalankan Pengujian (Testing)
 
-Pengujian unit dan integrasi HTTP menggunakan **Vitest** dan **Supertest** (seluruh dependensi database di-mock agar pengujian berjalan cepat dan deterministik tanpa memerlukan koneksi internet aktif):
+Pengujian unit dan integrasi HTTP menggunakan **Vitest** dan **Supertest** (seluruh dependensi database di-mock agar pengujian berjalan cepat, deterministik, dan bebas kebocoran kunci):
 
 ```bash
 # Menjalankan seluruh test suite sekali jalan
@@ -160,7 +167,7 @@ npm run test:watch
 ```
 
 Cakupan pengujian (17 test cases):
-- Validasi skema Zod untuk konfigurasi Supabase (URL valid, key non-empty, error saat field absen)
+- Validasi skema Zod untuk format `SUPABASE_SECRET_KEY` dan `SUPABASE_URL`
 - Inisialisasi dan isolasi Supabase client
 - Endpoint database readiness `GET /api/health/db` status HTTP 200 saat terhubung
 - Endpoint database readiness `GET /api/health/db` status HTTP 503 saat gagal & verifikasi ketiadaan kebocoran secret

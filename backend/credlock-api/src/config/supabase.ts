@@ -5,13 +5,13 @@ let cachedClient: SupabaseClient | null = null;
 
 /**
  * Creates or retrieves the cached Supabase client instance.
- * Uses the server-side service-role key (bypasses RLS).
+ * Uses the server-side SUPABASE_SECRET_KEY (elevated/admin credentials).
  * Never expose this client or its credentials to the frontend.
  */
 export function getSupabaseClient(): SupabaseClient {
   if (!cachedClient) {
     const config = validateSupabaseEnv();
-    cachedClient = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY, {
+    cachedClient = createClient(config.SUPABASE_URL, config.SUPABASE_SECRET_KEY, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
