@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { dashboardRouter } from './dashboard.js';
 import { breachesRouter } from './breaches.js';
+import { recommendationsRouter } from './recommendations.js';
 
 export const v1Router = Router();
 
@@ -14,6 +15,8 @@ v1Router.use('/dashboard', dashboardRouter);
 // Phase 3.3B: Breach Intelligence List & Detail
 v1Router.use('/breaches', breachesRouter);
 
+// Phase 3.3C: Security Recommendations List & Detail
+v1Router.use('/recommendations', recommendationsRouter);
+
 // Future module routers will be mounted in upcoming phases:
-// v1Router.use('/recommendations', recommendationsRouter);
 // v1Router.use('/articles', articlesRouter);
