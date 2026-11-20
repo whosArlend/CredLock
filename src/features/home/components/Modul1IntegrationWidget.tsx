@@ -66,28 +66,28 @@ export function Modul1IntegrationWidget() {
   return (
     <section aria-labelledby="modul1-integration-title" className="space-y-3 text-left">
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1 border-b border-border">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1 border-b border-border/40">
         <div className="flex items-center gap-2">
           <Server className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
           <h2 id="modul1-integration-title" className="text-xs font-semibold uppercase tracking-wider text-muted font-mono">
-            [ REST API ADAPTER // MODUL 1 INTEGRATION ]
+            Sales-API Telemetry
           </h2>
         </div>
 
         <div className="flex items-center gap-2">
           {status === 'loading' && (
             <Badge variant="amber" size="sm" dot>
-              Querying API...
+              Syncing...
             </Badge>
           )}
           {status === 'online' && (
             <Badge variant="emerald" size="sm" dot>
-              Sales-API Online
+              Online
             </Badge>
           )}
           {status === 'offline' && (
             <Badge variant="rose" size="sm" dot>
-              Sales-API Offline
+              Offline (Port 3000)
             </Badge>
           )}
           {status === 'error' && (
@@ -100,9 +100,6 @@ export function Modul1IntegrationWidget() {
               Idle
             </Badge>
           )}
-          <span className="font-mono text-[10px] text-muted-dim hidden sm:inline">
-            GET /api/reports/total
-          </span>
         </div>
       </div>
 
