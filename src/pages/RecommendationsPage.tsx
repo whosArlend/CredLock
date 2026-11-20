@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -145,11 +144,11 @@ export function RecommendationsPage() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200 text-left">
+    <div className="space-y-5 animate-in fade-in duration-200 text-left">
       {/* Page Header */}
       <PageHeader
         title="Security Recommendations & Playbooks"
-        description="Curated cybersecurity hardening playbooks, mitigation steps, and defensive best practices aggregated in Supabase PostgreSQL."
+        description="Curated cybersecurity hardening playbooks, mitigation steps, and defensive best practices."
         badge={
           <Badge variant="emerald" size="sm" dot>
             Hardening Playbooks
@@ -158,7 +157,7 @@ export function RecommendationsPage() {
         actions={
           <div className="flex items-center gap-2">
             <Link to="/">
-              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
+              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}>
                 Dashboard
               </Button>
             </Link>
@@ -175,21 +174,21 @@ export function RecommendationsPage() {
         }
       />
 
-      {/* Query Controls: Search, Filters & Sorting */}
-      <Card variant="default" padding="md" className="space-y-4 bg-surface border-border">
-        {/* Search Input */}
+      {/* Query Controls: Consolidated Search, Categories & Priorities */}
+      <div className="p-3.5 rounded-xl bg-surface border border-border shadow-sm space-y-3">
+        {/* Search & Action Bar */}
         <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2">
           <div className="flex-1">
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by title, summary, or category (e.g. 2FA, password manager, wifi)..."
+              placeholder="Search playbooks by title, summary, or category (e.g. 2FA, password, wifi)..."
               leftElement={<Search className="w-4 h-4 text-muted" />}
-              className="font-mono text-xs"
+              className="font-mono text-xs h-9"
             />
           </div>
           <div className="flex items-center gap-2">
-            <Button type="submit" variant="primary" size="sm" className="font-mono text-xs">
+            <Button type="submit" variant="primary" size="sm" className="font-mono text-xs h-9">
               Search
             </Button>
             {(activeSearch || categoryFilter !== 'all' || priorityFilter !== 'all' || sortBy !== 'created_at' || sortOrder !== 'desc') && (
@@ -198,7 +197,7 @@ export function RecommendationsPage() {
                 variant="ghost"
                 size="sm"
                 onClick={handleClearFilters}
-                className="font-mono text-xs text-muted hover:text-foreground"
+                className="font-mono text-xs h-9 text-muted hover:text-foreground"
               >
                 Reset
               </Button>
@@ -206,14 +205,11 @@ export function RecommendationsPage() {
           </div>
         </form>
 
-        {/* Filter Pills Bar: Categories & Priorities */}
-        <div className="space-y-3 pt-2 border-t border-border/60 text-xs font-mono">
-          {/* Category Filter */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-muted flex items-center gap-1 mr-1">
-              <Filter className="w-3 h-3 text-accent" />
-              <span>Category:</span>
-            </span>
+        {/* Compact Category & Priority Pills Bar */}
+        <div className="space-y-2 pt-2 border-t border-border/50 text-xs font-mono">
+          {/* Category Filter Pills */}
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="text-muted-dim text-[11px] mr-1 hidden sm:inline">Category:</span>
             {(['all', 'password', 'auth', 'device', 'network', 'incident_response'] as const).map((cat) => {
               const isActive = categoryFilter === cat;
               return (
@@ -237,10 +233,10 @@ export function RecommendationsPage() {
           </div>
 
           {/* Priority & Sorting Row */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/40">
+          <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1.5 border-t border-border/40">
             {/* Priority Filter */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-muted mr-1">Priority:</span>
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="text-muted-dim text-[11px] mr-1 hidden sm:inline">Priority:</span>
               {(['all', 'critical', 'high', 'medium', 'low'] as const).map((prio) => {
                 const isActive = priorityFilter === prio;
                 return (
@@ -264,23 +260,20 @@ export function RecommendationsPage() {
             </div>
 
             {/* Sorter Selector */}
-            <div className="flex items-center gap-2">
-              <span className="text-muted flex items-center gap-1">
-                <SlidersHorizontal className="w-3 h-3 text-accent" />
-                <span>Sort:</span>
-              </span>
+            <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
+              <span className="text-muted-dim text-[11px] hidden sm:inline">Sort:</span>
               <select
                 value={sortBy}
                 onChange={(e) => {
                   setSortBy(e.target.value as SortField);
                   setCurrentPage(1);
                 }}
-                className="bg-background-secondary text-foreground text-xs font-mono rounded px-2 py-1 border border-border focus:outline-none focus:border-accent"
+                className="bg-background-base text-foreground text-xs font-mono rounded px-2 py-0.5 border border-border focus:outline-none focus:border-accent"
                 aria-label="Sort recommendations by"
               >
                 <option value="created_at">Date Added</option>
                 <option value="priority">Priority</option>
-                <option value="title">Title (Alphabetical)</option>
+                <option value="title">Title (A-Z)</option>
                 <option value="category">Category</option>
               </select>
 
@@ -290,7 +283,7 @@ export function RecommendationsPage() {
                   setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'));
                   setCurrentPage(1);
                 }}
-                className="px-2 py-1 bg-background-secondary border border-border rounded text-[11px] font-mono text-muted hover:text-foreground hover:border-accent/40 transition-colors"
+                className="px-1.5 py-0.5 bg-background-base border border-border rounded text-[10px] font-mono text-muted hover:text-foreground hover:border-accent/40 transition-colors"
                 title={`Switch order (currently ${sortOrder.toUpperCase()})`}
               >
                 {sortOrder.toUpperCase()}
@@ -298,22 +291,22 @@ export function RecommendationsPage() {
             </div>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Main Content Area */}
       <div className="space-y-3">
-        {/* Telemetry Status Bar */}
+        {/* Status Bar */}
         <div className="flex items-center justify-between text-xs font-mono text-muted px-1">
           <div className="flex items-center gap-2">
             <Database className="w-3.5 h-3.5 text-accent" />
-            <span>
+            <span className="text-[11px]">
               {status === 'loading'
-                ? 'SYNCING WITH BACKEND API...'
-                : `SHOWING ${recommendations.length} OF ${pagination.totalItems} ACTION PLAYBOOKS`}
+                ? 'SYNCING HARDENING PLAYBOOKS...'
+                : `SHOWING ${recommendations.length} OF ${pagination.totalItems} ACTIONABLE PLAYBOOKS`}
             </span>
           </div>
           {pagination.totalPages > 1 && (
-            <span>
+            <span className="text-[11px]">
               PAGE {pagination.page} / {pagination.totalPages}
             </span>
           )}
@@ -321,28 +314,28 @@ export function RecommendationsPage() {
 
         {/* Loading State */}
         {status === 'loading' && (
-          <Card variant="inset" className="text-center py-16 border-border bg-surface">
+          <div className="text-center py-16 rounded-xl border border-border bg-surface">
             <div className="flex flex-col items-center justify-center space-y-3">
               <div className="w-7 h-7 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
               <div className="font-mono text-xs text-muted uppercase tracking-wider">
-                Querying /api/v1/recommendations telemetry...
+                Retrieving hardening recommendations...
               </div>
             </div>
-          </Card>
+          </div>
         )}
 
         {/* Error State */}
         {status === 'error' && (
-          <Card variant="default" className="border-status-danger/40 bg-surface p-6">
+          <div className="rounded-xl border border-danger/40 bg-surface p-5">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-status-danger/10 text-status-danger border border-status-danger/20 shrink-0">
+                <div className="p-2 rounded-lg bg-danger/10 text-danger border border-danger/20 shrink-0">
                   <AlertTriangle className="w-5 h-5" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-sm font-bold text-foreground">Recommendations Service Unavailable</h3>
+                  <h3 className="text-sm font-bold text-foreground">Playbooks Service Unavailable</h3>
                   <p className="text-xs text-muted max-w-xl">
-                    {errorMessage || 'Unable to retrieve recommendations from the backend API. Please verify the CredLock server is running on port 4000.'}
+                    {errorMessage || 'Unable to retrieve recommendations from the backend API.'}
                   </p>
                 </div>
               </div>
@@ -352,16 +345,16 @@ export function RecommendationsPage() {
                 onClick={loadRecommendations}
                 leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
               >
-                Retry Request
+                Retry
               </Button>
             </div>
-          </Card>
+          </div>
         )}
 
         {/* Empty State */}
         {status === 'success' && recommendations.length === 0 && (
-          <Card variant="inset" className="text-center py-12 bg-surface border-border">
-            <div className="flex flex-col items-center justify-center space-y-3 max-w-md mx-auto">
+          <div className="text-center py-12 rounded-xl bg-surface border border-border">
+            <div className="flex flex-col items-center justify-center space-y-3 max-w-md mx-auto p-4">
               <div className="p-3 rounded-lg bg-surface-elevated text-muted border border-border">
                 <SearchX className="w-6 h-6" />
               </div>
@@ -382,26 +375,24 @@ export function RecommendationsPage() {
                 </Button>
               )}
             </div>
-          </Card>
+          </div>
         )}
 
-        {/* Recommendations Grid/List */}
+        {/* Recommendations Actionable Ledger (Desktop & Mobile) */}
         {status === 'success' && recommendations.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {recommendations.map((rec) => (
-              <Card
+              <div
                 key={rec.id}
-                variant="default"
-                isInteractive
-                className="group bg-surface border-border hover:border-accent/40 transition-all duration-200 flex flex-col justify-between"
+                className="group rounded-xl border border-border bg-surface hover:border-accent/40 transition-all duration-200 flex flex-col justify-between shadow-sm p-4"
               >
                 <Link
                   to={`/recommendations/${rec.slug}`}
-                  className="block focus:outline-none p-5 h-full flex flex-col justify-between"
+                  className="block focus:outline-none h-full flex flex-col justify-between space-y-3"
                   aria-label={`Inspect playbook: ${rec.title}`}
                 >
-                  <div className="space-y-3">
-                    {/* Header Badges: Priority & Category */}
+                  <div className="space-y-2.5">
+                    {/* Header: Priority & Category */}
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5">
                         {getCategoryIcon(rec.category)}
@@ -415,75 +406,56 @@ export function RecommendationsPage() {
                     </div>
 
                     {/* Title & Summary */}
-                    <div className="space-y-1.5">
-                      <h3 className="text-base font-bold text-foreground group-hover:text-accent transition-colors font-sans">
+                    <div className="space-y-1">
+                      <h3 className="text-sm sm:text-base font-bold text-foreground group-hover:text-accent transition-colors font-sans leading-snug">
                         {rec.title}
                       </h3>
-                      <p className="text-xs text-muted leading-relaxed font-sans line-clamp-3">
+                      <p className="text-xs text-muted leading-relaxed font-sans line-clamp-2">
                         {rec.summary}
                       </p>
                     </div>
 
                     {/* Metadata chips */}
-                    <div className="space-y-2 pt-1 font-mono text-[11px]">
-                      {rec.target_audience && (
-                        <div className="flex items-center gap-1.5 text-muted-dim">
-                          <Users className="w-3 h-3 text-muted-dim shrink-0" />
-                          <span className="truncate">Audience: {rec.target_audience}</span>
-                        </div>
-                      )}
-
-                      {/* Tags chips */}
-                      {rec.tags && rec.tags.length > 0 && (
-                        <div className="flex flex-wrap items-center gap-1">
-                          {rec.tags.slice(0, 3).map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-1.5 py-0.5 rounded bg-background-secondary border border-border/50 text-[10px] text-muted-dim"
-                            >
-                              #{tag}
-                            </span>
-                          ))}
-                          {rec.tags.length > 3 && (
-                            <span className="text-[10px] text-muted-dim">+{rec.tags.length - 3}</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    {rec.target_audience && (
+                      <div className="flex items-center gap-1.5 text-muted-dim text-[11px] font-mono">
+                        <Users className="w-3 h-3 text-muted-dim shrink-0" />
+                        <span className="truncate">Scope: {rec.target_audience}</span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Card Footer: Action Steps count preview & Inspect affordance */}
-                  <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs font-mono">
+                  {/* Card Footer: Action steps & Inspect CTA */}
+                  <div className="pt-2.5 border-t border-border/50 flex items-center justify-between text-xs font-mono">
                     <span className="text-[11px] text-muted flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                      <span>{Array.isArray(rec.action_steps) ? rec.action_steps.length : 0} Action Steps</span>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{Array.isArray(rec.action_steps) ? rec.action_steps.length : 0} Steps</span>
                     </span>
 
-                    <div className="flex items-center gap-1 text-accent group-hover:text-accent font-semibold transition-colors">
-                      <span className="text-[11px] uppercase tracking-wider">Inspect</span>
+                    <div className="flex items-center gap-1 text-accent font-semibold text-[11px] uppercase tracking-wider">
+                      <span>View Playbook</span>
                       <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                     </div>
                   </div>
                 </Link>
-              </Card>
+              </div>
             ))}
           </div>
         )}
 
         {/* Pagination Navigation Controls */}
         {status === 'success' && pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between pt-4 border-t border-border/60 font-mono text-xs">
+          <div className="flex items-center justify-between pt-3 border-t border-border/50 font-mono text-xs">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={!pagination.hasPreviousPage}
-              leftIcon={<ChevronLeft className="w-4 h-4" />}
+              leftIcon={<ChevronLeft className="w-3.5 h-3.5" />}
             >
               Previous
             </Button>
 
-            <span className="text-muted">
+            <span className="text-muted text-[11px]">
               Page {pagination.page} of {pagination.totalPages}
             </span>
 
@@ -492,7 +464,7 @@ export function RecommendationsPage() {
               size="sm"
               onClick={() => setCurrentPage((p) => Math.min(pagination.totalPages, p + 1))}
               disabled={!pagination.hasNextPage}
-              rightIcon={<ChevronRight className="w-4 h-4" />}
+              rightIcon={<ChevronRight className="w-3.5 h-3.5" />}
             >
               Next
             </Button>

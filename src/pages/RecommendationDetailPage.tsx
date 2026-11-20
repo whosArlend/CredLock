@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { fetchRecommendationBySlug } from '@/services/api/recommendationService';
@@ -21,6 +20,7 @@ import {
   Wifi,
   Users,
   ListOrdered,
+  Check,
 } from 'lucide-react';
 
 export function RecommendationDetailPage() {
@@ -29,6 +29,19 @@ export function RecommendationDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isNotFound, setIsNotFound] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+
+  const toggleStep = (idx: number) => {
+    setCompletedSteps((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) {
+        next.delete(idx);
+      } else {
+        next.add(idx);
+      }
+      return next;
+    });
+  };
 
   const loadRecommendationDetail = useCallback(async () => {
     if (!slug) return;
@@ -96,26 +109,26 @@ export function RecommendationDetailPage() {
   // Loading State
   if (isLoading) {
     return (
-      <div className="space-y-6 animate-in fade-in duration-200 text-left">
+      <div className="space-y-5 animate-in fade-in duration-200 text-left">
         <PageHeader
           title="Loading Playbook Detail..."
           description={`Retrieving verified recommendation guidance for '${slug || 'playbook'}' from backend API.`}
           actions={
             <Link to="/recommendations">
-              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
-                Back to Playbooks
+              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}>
+                All Playbooks
               </Button>
             </Link>
           }
         />
-        <Card variant="inset" className="text-center py-16 border-border bg-surface">
+        <div className="text-center py-16 rounded-xl border border-border bg-surface">
           <div className="flex flex-col items-center justify-center space-y-3">
-            <div className="w-8 h-8 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
+            <div className="w-7 h-7 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
             <div className="font-mono text-xs text-muted uppercase tracking-wider">
               Querying /api/v1/recommendations/{slug || 'record'}...
             </div>
           </div>
-        </Card>
+        </div>
       </div>
     );
   }
@@ -123,39 +136,36 @@ export function RecommendationDetailPage() {
   // Not Found State (404)
   if (isNotFound) {
     return (
-      <div className="space-y-6 animate-in fade-in duration-200 text-left">
+      <div className="space-y-5 animate-in fade-in duration-200 text-left">
         <PageHeader
-          title="Recommendation Playbook Not Found"
+          title="Playbook Not Found"
           description="The requested security playbook record does not exist or has not been published."
           actions={
             <Link to="/recommendations">
-              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
-                Back to Playbooks
+              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}>
+                All Playbooks
               </Button>
             </Link>
           }
         />
 
-        <Card className="max-w-lg mx-auto text-center py-10 bg-surface border-border">
-          <div className="flex flex-col items-center justify-center p-6 space-y-3">
-            <div className="p-3.5 rounded-lg bg-surface-elevated text-amber-500 border border-border">
-              <SearchX className="w-8 h-8" />
-            </div>
-            <h3 className="text-base font-bold text-foreground">Playbook Record Unavailable</h3>
-            <p className="text-xs text-muted max-w-sm leading-relaxed font-sans">
-              No published recommendation matches the slug identifier{' '}
-              <code className="font-mono text-foreground font-semibold">"{slug}"</code>.
-              It may be unpublished or the link may be outdated.
-            </p>
-            <div className="pt-2">
-              <Link to="/recommendations">
-                <Button variant="primary" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
-                  Explore Published Playbooks
-                </Button>
-              </Link>
-            </div>
+        <div className="max-w-md mx-auto text-center py-10 rounded-xl bg-surface border border-border p-6 space-y-3">
+          <div className="p-3 rounded-lg bg-surface-elevated text-amber-500 border border-border inline-flex">
+            <SearchX className="w-6 h-6" />
           </div>
-        </Card>
+          <h3 className="text-base font-bold text-foreground font-sans">Playbook Record Unavailable</h3>
+          <p className="text-xs text-muted leading-relaxed font-sans">
+            No published recommendation matches the slug identifier{' '}
+            <code className="font-mono text-foreground font-semibold">"{slug}"</code>.
+          </p>
+          <div className="pt-1">
+            <Link to="/recommendations">
+              <Button variant="primary" size="sm" leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}>
+                Explore Published Playbooks
+              </Button>
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
@@ -163,26 +173,26 @@ export function RecommendationDetailPage() {
   // Error State (Network / 500)
   if (errorMessage || !recommendation) {
     return (
-      <div className="space-y-6 animate-in fade-in duration-200 text-left">
+      <div className="space-y-5 animate-in fade-in duration-200 text-left">
         <PageHeader
           title="Playbook Retrieval Error"
           description="Unable to load the security recommendation record due to a communication issue with the backend."
           actions={
             <Link to="/recommendations">
-              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
-                Back to Playbooks
+              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}>
+                All Playbooks
               </Button>
             </Link>
           }
         />
 
-        <Card variant="default" className="border-status-danger/40 bg-surface p-6">
+        <div className="rounded-xl border border-danger/40 bg-surface p-5">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-lg bg-status-danger/10 text-status-danger border border-status-danger/20 shrink-0">
-                <AlertTriangle className="w-6 h-6" />
+              <div className="p-2 rounded-lg bg-danger/10 text-danger border border-danger/20 shrink-0">
+                <AlertTriangle className="w-5 h-5" />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <h3 className="text-sm font-bold text-foreground">Service Connection Error</h3>
                 <p className="text-xs text-muted max-w-md">
                   {errorMessage || 'Failed to communicate with the CredLock Security Recommendations API.'}
@@ -198,7 +208,7 @@ export function RecommendationDetailPage() {
               Retry Request
             </Button>
           </div>
-        </Card>
+        </div>
       </div>
     );
   }
@@ -209,11 +219,11 @@ export function RecommendationDetailPage() {
     : [];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200 text-left">
+    <div className="space-y-5 animate-in fade-in duration-200 text-left">
       {/* Page Header */}
       <PageHeader
         title={recommendation.title}
-        description={`Cybersecurity hardening playbook for category: ${formatCategoryLabel(recommendation.category)}.`}
+        description={`Hardening playbook for category: ${formatCategoryLabel(recommendation.category)}.`}
         badge={
           <Badge variant={getPriorityBadgeVariant(recommendation.priority)} size="sm" dot>
             {recommendation.priority.toUpperCase()} PRIORITY
@@ -222,7 +232,7 @@ export function RecommendationDetailPage() {
         actions={
           <div className="flex items-center gap-2">
             <Link to="/recommendations">
-              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
+              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}>
                 All Playbooks
               </Button>
             </Link>

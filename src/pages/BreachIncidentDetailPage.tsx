@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { fetchBreachBySlug } from '@/services/api/breachService';
@@ -86,26 +85,26 @@ export function BreachIncidentDetailPage() {
   // Loading State
   if (isLoading) {
     return (
-      <div className="space-y-6 animate-in fade-in duration-200 text-left">
+      <div className="space-y-5 animate-in fade-in duration-200 text-left">
         <PageHeader
           title="Loading Incident Detail..."
           description={`Retrieving verified breach telemetry for '${slug || 'incident'}' from backend API.`}
           actions={
             <Link to="/breaches">
-              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
-                Back to Breaches
+              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}>
+                All Breaches
               </Button>
             </Link>
           }
         />
-        <Card variant="inset" className="text-center py-16 border-border bg-surface">
+        <div className="text-center py-16 rounded-xl border border-border bg-surface">
           <div className="flex flex-col items-center justify-center space-y-3">
-            <div className="w-8 h-8 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
+            <div className="w-7 h-7 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
             <div className="font-mono text-xs text-muted uppercase tracking-wider">
               Querying /api/v1/breaches/{slug || 'record'}...
             </div>
           </div>
-        </Card>
+        </div>
       </div>
     );
   }
@@ -113,39 +112,36 @@ export function BreachIncidentDetailPage() {
   // Not Found State (404)
   if (isNotFound) {
     return (
-      <div className="space-y-6 animate-in fade-in duration-200 text-left">
+      <div className="space-y-5 animate-in fade-in duration-200 text-left">
         <PageHeader
-          title="Breach Incident Not Found"
+          title="Incident Not Found"
           description="The requested cybersecurity breach record does not exist or has not been verified for publication."
           actions={
             <Link to="/breaches">
-              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
-                Back to Breaches
+              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}>
+                All Breaches
               </Button>
             </Link>
           }
         />
 
-        <Card className="max-w-lg mx-auto text-center py-10 bg-surface border-border">
-          <div className="flex flex-col items-center justify-center p-6 space-y-3">
-            <div className="p-3.5 rounded-lg bg-surface-elevated text-amber-500 border border-border">
-              <SearchX className="w-8 h-8" />
-            </div>
-            <h3 className="text-base font-bold text-foreground">Incident Record Unavailable</h3>
-            <p className="text-xs text-muted max-w-sm leading-relaxed">
-              No verified public breach matches the identifier{' '}
-              <code className="font-mono text-foreground font-semibold">"{slug}"</code>.
-              It may be unpublished or the URL may be incorrect.
-            </p>
-            <div className="pt-2">
-              <Link to="/breaches">
-                <Button variant="primary" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
-                  Explore Verified Breaches
-                </Button>
-              </Link>
-            </div>
+        <div className="max-w-md mx-auto text-center py-10 rounded-xl bg-surface border border-border p-6 space-y-3">
+          <div className="p-3 rounded-lg bg-surface-elevated text-amber-500 border border-border inline-flex">
+            <SearchX className="w-6 h-6" />
           </div>
-        </Card>
+          <h3 className="text-base font-bold text-foreground font-sans">Incident Record Unavailable</h3>
+          <p className="text-xs text-muted leading-relaxed font-sans">
+            No verified public breach matches the identifier{' '}
+            <code className="font-mono text-foreground font-semibold">"{slug}"</code>.
+          </p>
+          <div className="pt-1">
+            <Link to="/breaches">
+              <Button variant="primary" size="sm" leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}>
+                Explore Verified Breaches
+              </Button>
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
@@ -153,26 +149,26 @@ export function BreachIncidentDetailPage() {
   // Error State (Network / Server 500)
   if (errorMessage || !breach) {
     return (
-      <div className="space-y-6 animate-in fade-in duration-200 text-left">
+      <div className="space-y-5 animate-in fade-in duration-200 text-left">
         <PageHeader
           title="Telemetry Retrieval Error"
           description="Unable to load the breach incident record due to a communication issue with the backend."
           actions={
             <Link to="/breaches">
-              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
-                Back to Breaches
+              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}>
+                All Breaches
               </Button>
             </Link>
           }
         />
 
-        <Card variant="default" className="border-status-danger/40 bg-surface p-6">
+        <div className="rounded-xl border border-danger/40 bg-surface p-5">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-lg bg-status-danger/10 text-status-danger border border-status-danger/20 shrink-0">
-                <ShieldAlert className="w-6 h-6" />
+              <div className="p-2 rounded-lg bg-danger/10 text-danger border border-danger/20 shrink-0">
+                <ShieldAlert className="w-5 h-5" />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <h3 className="text-sm font-bold text-foreground">Service Connection Error</h3>
                 <p className="text-xs text-muted max-w-md">
                   {errorMessage || 'Failed to communicate with the CredLock Security Intelligence API.'}
@@ -188,14 +184,14 @@ export function BreachIncidentDetailPage() {
               Retry Request
             </Button>
           </div>
-        </Card>
+        </div>
       </div>
     );
   }
 
   // Success State
   return (
-    <div className="space-y-6 animate-in fade-in duration-200 text-left">
+    <div className="space-y-5 animate-in fade-in duration-200 text-left">
       {/* Page Header */}
       <PageHeader
         title={breach.title}
@@ -212,7 +208,7 @@ export function BreachIncidentDetailPage() {
         actions={
           <div className="flex items-center gap-2">
             <Link to="/breaches">
-              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
+              <Button variant="secondary" size="sm" leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}>
                 All Breaches
               </Button>
             </Link>
@@ -224,7 +220,7 @@ export function BreachIncidentDetailPage() {
                 className="inline-flex"
               >
                 <Button variant="outline" size="sm" rightIcon={<ExternalLink className="w-3.5 h-3.5" />}>
-                  External Source
+                  Official Source
                 </Button>
               </a>
             )}
@@ -232,127 +228,123 @@ export function BreachIncidentDetailPage() {
         }
       />
 
-      {/* Primary Metrics Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Incident Snapshot Bar */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
         {/* Metric 1: Exposed Accounts */}
-        <Card variant="default" padding="sm" className="space-y-1.5 bg-surface border-border">
-          <div className="flex items-center justify-between text-muted">
-            <span className="text-[11px] font-mono uppercase tracking-wider">Compromised</span>
-            <Users className="w-3.5 h-3.5 text-status-danger" />
+        <div className="p-3 rounded-xl bg-surface border border-border space-y-1">
+          <div className="flex items-center justify-between text-muted text-[10px] font-mono uppercase tracking-wider">
+            <span>Compromised</span>
+            <Users className="w-3.5 h-3.5 text-danger" />
           </div>
           <div className="space-y-0.5">
-            <p className="text-xl sm:text-2xl font-bold font-mono text-foreground tracking-tight">
+            <p className="text-lg sm:text-xl font-bold font-mono text-foreground tracking-tight tabular-nums">
               {breach.pwn_count ? breach.pwn_count.toLocaleString() : 'Undisclosed'}
             </p>
             <span className="text-[10px] text-muted-dim font-mono">Reported accounts</span>
           </div>
-        </Card>
+        </div>
 
         {/* Metric 2: Incident Severity */}
-        <Card variant="default" padding="sm" className="space-y-1.5 bg-surface border-border">
-          <div className="flex items-center justify-between text-muted">
-            <span className="text-[11px] font-mono uppercase tracking-wider">Severity</span>
+        <div className="p-3 rounded-xl bg-surface border border-border space-y-1">
+          <div className="flex items-center justify-between text-muted text-[10px] font-mono uppercase tracking-wider">
+            <span>Threat Severity</span>
             <AlertTriangle className="w-3.5 h-3.5 text-accent" />
           </div>
           <div className="space-y-0.5">
-            <p className="text-xl sm:text-2xl font-bold font-mono text-foreground capitalize tracking-tight">
+            <p className="text-lg sm:text-xl font-bold font-mono text-foreground capitalize tracking-tight">
               {breach.severity}
             </p>
-            <span className="text-[10px] text-muted-dim font-mono">Threat assessment</span>
+            <span className="text-[10px] text-muted-dim font-mono">Assessed threat level</span>
           </div>
-        </Card>
+        </div>
 
         {/* Metric 3: Incident Date */}
-        <Card variant="default" padding="sm" className="space-y-1.5 bg-surface border-border">
-          <div className="flex items-center justify-between text-muted">
-            <span className="text-[11px] font-mono uppercase tracking-wider">Breach Date</span>
+        <div className="p-3 rounded-xl bg-surface border border-border space-y-1">
+          <div className="flex items-center justify-between text-muted text-[10px] font-mono uppercase tracking-wider">
+            <span>Breach Date</span>
             <Calendar className="w-3.5 h-3.5 text-muted-dim" />
           </div>
           <div className="space-y-0.5">
-            <p className="text-sm sm:text-base font-bold font-mono text-foreground tracking-tight pt-1">
+            <p className="text-xs sm:text-sm font-bold font-mono text-foreground tracking-tight pt-1">
               {formatDate(breach.breach_date)}
             </p>
-            <span className="text-[10px] text-muted-dim font-mono">Original incident</span>
+            <span className="text-[10px] text-muted-dim font-mono">Incident date</span>
           </div>
-        </Card>
+        </div>
 
         {/* Metric 4: Ingestion Date */}
-        <Card variant="default" padding="sm" className="space-y-1.5 bg-surface border-border">
-          <div className="flex items-center justify-between text-muted">
-            <span className="text-[11px] font-mono uppercase tracking-wider">Cataloged</span>
-            <ShieldCheck className="w-3.5 h-3.5 text-status-success" />
+        <div className="p-3 rounded-xl bg-surface border border-border space-y-1">
+          <div className="flex items-center justify-between text-muted text-[10px] font-mono uppercase tracking-wider">
+            <span>Cataloged</span>
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
           </div>
           <div className="space-y-0.5">
-            <p className="text-sm sm:text-base font-bold font-mono text-foreground tracking-tight pt-1">
+            <p className="text-xs sm:text-sm font-bold font-mono text-foreground tracking-tight pt-1">
               {formatDate(breach.added_date)}
             </p>
-            <span className="text-[10px] text-muted-dim font-mono">Intelligence database</span>
+            <span className="text-[10px] text-muted-dim font-mono">Intelligence ingested</span>
           </div>
-        </Card>
+        </div>
       </div>
 
       {/* Main Narrative & Incident Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* Left Column: Narrative Description (8 cols) */}
-        <div className="lg:col-span-8 space-y-6">
-          <Card variant="default" padding="lg" className="bg-surface border-border space-y-4">
-            <CardHeader className="px-0 pt-0 pb-2 border-b border-border/60">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-accent" />
-                  <CardTitle className="text-sm font-mono uppercase tracking-wider text-muted">
-                    INCIDENT DESCRIPTION & AUDIT NARRATIVE
-                  </CardTitle>
-                </div>
-                <span className="font-mono text-[10px] text-muted uppercase">VERIFIED</span>
+        <div className="lg:col-span-8 space-y-4">
+          <div className="rounded-xl bg-surface border border-border p-5 space-y-3.5 shadow-sm">
+            <div className="flex items-center justify-between pb-2.5 border-b border-border/50">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-accent" />
+                <h3 className="text-xs font-mono uppercase tracking-wider text-muted font-semibold">
+                  Incident Narrative & Analysis
+                </h3>
               </div>
-            </CardHeader>
+              <Badge variant="emerald" size="sm">Verified</Badge>
+            </div>
 
-            <CardContent className="px-0 pb-0">
-              <div className="prose prose-invert max-w-none text-sm text-foreground/90 leading-relaxed font-sans space-y-3">
-                <p>{breach.description}</p>
-              </div>
-            </CardContent>
-          </Card>
+            <div className="prose prose-invert max-w-none text-xs sm:text-sm text-foreground/90 leading-relaxed font-sans space-y-3">
+              <p>{breach.description}</p>
+            </div>
+          </div>
 
           {/* Affected Data Classes */}
           {breach.data_classes && breach.data_classes.length > 0 && (
-            <Card variant="default" padding="md" className="bg-surface border-border space-y-3">
-              <div className="flex items-center gap-2 pb-2 border-b border-border/60">
+            <div className="rounded-xl bg-surface border border-border p-4 space-y-2.5 shadow-sm">
+              <div className="flex items-center gap-2 pb-2 border-b border-border/50">
                 <Tag className="w-3.5 h-3.5 text-accent" />
-                <h3 className="text-xs font-mono font-semibold uppercase tracking-wider text-foreground">
-                  Compromised Data Classes ({breach.data_classes.length})
+                <h3 className="text-xs font-mono font-semibold uppercase tracking-wider text-muted">
+                  Compromised Data Attributes ({breach.data_classes.length})
                 </h3>
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {breach.data_classes.map((cls) => (
                   <span
                     key={cls}
-                    className="px-2.5 py-1 rounded bg-background-secondary border border-border text-xs font-mono text-foreground flex items-center gap-1.5"
+                    className="px-2 py-0.5 rounded bg-background-base border border-border text-[11px] font-mono text-foreground flex items-center gap-1.5"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-accent/60" />
                     {cls}
                   </span>
                 ))}
               </div>
-            </Card>
+            </div>
           )}
         </div>
 
         {/* Right Column: Organization & Technical Telemetry (4 cols) */}
-        <div className="lg:col-span-4 space-y-6">
-          <Card variant="default" padding="md" className="bg-surface border-border space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b border-border/60">
+        <div className="lg:col-span-4 space-y-4">
+          <div className="rounded-xl bg-surface border border-border p-4 space-y-3.5 shadow-sm">
+            <div className="flex items-center gap-2 pb-2 border-b border-border/50">
               <Building2 className="w-3.5 h-3.5 text-accent" />
-              <h3 className="text-xs font-mono font-semibold uppercase tracking-wider text-foreground">
-                Entity Metadata
+              <h3 className="text-xs font-mono font-semibold uppercase tracking-wider text-muted">
+                Entity Profile
               </h3>
             </div>
 
-            <div className="space-y-3 text-xs font-mono">
+            <div className="space-y-2.5 text-xs font-mono">
               <div>
-                <span className="text-[11px] text-muted uppercase tracking-wider block">Target Entity</span>
+                <span className="text-[10px] text-muted-dim uppercase tracking-wider block">Target Entity</span>
                 <span className="text-foreground font-semibold text-sm">
                   {breach.organization || 'Independent Dataset'}
                 </span>
@@ -360,39 +352,39 @@ export function BreachIncidentDetailPage() {
 
               {breach.domain && (
                 <div>
-                  <span className="text-[11px] text-muted uppercase tracking-wider block">Domain</span>
+                  <span className="text-[10px] text-muted-dim uppercase tracking-wider block">Associated Domain</span>
                   <div className="flex items-center gap-1 text-accent pt-0.5">
                     <Globe className="w-3.5 h-3.5" />
-                    <span>{breach.domain}</span>
+                    <span className="truncate">{breach.domain}</span>
                   </div>
                 </div>
               )}
 
               <div>
-                <span className="text-[11px] text-muted uppercase tracking-wider block">Database Slug</span>
-                <code className="text-foreground-dim text-[11px]">{breach.slug}</code>
+                <span className="text-[10px] text-muted-dim uppercase tracking-wider block">Database Slug</span>
+                <code className="text-foreground/80 text-[11px]">{breach.slug}</code>
               </div>
 
               <div>
-                <span className="text-[11px] text-muted uppercase tracking-wider block">Audit Record ID</span>
-                <code className="text-foreground-dim text-[10px] break-all">{breach.id}</code>
+                <span className="text-[10px] text-muted-dim uppercase tracking-wider block">Telemetry Identifier</span>
+                <code className="text-muted text-[10px] break-all">{breach.id}</code>
               </div>
 
               {breach.source_url && (
-                <div className="pt-2 border-t border-border/60">
+                <div className="pt-2 border-t border-border/50">
                   <a
                     href={breach.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-accent hover:underline flex items-center gap-1"
                   >
-                    <span>View Official Advisory</span>
+                    <span>View Official Security Advisory</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
               )}
             </div>
-          </Card>
+          </div>
         </div>
       </div>
     </div>
