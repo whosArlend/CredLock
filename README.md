@@ -2,6 +2,7 @@
 
 **A Zero-Knowledge Progressive Web Application for Password Security & Threat Intelligence.**
 
+[![Version](https://img.shields.io/badge/Release-v1.0.0-amber.svg)](CHANGELOG.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg?logo=typescript)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19.0-61DAFB.svg?logo=react)](https://react.dev/)
 [![Express](https://img.shields.io/badge/Express-5.0-black.svg?logo=express)](https://expressjs.com/)
@@ -19,6 +20,7 @@ CredLock strictly separates client-side credential processing from remote teleme
 
 CredLock development and production deployments are complete and verified:
 
+- **Current Release:** **v1.0.0 (Initial Stable Release)** — consult [CHANGELOG.md](CHANGELOG.md) for full release history.
 - **Live Backend API (Production):** [`https://credlock-api.vercel.app`](https://credlock-api.vercel.app)
 - **API Liveness Probe:** [`https://credlock-api.vercel.app/api/health`](https://credlock-api.vercel.app/api/health)
 - **API Database Readiness Probe:** [`https://credlock-api.vercel.app/api/health/db`](https://credlock-api.vercel.app/api/health/db)
@@ -387,4 +389,6 @@ For detailed step-by-step instructions and redeployment procedures, consult [Pro
 
 ## 14. License & Usage
 
-All rights reserved. Developed as an academic capstone project in Computer Engineering. Commercial use, reproduction, or distribution without explicit permission is prohibited. For research inquiries or educational access, please contact the repository owner.
+All rights reserved. CredLock was developed as a final project for the Mobile Device Programming (Pemrograman Perangkat Bergerak) practical course. Commercial use, reproduction, or distribution without explicit permission from the project owner is prohibited.
+
+For educational or research purposes, please contact the project owner for permission.

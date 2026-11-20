@@ -27,7 +27,7 @@ describe('Vercel Serverless Entrypoint & App Configuration', () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('success', true);
     expect(res.body).toHaveProperty('name', 'CredLock Security Intelligence API');
-    expect(res.body).toHaveProperty('version', '0.1.0');
+    expect(res.body).toHaveProperty('version', '1.0.0');
     expect(res.body).toHaveProperty('status', 'operational');
     expect(res.body).toHaveProperty('endpoints');
     expect(res.body.endpoints).toHaveProperty('health', '/api/health');

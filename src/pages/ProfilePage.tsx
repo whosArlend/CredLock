@@ -64,7 +64,7 @@ export function ProfilePage() {
       <PageHeader
         title="About CredLock"
         description="Client-side security architecture, verified technology stack, and local data sovereignty."
-        badge={<Badge variant="neutral" size="sm">v0.1.0 // Client Enclave</Badge>}
+        badge={<Badge variant="neutral" size="sm">v1.0.0 // Client Enclave</Badge>}
       />
 
       {/* 1. Project Overview & Identity Banner */}
@@ -248,7 +248,7 @@ export function ProfilePage() {
           </div>
           <div className="p-2.5 rounded-lg bg-surface-elevated/40 border border-border">
             <span className="text-[10px] text-muted uppercase block">BUILD VERSION</span>
-            <span className="font-semibold text-foreground text-xs font-sans">v0.1.0 (Production)</span>
+            <span className="font-semibold text-foreground text-xs font-sans">v1.0.0 (Production)</span>
           </div>
           <div className="p-2.5 rounded-lg bg-surface-elevated/40 border border-border">
             <span className="text-[10px] text-muted uppercase block">CLIENT ARCHITECTURE</span>

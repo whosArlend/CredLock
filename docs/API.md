@@ -74,7 +74,7 @@ Returns server status and top-level endpoint pointers.
   {
     "success": true,
     "name": "CredLock Security Intelligence API",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "status": "operational",
     "endpoints": {
       "health": "/api/health",
