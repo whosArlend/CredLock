@@ -1,7 +1,6 @@
 import React from 'react';
-import { Check, ShieldAlert, Sparkles, Layers } from 'lucide-react';
+import { Check, Layers } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
-import { Tooltip } from '@/components/ui/Tooltip';
 import {
   LOWERCASE_CHARS,
   UPPERCASE_CHARS,

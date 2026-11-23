@@ -1,5 +1,5 @@
 import { useState, useId } from 'react';
-import { Eye, EyeOff, X, KeyRound, ArrowRight, ShieldCheck, Search } from 'lucide-react';
+import { Eye, EyeOff, X, KeyRound, ShieldCheck, Search } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/lib/utils';

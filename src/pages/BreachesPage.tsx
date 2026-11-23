@@ -163,7 +163,7 @@ export function BreachesPage() {
       />
 
       {/* Query Controls: Consolidated Search, Filters & Sorting */}
-      <div className="p-3.5 rounded-xl bg-surface border border-border shadow-sm space-y-3">
+      <div className="p-4 sm:p-5 rounded-2xl bg-enclave-plate/90 border border-enclave-border/80 shadow-plate-tactical backdrop-blur-sm space-y-3">
         {/* Search & Action Bar */}
         <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2">
           <div className="flex-1">
@@ -342,9 +342,9 @@ export function BreachesPage() {
         {status === 'success' && breaches.length > 0 && (
           <div className="space-y-2">
             {/* Desktop Structured Ledger (md+) */}
-            <div className="hidden md:block rounded-xl border border-border bg-surface overflow-hidden shadow-sm">
+            <div className="hidden md:block rounded-2xl border border-enclave-border/80 bg-enclave-plate/90 overflow-hidden shadow-plate-tactical">
               <table className="w-full text-left text-xs font-mono">
-                <thead className="bg-surface-elevated/70 border-b border-border text-[11px] text-muted uppercase tracking-wider">
+                <thead className="bg-enclave-elevated/70 border-b border-enclave-border text-[11px] text-muted uppercase tracking-wider">
                   <tr>
                     <th className="py-2.5 px-4 font-semibold">Incident / Organization</th>
                     <th className="py-2.5 px-3 font-semibold">Severity</th>
@@ -438,7 +438,7 @@ export function BreachesPage() {
               {breaches.map((breach) => (
                 <div
                   key={breach.id}
-                  className="rounded-xl border border-border bg-surface p-3.5 hover:border-accent/40 transition-colors shadow-sm"
+                  className="rounded-xl border border-enclave-border/80 bg-enclave-plate/90 p-3.5 hover:border-accent/40 transition-colors shadow-card-tactical"
                 >
                   <Link
                     to={`/breaches/${breach.slug}`}

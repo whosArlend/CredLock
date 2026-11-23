@@ -14,7 +14,7 @@ import { LengthControl } from '@/features/generator/components/LengthControl';
 import { CategoryToggles } from '@/features/generator/components/CategoryToggles';
 import { GeneratorNoticeCard } from '@/features/generator/components/GeneratorNoticeCard';
 import type { GeneratorOptions, GeneratorResult } from '@/types';
-import { ShieldCheck, ArrowRight, ShieldAlert, Cpu, Sparkles } from 'lucide-react';
+import { ArrowRight, ShieldAlert } from 'lucide-react';
 
 export function GeneratorPage() {
   const [options, setOptions] = useState<GeneratorOptions>(DEFAULT_GENERATOR_OPTIONS);

@@ -136,9 +136,9 @@ export function ProfilePage() {
       {/* 3. 2-Column Responsive Architecture Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Left Column: Privacy & Security Invariants */}
-        <div className="rounded-xl bg-surface border border-border/80 p-5 space-y-3.5 flex flex-col justify-between">
+        <div className="rounded-xl bg-enclave-plate/90 border border-enclave-border/80 shadow-plate-tactical p-5 space-y-3.5 flex flex-col justify-between">
           <div className="space-y-3">
-            <div className="flex items-center justify-between pb-2.5 border-b border-border/60">
+            <div className="flex items-center justify-between pb-2.5 border-b border-enclave-border/60">
               <div className="flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5 text-accent" />
                 <h3 className="text-xs font-mono font-semibold uppercase tracking-wider text-muted">
@@ -153,26 +153,26 @@ export function ProfilePage() {
             </p>
 
             {/* Progressive Disclosure: Technical Declarations */}
-            <details className="group border-t border-border/60 pt-2.5 text-xs">
+            <details className="group border-t border-enclave-border/60 pt-2.5 text-xs">
               <summary className="cursor-pointer font-mono text-[11px] text-accent hover:underline flex items-center justify-between select-none focus:outline-none">
                 <span>View Technical Security Boundaries</span>
                 <ChevronDown className="w-3.5 h-3.5 transition-transform group-open:rotate-180" />
               </summary>
 
               <div className="mt-3 space-y-2 text-[11px] text-muted leading-relaxed">
-                <div className="p-2.5 rounded-lg bg-background-base/60 border border-border flex items-start gap-2">
+                <div className="p-2.5 rounded-lg bg-enclave-void/70 border border-enclave-border/60 flex items-start gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-status-success shrink-0 mt-0.5" />
                   <p>
                     <strong className="text-foreground">In-Memory Processing:</strong> Plaintext credentials exist solely in component memory during analysis. Neither passwords nor full hashes are ever written to disk.
                   </p>
                 </div>
-                <div className="p-2.5 rounded-lg bg-background-base/60 border border-border flex items-start gap-2">
+                <div className="p-2.5 rounded-lg bg-enclave-void/70 border border-enclave-border/60 flex items-start gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-status-success shrink-0 mt-0.5" />
                   <p>
                     <strong className="text-foreground">Probabilistic Models:</strong> Heuristic crack estimations and absence from known leak archives do not provide absolute mathematical invulnerability against targeted offline brute force.
                   </p>
                 </div>
-                <div className="p-2.5 rounded-lg bg-background-base/60 border border-border flex items-start gap-2">
+                <div className="p-2.5 rounded-lg bg-enclave-void/70 border border-enclave-border/60 flex items-start gap-2">
                   <Cpu className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
                   <p className="font-mono text-[10px] text-muted-dim">
                     * Note on browser runtimes: Under JavaScript garbage collection architectures, memory zeroing cannot be physically guaranteed at the hardware RAM layer.
@@ -182,15 +182,15 @@ export function ProfilePage() {
             </details>
           </div>
 
-          <div className="pt-3 border-t border-border/60 text-[11px] font-mono text-muted-dim flex items-center justify-between">
+          <div className="pt-3 border-t border-enclave-border/60 text-[11px] font-mono text-muted-dim flex items-center justify-between">
             <span>CLIENT PRIVACY LEVEL</span>
             <span className="text-status-success font-semibold">ZERO-KNOWLEDGE</span>
           </div>
         </div>
 
         {/* Right Column: Runtime Technology Stack */}
-        <div className="rounded-xl bg-surface border border-border/80 p-5 space-y-3.5">
-          <div className="flex items-center justify-between pb-2.5 border-b border-border/60">
+        <div className="rounded-xl bg-enclave-plate/90 border border-enclave-border/80 shadow-plate-tactical p-5 space-y-3.5">
+          <div className="flex items-center justify-between pb-2.5 border-b border-enclave-border/60">
             <div className="flex items-center gap-1.5">
               <Code className="w-3.5 h-3.5 text-accent" />
               <h3 className="text-xs font-mono font-semibold uppercase tracking-wider text-muted">
@@ -201,42 +201,42 @@ export function ProfilePage() {
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-            <div className="p-2.5 rounded-lg bg-background-base/60 border border-border space-y-0.5">
+            <div className="p-2.5 rounded-lg bg-enclave-void/70 border border-enclave-border/60 space-y-0.5">
               <span className="text-[10px] text-muted uppercase block">UI FRAMEWORK</span>
               <span className="font-bold text-foreground text-xs font-sans">React 19</span>
             </div>
 
-            <div className="p-2.5 rounded-lg bg-background-base/60 border border-border space-y-0.5">
+            <div className="p-2.5 rounded-lg bg-enclave-void/70 border border-enclave-border/60 space-y-0.5">
               <span className="text-[10px] text-muted uppercase block">TYPE SYSTEM</span>
               <span className="font-bold text-foreground text-xs font-sans">TypeScript 5.7</span>
             </div>
 
-            <div className="p-2.5 rounded-lg bg-background-base/60 border border-border space-y-0.5">
+            <div className="p-2.5 rounded-lg bg-enclave-void/70 border border-enclave-border/60 space-y-0.5">
               <span className="text-[10px] text-muted uppercase block">BUILD TOOL</span>
               <span className="font-bold text-foreground text-xs font-sans">Vite 6</span>
             </div>
 
-            <div className="p-2.5 rounded-lg bg-background-base/60 border border-border space-y-0.5">
+            <div className="p-2.5 rounded-lg bg-enclave-void/70 border border-enclave-border/60 space-y-0.5">
               <span className="text-[10px] text-muted uppercase block">STYLING</span>
               <span className="font-bold text-foreground text-xs font-sans">Tailwind CSS 3.4</span>
             </div>
 
-            <div className="p-2.5 rounded-lg bg-background-base/60 border border-border space-y-0.5">
+            <div className="p-2.5 rounded-lg bg-enclave-void/70 border border-enclave-border/60 space-y-0.5">
               <span className="text-[10px] text-muted uppercase block">ROUTING</span>
               <span className="font-bold text-foreground text-xs font-sans">React Router 7</span>
             </div>
 
-            <div className="p-2.5 rounded-lg bg-background-base/60 border border-border space-y-0.5">
+            <div className="p-2.5 rounded-lg bg-enclave-void/70 border border-enclave-border/60 space-y-0.5">
               <span className="text-[10px] text-muted uppercase block">CRYPTOGRAPHY</span>
               <span className="font-bold text-foreground text-xs font-sans">Web Crypto API</span>
             </div>
 
-            <div className="p-2.5 rounded-lg bg-background-base/60 border border-border space-y-0.5">
+            <div className="p-2.5 rounded-lg bg-enclave-void/70 border border-enclave-border/60 space-y-0.5">
               <span className="text-[10px] text-muted uppercase block">PERSISTENCE</span>
               <span className="font-bold text-foreground text-xs font-sans">IndexedDB</span>
             </div>
 
-            <div className="p-2.5 rounded-lg bg-background-base/60 border border-border space-y-0.5">
+            <div className="p-2.5 rounded-lg bg-enclave-void/70 border border-enclave-border/60 space-y-0.5">
               <span className="text-[10px] text-muted uppercase block">ESTIMATION</span>
               <span className="font-bold text-foreground text-xs font-sans">zxcvbn-ts 4.2</span>
             </div>
@@ -245,7 +245,7 @@ export function ProfilePage() {
       </div>
 
       {/* 4. v2.0 Architecture Preview — User Accounts & Cloud Sync */}
-      <div className="rounded-xl bg-surface border border-accent/30 p-5 space-y-4">
+      <div className="rounded-xl bg-enclave-plate/90 border border-accent/40 shadow-plate-tactical p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/60">
           <div className="flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-accent/10 border border-accent/30 text-accent">
@@ -301,7 +301,7 @@ export function ProfilePage() {
       </div>
 
       {/* 5. Project Status & Data Sovereignty Management */}
-      <div className="rounded-xl bg-surface border border-border/80 p-5 space-y-4">
+      <div className="rounded-xl bg-enclave-plate/90 border border-enclave-border/80 shadow-plate-tactical p-5 space-y-4">
         {/* Project Metadata Chips */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs font-mono pb-3 border-b border-border/60">
           <div className="p-2.5 rounded-lg bg-surface-elevated/40 border border-border">

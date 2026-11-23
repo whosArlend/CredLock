@@ -2,7 +2,6 @@ import { HeroMasterInput } from '@/features/home/components/HeroMasterInput';
 import { SecurityFeatureIndex } from '@/features/home/components/SecurityFeatureIndex';
 import { SecurityIntelligenceSection } from '@/features/home/components/SecurityIntelligenceSection';
 import { RecentActivitySection } from '@/features/home/components/RecentActivitySection';
-import { Shield, Cpu, Lock } from 'lucide-react';
 
 export function HomePage() {
   return (

@@ -181,7 +181,7 @@ export function RecommendationsPage() {
       />
 
       {/* Query Controls: Consolidated Search, Categories & Priorities */}
-      <div className="p-3.5 rounded-xl bg-surface border border-border shadow-sm space-y-3">
+      <div className="p-4 sm:p-5 rounded-2xl bg-enclave-plate/90 border border-enclave-border/80 shadow-plate-tactical backdrop-blur-sm space-y-3">
         {/* Search & Action Bar */}
         <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2">
           <div className="flex-1">
@@ -390,7 +390,7 @@ export function RecommendationsPage() {
             {recommendations.map((rec) => (
               <div
                 key={rec.id}
-                className="group rounded-xl border border-border bg-surface hover:border-accent/40 transition-all duration-200 flex flex-col justify-between shadow-sm p-4"
+                className="group rounded-2xl border border-enclave-border/80 bg-enclave-plate/90 hover:border-accent/40 shadow-card-tactical hover:shadow-plate-tactical transition-all duration-200 flex flex-col justify-between p-4 sm:p-5"
               >
                 <Link
                   to={`/recommendations/${rec.slug}`}

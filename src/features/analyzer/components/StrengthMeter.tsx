@@ -4,7 +4,7 @@ import {
   type StrengthScore,
   STRENGTH_VARIANTS,
 } from '@/services/passwordAnalyzer';
-import { ShieldCheck, Zap, Activity } from 'lucide-react';
+import { ShieldCheck, Zap } from 'lucide-react';
 
 export interface StrengthMeterProps {
   score: StrengthScore;

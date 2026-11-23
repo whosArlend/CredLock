@@ -199,7 +199,7 @@ export function AnalysisDetailPage() {
       </div>
 
       {/* Primary Metrics Snapshot Bar (4 items) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 p-3 sm:p-4 rounded-xl bg-surface border border-border/80 shadow-sm">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 p-4 sm:p-5 rounded-2xl bg-enclave-plate/90 border border-enclave-border/80 shadow-plate-tactical">
         <div className="space-y-1">
           <span className="text-[11px] font-mono uppercase text-muted tracking-wider block">Strength Verdict</span>
           <div className="text-base sm:text-lg font-bold font-sans text-foreground">
@@ -236,7 +236,7 @@ export function AnalysisDetailPage() {
       {/* 2-Column Responsive Diagnostic Panels */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Panel 1: Cryptographic Evaluation Metrics */}
-        <div className="rounded-xl bg-surface border border-border/80 p-5 space-y-4">
+        <div className="rounded-2xl bg-enclave-plate/90 border border-enclave-border/80 p-5 space-y-4 shadow-card-tactical">
           <div className="flex items-center justify-between pb-3 border-b border-border/60">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-accent" />
@@ -302,7 +302,7 @@ export function AnalysisDetailPage() {
         </div>
 
         {/* Panel 2: Character Diversity Audit */}
-        <div className="rounded-xl bg-surface border border-border/80 p-5 space-y-4 flex flex-col justify-between">
+        <div className="rounded-2xl bg-enclave-plate/90 border border-enclave-border/80 p-5 space-y-4 flex flex-col justify-between shadow-card-tactical">
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-border/60">
               <div className="flex items-center gap-2">

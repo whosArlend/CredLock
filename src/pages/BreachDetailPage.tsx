@@ -172,7 +172,7 @@ export function BreachDetailPage() {
       </div>
 
       {/* Primary Metrics Snapshot Bar (4 items) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 p-3 sm:p-4 rounded-xl bg-surface border border-border/80 shadow-sm">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 p-4 sm:p-5 rounded-2xl bg-enclave-plate/90 border border-enclave-border/80 shadow-plate-tactical">
         <div className="space-y-1">
           <span className="text-[11px] font-mono uppercase text-muted tracking-wider block">Exposure Status</span>
           <div className={`text-base sm:text-lg font-bold font-sans ${record.isBreached ? 'text-status-danger' : 'text-status-success'}`}>

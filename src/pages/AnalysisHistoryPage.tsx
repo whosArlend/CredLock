@@ -185,10 +185,10 @@ export function AnalysisHistoryPage() {
       {/* Records: Desktop Ledger Table (md:block) */}
       {!isLoading && !error && records.length > 0 && (
         <>
-          <div className="hidden md:block rounded-xl border border-border/80 bg-surface overflow-hidden shadow-sm">
+          <div className="hidden md:block rounded-2xl border border-enclave-border/80 bg-enclave-plate/90 overflow-hidden shadow-plate-tactical">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-border/80 bg-surface-elevated/40 text-[11px] font-mono uppercase text-muted tracking-wider">
+                <tr className="border-b border-enclave-border/80 bg-enclave-elevated/60 text-[11px] font-mono uppercase text-muted tracking-wider">
                   <th scope="col" className="py-3 px-4 font-semibold">Record ID</th>
                   <th scope="col" className="py-3 px-4 font-semibold">Evaluated At</th>
                   <th scope="col" className="py-3 px-4 font-semibold">Strength & Score</th>

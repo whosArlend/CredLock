@@ -354,7 +354,7 @@ export function ArticleDetailPage() {
         </h1>
 
         {/* Unified Editorial Metadata Bar */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-2.5 px-3.5 rounded-lg bg-surface border border-border/80 font-mono text-xs text-muted">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 px-4 rounded-xl bg-enclave-plate/90 border border-enclave-border/80 shadow-card-tactical font-mono text-xs text-muted">
           <div className="flex items-center gap-1.5 text-foreground">
             {getCategoryIcon(article.category)}
             <span className="font-semibold uppercase tracking-wider">{formatCategoryLabel(article.category)}</span>

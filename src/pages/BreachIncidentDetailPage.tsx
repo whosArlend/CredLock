@@ -231,7 +231,7 @@ export function BreachIncidentDetailPage() {
       {/* Incident Snapshot Bar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
         {/* Metric 1: Exposed Accounts */}
-        <div className="p-3 rounded-xl bg-surface border border-border space-y-1">
+        <div className="p-3.5 rounded-xl bg-enclave-plate/90 border border-enclave-border/80 shadow-card-tactical space-y-1">
           <div className="flex items-center justify-between text-muted text-[10px] font-mono uppercase tracking-wider">
             <span>Compromised</span>
             <Users className="w-3.5 h-3.5 text-danger" />
@@ -245,7 +245,7 @@ export function BreachIncidentDetailPage() {
         </div>
 
         {/* Metric 2: Incident Severity */}
-        <div className="p-3 rounded-xl bg-surface border border-border space-y-1">
+        <div className="p-3.5 rounded-xl bg-enclave-plate/90 border border-enclave-border/80 shadow-card-tactical space-y-1">
           <div className="flex items-center justify-between text-muted text-[10px] font-mono uppercase tracking-wider">
             <span>Threat Severity</span>
             <AlertTriangle className="w-3.5 h-3.5 text-accent" />
@@ -259,7 +259,7 @@ export function BreachIncidentDetailPage() {
         </div>
 
         {/* Metric 3: Incident Date */}
-        <div className="p-3 rounded-xl bg-surface border border-border space-y-1">
+        <div className="p-3.5 rounded-xl bg-enclave-plate/90 border border-enclave-border/80 shadow-card-tactical space-y-1">
           <div className="flex items-center justify-between text-muted text-[10px] font-mono uppercase tracking-wider">
             <span>Breach Date</span>
             <Calendar className="w-3.5 h-3.5 text-muted-dim" />
