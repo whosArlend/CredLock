@@ -403,3 +403,6 @@ export function HeroMasterInput() {
     </div>
   );
 }
+
+export default HeroMasterInput;
+

@@ -406,3 +406,6 @@ export function SecurityIntelligenceSection() {
     </section>
   );
 }
+
+export default SecurityIntelligenceSection;
+

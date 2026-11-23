@@ -235,3 +235,6 @@ export function RecentActivitySection() {
     </section>
   );
 }
+
+export default RecentActivitySection;
+
