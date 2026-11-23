@@ -51,7 +51,7 @@ export function BottomNav() {
                     to={item.to}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
-                      'flex flex-col items-center justify-center flex-1 py-1 px-0.5 text-xs font-medium transition-all duration-150 select-none relative group rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent min-w-0',
+                      'flex flex-col items-center justify-center flex-1 py-1 px-0.5 min-h-[44px] text-xs font-medium transition-all duration-150 select-none relative group rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent min-w-0',
                       active
                         ? 'text-accent'
                         : 'text-muted hover:text-foreground active:scale-95'
@@ -84,7 +84,7 @@ export function BottomNav() {
             <button
               type="button"
               onClick={collapse}
-              className="flex flex-col items-center justify-center py-1 px-1 sm:px-1.5 text-xs font-medium text-muted hover:text-foreground active:scale-95 transition-all select-none rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent group shrink-0"
+              className="flex flex-col items-center justify-center py-1 px-1 sm:px-1.5 min-h-[44px] min-w-[36px] text-xs font-medium text-muted hover:text-foreground active:scale-95 transition-all select-none rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent group shrink-0"
               aria-label="Collapse navigation"
               title="Collapse navigation"
             >

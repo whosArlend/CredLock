@@ -52,3 +52,9 @@ coverage/
 .eslintcache
 .stylelintcache
 *.tsbuildinfo
+
+# Local AI agent tools
+.taste-skill/
+
+# AI-generated screenshots / visual testing artifacts
+shots/

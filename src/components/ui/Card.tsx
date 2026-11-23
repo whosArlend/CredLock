@@ -35,7 +35,7 @@ export function Card({
         variants[variant],
         paddings[padding],
         isInteractive &&
-          'cursor-pointer hover:border-border-strong hover:bg-[#1F2226] focus-within:border-accent focus-within:ring-1 focus-within:ring-accent active:scale-[0.995]',
+          'cursor-pointer hover:border-border-strong hover:bg-[#1A1D21] focus-within:border-accent focus-within:ring-1 focus-within:ring-accent active:scale-[0.995] interactive-card',
         className
       )}
       {...props}

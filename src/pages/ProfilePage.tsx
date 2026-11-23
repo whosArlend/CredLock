@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
 import { clearAllHistoryAsync } from '@/services/historyStorage';
+import { AuthModal } from '@/features/auth';
 import {
   Shield,
   Layers,
@@ -17,12 +18,16 @@ import {
   Lock,
   Cpu,
   ChevronDown,
+  Cloud,
+  User,
+  ArrowRight,
 } from 'lucide-react';
 
 export function ProfilePage() {
   const { showToast } = useToast();
   const [showConfirm, setShowConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
 
   const handleClearLocalData = async () => {
     try {
@@ -238,7 +243,63 @@ export function ProfilePage() {
         </div>
       </div>
 
-      {/* 4. Project Status & Data Sovereignty Management */}
+      {/* 4. v2.0 Architecture Preview — User Accounts & Cloud Sync */}
+      <div className="rounded-xl bg-surface border border-accent/30 p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/60">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-accent/10 border border-accent/30 text-accent">
+              <Cloud className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-foreground font-sans flex items-center gap-2">
+                CredLock v2.0 Cloud Sync & Account Enclave
+                <Badge variant="amber" size="sm">Architecture Preview</Badge>
+              </h3>
+              <p className="text-xs text-muted font-sans">
+                Cross-device synchronized audit history and authenticated device session management.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsAuthOpen(true)}
+            leftIcon={<User className="w-3.5 h-3.5" />}
+            rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+            className="self-start sm:self-auto shrink-0"
+          >
+            Launch Auth Preview
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <div className="p-3 rounded-lg bg-background-secondary/60 border border-border/70 space-y-1">
+            <span className="text-[10px] font-mono text-muted uppercase block">CURRENT STATE</span>
+            <span className="font-bold text-foreground block font-sans">Local Enclave (Guest Mode)</span>
+            <span className="text-muted text-[11px]">
+              Audit history stored strictly in this browser’s IndexedDB (<code className="font-mono text-foreground font-semibold">credlock-db</code>).
+            </span>
+          </div>
+
+          <div className="p-3 rounded-lg bg-background-secondary/60 border border-border/70 space-y-1">
+            <span className="text-[10px] font-mono text-accent uppercase block">v2.0 CLOUD SYNC</span>
+            <span className="font-bold text-foreground block font-sans">Cross-Device Pairing</span>
+            <span className="text-muted text-[11px]">
+              Supabase Auth user sessions with end-to-end encrypted safe audit history synchronization.
+            </span>
+          </div>
+
+          <div className="p-3 rounded-lg bg-background-secondary/60 border border-border/70 space-y-1">
+            <span className="text-[10px] font-mono text-status-success uppercase block">ZERO-KNOWLEDGE COMMITMENT</span>
+            <span className="font-bold text-foreground block font-sans">No Password Storage</span>
+            <span className="text-muted text-[11px]">
+              Passwords will NEVER be transmitted, hashed, or stored on remote cloud databases.
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. Project Status & Data Sovereignty Management */}
       <div className="rounded-xl bg-surface border border-border/80 p-5 space-y-4">
         {/* Project Metadata Chips */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs font-mono pb-3 border-b border-border/60">
@@ -321,6 +382,13 @@ export function ProfilePage() {
           )}
         </div>
       </div>
+
+      {/* v2.0 Authentication UI Prototype Dialog */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        initialView="session-info"
+      />
     </div>
   );
 }

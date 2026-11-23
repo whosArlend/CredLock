@@ -377,16 +377,17 @@ export function SecurityIntelligenceSection() {
                       className="py-2 first:pt-0 last:pb-0 flex items-center justify-between gap-3 text-left"
                     >
                       <div className="space-y-0.5 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 min-w-0">
                           <Link
                             to={`/breaches/${breach.slug}`}
-                            className="text-xs font-semibold text-foreground hover:text-accent transition-colors truncate"
+                            className="text-xs font-semibold text-foreground hover:text-accent transition-colors truncate max-w-[190px] sm:max-w-none"
                           >
                             {breach.title}
                           </Link>
                           <Badge
                             variant={getSeverityBadgeVariant(breach.severity)}
                             size="sm"
+                            className="shrink-0"
                           >
                             {breach.severity}
                           </Badge>

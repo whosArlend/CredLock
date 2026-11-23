@@ -83,12 +83,12 @@ export function HeroMasterInput() {
         />
 
         {/* Input Controls */}
-        <div className="absolute right-2.5 flex items-center gap-1">
+        <div className="absolute right-2 flex items-center gap-1">
           {password.length > 0 && (
             <button
               type="button"
               onClick={handleClear}
-              className="p-1.5 rounded text-muted hover:text-foreground hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+              className="h-9 w-9 sm:h-8 sm:w-8 flex items-center justify-center rounded-md text-muted hover:text-foreground hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
               aria-label="Clear password input"
             >
               <X className="w-4 h-4" />
@@ -97,7 +97,7 @@ export function HeroMasterInput() {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="p-1.5 rounded text-muted hover:text-foreground hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+            className="h-9 w-9 sm:h-8 sm:w-8 flex items-center justify-center rounded-md text-muted hover:text-foreground hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
