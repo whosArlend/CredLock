@@ -73,7 +73,8 @@ export function ProfilePage() {
       />
 
       {/* 1. Project Overview & Identity Banner */}
-      <div className="p-4 sm:p-5 rounded-xl bg-surface border border-border/80 space-y-2">
+      <div className="p-5 sm:p-6 rounded-2xl bg-enclave-plate/90 border border-enclave-border/80 shadow-plate-tactical relative overflow-hidden space-y-3">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
         <div className="flex items-center gap-1.5 font-mono text-[11px] font-semibold text-accent uppercase tracking-wider">
           <Shield className="w-3.5 h-3.5" />
           <span>Project Identity & Architectural Purpose</span>
@@ -95,7 +96,7 @@ export function ProfilePage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* Capability 1 */}
-          <div className="p-4 rounded-xl bg-surface border border-border/80 space-y-2">
+          <div className="p-4 rounded-xl bg-enclave-plate/80 border border-enclave-border/80 shadow-card-tactical space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-mono text-[10px] font-bold text-accent">01 // ANALYZER</span>
               <Shield className="w-4 h-4 text-muted-dim" />
@@ -107,7 +108,7 @@ export function ProfilePage() {
           </div>
 
           {/* Capability 2 */}
-          <div className="p-4 rounded-xl bg-surface border border-border/80 space-y-2">
+          <div className="p-4 rounded-xl bg-enclave-plate/80 border border-enclave-border/80 shadow-card-tactical space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-mono text-[10px] font-bold text-accent">02 // GENERATOR</span>
               <KeyRound className="w-4 h-4 text-muted-dim" />
@@ -119,7 +120,7 @@ export function ProfilePage() {
           </div>
 
           {/* Capability 3 */}
-          <div className="p-4 rounded-xl bg-surface border border-border/80 space-y-2">
+          <div className="p-4 rounded-xl bg-enclave-plate/80 border border-enclave-border/80 shadow-card-tactical space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-mono text-[10px] font-bold text-accent">03 // BREACH CHECK</span>
               <Database className="w-4 h-4 text-muted-dim" />

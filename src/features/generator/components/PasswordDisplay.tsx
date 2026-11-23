@@ -34,29 +34,29 @@ export const PasswordDisplay: React.FC<PasswordDisplayProps> = ({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4 text-left">
       {/* Generated Password Box */}
-      <div className="relative rounded-xl border border-border bg-surface p-4 transition-all focus-within:border-accent focus-within:ring-1 focus-within:ring-accent shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+      <div className="relative rounded-2xl border border-border-strong bg-enclave-plate p-5 sm:p-6 transition-all focus-within:border-accent shadow-plate-tactical">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-border/80">
           <div className="flex items-center gap-2">
             <KeyRound className="w-4 h-4 text-accent" aria-hidden="true" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted font-mono">
-              Generated Credential
+            <span className="text-xs font-bold uppercase tracking-wider text-foreground-secondary font-mono">
+              Cryptographic Key Chamber
             </span>
           </div>
 
           {result && result.password.length > 0 && (
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap font-mono">
               <Badge variant="cyan" size="sm">
-                <span className="font-mono">{result.length}</span> chars
+                <span className="font-bold">{result.length}</span> CHARS
               </Badge>
               <Badge variant="neutral" size="sm">
-                <span className="font-mono">{result.poolSize}</span>-char pool
+                <span>{result.poolSize}</span> POOL
               </Badge>
               <Tooltip content="Theoretical pool-based entropy estimate: length * log2(poolSize). Upper-bound estimate assuming unconstrained uniform selection.">
                 <div>
                   <Badge variant="emerald" size="sm">
-                    ~<span className="font-mono">{result.theoreticalPoolEntropyBits}</span> bits
+                    ~<span className="font-bold">{result.theoreticalPoolEntropyBits}</span> BITS
                   </Badge>
                 </div>
               </Tooltip>
@@ -64,124 +64,81 @@ export const PasswordDisplay: React.FC<PasswordDisplayProps> = ({
           )}
         </div>
 
-        {/* Password Output Area */}
-        <div className="min-h-[52px] flex items-center justify-between rounded-lg bg-background-base px-3.5 py-2.5 border border-border/80">
-          {result && result.password.length > 0 ? (
+        {/* Password Monospace Value Area */}
+        <div className="relative flex items-center justify-between min-h-[4rem] rounded-xl bg-enclave-void border border-border-strong px-4 py-3 shadow-inner my-1">
+          {hasPassword && result ? (
             <div
-              className="font-mono text-base sm:text-lg tracking-wider text-accent font-semibold break-all select-all selection:bg-accent selection:text-background-base"
-              aria-live="polite"
-              aria-label={isVisible ? 'Generated password' : 'Generated password hidden'}
+              className="w-full font-mono text-base sm:text-lg text-foreground tracking-wider select-all break-all overflow-x-auto pr-3 leading-relaxed"
+              aria-label="Generated Password Output"
             >
-              {isVisible ? result.password : '•'.repeat(result.length)}
+              {isVisible ? (
+                result.password
+              ) : (
+                <span className="text-foreground-dim tracking-[0.3em]">
+                  {'•'.repeat(result.password.length)}
+                </span>
+              )}
             </div>
           ) : (
-            <div className="text-xs sm:text-sm text-muted/60 italic font-mono select-none">
-              Memory purged. Click "Generate" below to create a credential.
+            <div className="text-xs sm:text-sm font-mono text-foreground-dim italic">
+              Buffer empty. Click "Synthesize Key" below.
             </div>
+          )}
+
+          {/* Visibility Toggle */}
+          {hasPassword && (
+            <button
+              type="button"
+              onClick={() => setIsVisible(!isVisible)}
+              disabled={disabled}
+              className="h-8 w-8 flex items-center justify-center rounded-lg bg-enclave-elevated hover:bg-enclave-card text-muted hover:text-foreground transition-colors border border-border shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+              aria-label={isVisible ? 'Hide password characters' : 'Show password characters'}
+            >
+              {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
           )}
         </div>
 
-        {/* Action Controls Toolbar */}
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/40">
-          <div className="flex items-center gap-1.5">
-            {hasPassword && (
-              <Tooltip
-                content={isVisible ? 'Hide password characters' : 'Reveal password characters'}
-              >
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsVisible(!isVisible)}
-                  aria-label={isVisible ? 'Hide password' : 'Show password'}
-                  leftIcon={
-                    isVisible ? (
-                      <EyeOff className="w-3.5 h-3.5 text-muted" />
-                    ) : (
-                      <Eye className="w-3.5 h-3.5 text-muted" />
-                    )
-                  }
-                >
-                  <span className="text-xs">{isVisible ? 'Hide' : 'Show'}</span>
-                </Button>
-              </Tooltip>
-            )}
-
-            {hasPassword && (
-              <Tooltip content="Purge generated password from memory">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onClear}
-                  aria-label="Clear password from memory"
-                  className="text-muted hover:text-danger"
-                  leftIcon={<Trash2 className="w-3.5 h-3.5" />}
-                >
-                  <span className="text-xs">Purge</span>
-                </Button>
-              </Tooltip>
-            )}
-          </div>
-
+        {/* Control Toolbar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3">
           <div className="flex items-center gap-2">
             <Button
-              variant="secondary"
-              size="sm"
+              variant="primary"
+              size="md"
+              leftIcon={<RotateCw className={`w-4 h-4 ${isSpinning ? 'animate-spin' : ''}`} />}
               onClick={handleRegenerateClick}
               disabled={disabled}
-              aria-label="Generate new password"
-              leftIcon={
-                <RotateCw
-                  className={`w-3.5 h-3.5 text-accent transition-transform ${
-                    isSpinning ? 'rotate-180 duration-300' : ''
-                  }`}
-                />
-              }
+              className="font-mono text-xs font-bold"
             >
-              <span className="text-xs font-semibold">
-                {hasPassword ? 'Regenerate' : 'Generate'}
-              </span>
+              Synthesize Key
             </Button>
 
-            {hasPassword && (
-              <Tooltip content="Copy password to device clipboard">
-                <Button
-                  variant={isCopied ? 'secondary' : 'primary'}
-                  size="sm"
-                  onClick={onCopy}
-                  aria-label={isCopied ? 'Password copied' : 'Copy password to clipboard'}
-                  leftIcon={
-                    isCopied ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5" />
-                    )
-                  }
-                >
-                  <span className="text-xs font-semibold">
-                    {isCopied ? 'Copied' : 'Copy'}
-                  </span>
-                </Button>
-              </Tooltip>
-            )}
+            <Button
+              variant="secondary"
+              size="md"
+              leftIcon={isCopied ? <Check className="w-4 h-4 text-status-success" /> : <Copy className="w-4 h-4 text-accent" />}
+              onClick={onCopy}
+              disabled={disabled || !hasPassword}
+              className="font-mono text-xs"
+            >
+              {isCopied ? 'Copied' : 'Copy'}
+            </Button>
           </div>
+
+          {hasPassword && (
+            <Button
+              variant="ghost"
+              size="sm"
+              leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+              onClick={onClear}
+              disabled={disabled}
+              className="text-foreground-dim hover:text-status-danger text-xs font-mono self-end sm:self-auto"
+            >
+              Purge Buffer
+            </Button>
+          )}
         </div>
       </div>
-
-      {/* Non-Absolute Clipboard Security Notice */}
-      {isCopied && (
-        <div
-          role="status"
-          className="rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-accent flex items-start gap-2 animate-in fade-in duration-150"
-        >
-          <Check className="w-4 h-4 mt-0.5 shrink-0 text-accent" aria-hidden="true" />
-          <div>
-            <span className="font-semibold">Copied to clipboard. </span>
-            <span className="text-foreground/80">
-              Clear your clipboard history after pasting into your password manager or login form.
-            </span>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

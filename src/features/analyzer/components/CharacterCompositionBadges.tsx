@@ -1,4 +1,4 @@
-import { Check, X, Layers, Info } from 'lucide-react';
+import { Check, X, Layers } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import type { CharacterComposition } from '@/services/passwordAnalyzer';
 
@@ -11,46 +11,57 @@ export function CharacterCompositionBadges({
 }: CharacterCompositionBadgesProps) {
   const categories = [
     {
-      label: 'Lowercase (a-z)',
+      label: 'Lowercase',
+      sub: 'a-z',
       present: composition.hasLowercase,
       count: composition.lowercaseCount,
     },
     {
-      label: 'Uppercase (A-Z)',
+      label: 'Uppercase',
+      sub: 'A-Z',
       present: composition.hasUppercase,
       count: composition.uppercaseCount,
     },
     {
-      label: 'Numbers (0-9)',
+      label: 'Numbers',
+      sub: '0-9',
       present: composition.hasNumbers,
       count: composition.numbersCount,
     },
     {
-      label: 'Symbols (!@#$)',
+      label: 'Symbols',
+      sub: '!@#$',
       present: composition.hasSymbols,
       count: composition.symbolsCount,
     },
   ];
 
   return (
-    <div className="space-y-3 p-4 rounded-xl bg-surface border border-border">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5 font-mono">
-          <Layers className="w-3.5 h-3.5 text-accent" />
-          <span>Character Diversity</span>
+    <div className="space-y-3 p-4 sm:p-5 rounded-2xl bg-enclave-plate border border-border-strong shadow-card-tactical text-left">
+      <div className="flex items-center justify-between pb-2 border-b border-border/80">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-foreground-secondary flex items-center gap-2 font-mono">
+          <Layers className="w-4 h-4 text-accent" />
+          <span>Character Diversity Matrix</span>
         </h3>
-        <span className="text-xs font-mono text-muted">
-          Length: <strong className="text-foreground">{composition.length}</strong>
+        <span className="text-xs font-mono text-foreground-dim">
+          Total Length: <strong className="text-accent">{composition.length}</strong>
         </span>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         {categories.map((cat) => (
           <div
             key={cat.label}
-            className="flex items-center justify-between p-2 rounded-lg bg-surface-elevated/40 border border-border/50 text-xs"
+            className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
+              cat.present
+                ? 'bg-enclave-card border-border-strong text-foreground'
+                : 'bg-enclave-void/60 border-border/50 text-foreground-dim'
+            }`}
           >
-            <span className="text-muted truncate mr-1 text-[11px]">{cat.label}</span>
+            <div>
+              <span className="text-xs font-bold block font-sans">{cat.label}</span>
+              <span className="text-[10px] font-mono text-foreground-dim">{cat.sub}</span>
+            </div>
             {cat.present ? (
               <Badge variant="emerald" size="sm">
                 <Check className="w-3 h-3 mr-0.5" /> {cat.count}
@@ -63,19 +74,6 @@ export function CharacterCompositionBadges({
           </div>
         ))}
       </div>
-
-      {composition.length > 0 && (
-        <div className="pt-2 border-t border-border/40 text-[11px] text-muted flex items-start gap-1.5">
-          <Info className="w-3.5 h-3.5 text-muted-dim shrink-0 mt-0.5" />
-          <p className="leading-relaxed">
-            <strong className="text-foreground">Theoretical Pool Entropy:</strong>{' '}
-            <span className="font-mono text-accent font-semibold">
-              {composition.theoreticalPoolEntropyBits} bits
-            </span>{' '}
-            ({composition.theoreticalPoolSize}-char pool). Upper bound under uniform random selection.
-          </p>
-        </div>
-      )}
     </div>
   );
 }

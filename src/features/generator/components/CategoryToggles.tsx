@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, ShieldAlert, Sparkles } from 'lucide-react';
+import { Check, ShieldAlert, Sparkles, Layers } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Tooltip } from '@/components/ui/Tooltip';
 import {
@@ -29,30 +29,30 @@ interface CategoryConfig {
 const CATEGORIES: CategoryConfig[] = [
   {
     key: 'includeLowercase',
-    label: 'Lowercase Letters',
+    label: 'Lowercase Characters',
     count: LOWERCASE_CHARS.length,
-    examples: 'a-z (e.g. a, b, c...)',
+    examples: 'a-z (alphabetical set)',
     tag: '26 chars',
   },
   {
     key: 'includeUppercase',
-    label: 'Uppercase Letters',
+    label: 'Uppercase Characters',
     count: UPPERCASE_CHARS.length,
-    examples: 'A-Z (e.g. A, B, C...)',
+    examples: 'A-Z (alphabetical set)',
     tag: '26 chars',
   },
   {
     key: 'includeNumbers',
-    label: 'Numbers / Digits',
+    label: 'Numeric Digits',
     count: NUMBER_CHARS.length,
-    examples: '0-9 (e.g. 0, 1, 2...)',
+    examples: '0-9 (base-10 set)',
     tag: '10 chars',
   },
   {
     key: 'includeSymbols',
-    label: 'Special Symbols',
+    label: 'Cryptographic Symbols',
     count: SYMBOL_CHARS.length,
-    examples: '!@#$%^&*()_+-=[]{}...',
+    examples: '!@#$%^&*()_+-=[]{}|;:,.<>?',
     tag: '32 chars',
   },
 ];
@@ -62,107 +62,83 @@ export const CategoryToggles: React.FC<CategoryTogglesProps> = ({
   onChange,
   disabled = false,
 }) => {
+  const poolSize = calculatePoolSize(options);
+  const entropy = calculateTheoreticalPoolEntropy(options.length, poolSize);
+
+  const activeCount = Object.entries(options).filter(
+    ([k, v]) => k !== 'length' && Boolean(v)
+  ).length;
+
   const handleToggle = (key: keyof Omit<GeneratorOptions, 'length'>) => {
+    if (disabled) return;
+    if (options[key] && activeCount <= 1) {
+      return;
+    }
     onChange({
       ...options,
       [key]: !options[key],
     });
   };
 
-  const poolSize = calculatePoolSize(options);
-  const theoreticalPoolEntropyBits = calculateTheoreticalPoolEntropy(options.length, poolSize);
-  const selectedCount =
-    (options.includeLowercase ? 1 : 0) +
-    (options.includeUppercase ? 1 : 0) +
-    (options.includeNumbers ? 1 : 0) +
-    (options.includeSymbols ? 1 : 0);
-
-  const hasNoCategories = selectedCount === 0;
-
   return (
-    <div className="rounded-xl border border-border bg-surface p-4 space-y-3.5 shadow-sm">
-      <div className="flex items-center justify-between">
+    <div className="rounded-2xl border border-border-strong bg-enclave-plate p-5 space-y-4 shadow-card-tactical text-left">
+      <div className="flex items-center justify-between pb-2 border-b border-border/80">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-accent" aria-hidden="true" />
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted font-mono">
-            Character Sets & Pool
+          <Layers className="w-4 h-4 text-accent" />
+          <h3 className="text-xs font-bold uppercase tracking-wider text-foreground-secondary font-mono">
+            Character Space Allocation
           </h3>
         </div>
-
-        <div className="flex items-center gap-1.5">
-          <Badge variant={hasNoCategories ? 'rose' : 'cyan'} size="sm">
-            Pool: <span className="font-mono">{poolSize}</span>
+        <div className="flex items-center gap-2">
+          <Badge variant="cyan" size="sm">
+            POOL: {poolSize}
           </Badge>
-          <Tooltip content="Theoretical pool-based entropy estimate: length * log2(poolSize). Upper bound assuming unconstrained uniform selection.">
-            <div>
-              <Badge variant={hasNoCategories ? 'rose' : 'emerald'} size="sm">
-                ~<span className="font-mono">{theoreticalPoolEntropyBits}</span> bits
-              </Badge>
-            </div>
-          </Tooltip>
+          <Badge variant="emerald" size="sm">
+            ~{entropy} BITS
+          </Badge>
         </div>
       </div>
 
-      {/* Category Selection Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {CATEGORIES.map((cat) => {
           const isChecked = options[cat.key];
+          const isOnlyOneActive = isChecked && activeCount <= 1;
+
           return (
-            <button
+            <div
               key={cat.key}
-              type="button"
-              role="checkbox"
-              aria-checked={isChecked}
-              disabled={disabled}
-              onClick={() => handleToggle(cat.key)}
-              className={`flex items-start justify-between p-2.5 rounded-lg border text-left transition-all select-none ${
+              onClick={() => !isOnlyOneActive && handleToggle(cat.key)}
+              className={`p-3.5 rounded-xl border transition-all cursor-pointer select-none flex items-start justify-between gap-3 ${
                 isChecked
-                  ? 'border-accent/50 bg-accent/10 hover:border-accent text-foreground'
-                  : 'border-border/60 bg-background-base/60 hover:border-border text-muted'
-              } disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent`}
+                  ? 'bg-enclave-card border-border-strong hover:border-accent/40 shadow-sm'
+                  : 'bg-enclave-void/50 border-border/60 opacity-60 hover:opacity-80'
+              } ${isOnlyOneActive ? 'cursor-not-allowed opacity-90' : ''}`}
             >
-              <div className="space-y-0.5 pr-2">
-                <div className="flex items-center gap-1.5">
-                  <span className={`text-xs font-semibold ${isChecked ? 'text-accent' : 'text-muted'}`}>
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-bold font-sans ${isChecked ? 'text-foreground' : 'text-foreground-dim'}`}>
                     {cat.label}
                   </span>
-                  <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-background-base text-muted-dim border border-border/40">
-                    {cat.tag}
-                  </span>
+                  <span className="text-[10px] font-mono text-foreground-dim">({cat.tag})</span>
                 </div>
-                <div className="font-mono text-[10px] text-muted-dim truncate max-w-[170px]">
+                <p className="text-[11px] font-mono text-foreground-muted truncate">
                   {cat.examples}
-                </div>
+                </p>
               </div>
 
-              {/* Styled Check Indicator */}
               <div
-                className={`mt-0.5 shrink-0 w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors ${
+                className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border transition-all ${
                   isChecked
-                    ? 'border-accent bg-accent text-background-base'
-                    : 'border-border bg-surface text-transparent'
+                    ? 'bg-accent border-accent text-enclave-void'
+                    : 'bg-enclave-void border-border text-transparent'
                 }`}
-                aria-hidden="true"
               >
-                <Check className="w-2.5 h-2.5 stroke-[3]" />
+                <Check className="w-3.5 h-3.5 stroke-[3]" />
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
-
-      {/* Validation Warning when no category selected */}
-      {hasNoCategories && (
-        <div
-          role="alert"
-          className="rounded-lg border border-danger/30 bg-danger/10 p-2.5 text-xs text-danger flex items-center gap-2"
-        >
-          <ShieldAlert className="w-4 h-4 shrink-0" aria-hidden="true" />
-          <span>
-            <strong>Configuration Required:</strong> Select at least one character category.
-          </span>
-        </div>
-      )}
     </div>
   );
 };

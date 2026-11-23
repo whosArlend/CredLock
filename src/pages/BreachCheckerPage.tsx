@@ -171,7 +171,8 @@ export function BreachCheckerPage() {
       />
 
       {/* Main Interactive Query Chamber */}
-      <div className="p-4 sm:p-5 rounded-xl border border-border bg-surface shadow-sm">
+      <div className="p-5 sm:p-6 rounded-2xl border border-enclave-border/80 bg-enclave-plate/90 shadow-plate-tactical backdrop-blur-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-status-danger/5 rounded-full blur-3xl pointer-events-none" />
         <BreachPasswordInput
           value={password}
           onChange={handlePasswordChange}
