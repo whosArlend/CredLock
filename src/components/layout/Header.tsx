@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Shield, Lock, User } from 'lucide-react';
+import { Lock, User } from 'lucide-react';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Container } from './Container';
 import { NAV_ITEMS, isItemActive } from './navUtils';
@@ -22,8 +22,15 @@ export function Header() {
               className="flex items-center gap-2.5 group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent shrink-0"
               aria-label="CredLock Home"
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 border border-accent/30 text-accent transition-transform group-hover:scale-105">
-                <Shield className="h-4 w-4" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-elevated/90 border border-border-strong text-foreground transition-all duration-200 group-hover:border-accent/50 group-hover:scale-105 p-1 shrink-0 overflow-hidden shadow-sm">
+                <img
+                  src="/favicon-white.svg"
+                  alt="CredLock"
+                  className="w-5 h-5 object-contain"
+                  width="20"
+                  height="20"
+                  loading="eager"
+                />
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-sm sm:text-base font-bold tracking-tight text-foreground group-hover:text-accent transition-colors font-sans">

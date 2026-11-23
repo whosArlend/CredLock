@@ -36,8 +36,8 @@ export function SecurityFeatureIndex() {
   ];
 
   return (
-    <div className="space-y-3 text-left">
-      <div className="flex items-center justify-between pb-1 border-b border-border/80">
+    <div className="space-y-3 text-left flex flex-col h-full justify-between">
+      <div className="flex items-center justify-between pb-1 border-b border-border/80 shrink-0">
         <h2 className="text-xs font-bold uppercase tracking-wider text-foreground-secondary font-mono flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-accent" />
           <span>Core Security Modules</span>
@@ -47,7 +47,7 @@ export function SecurityFeatureIndex() {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-3 flex-1">
         {tools.map((tool, idx) => {
           const Icon = tool.icon;
           return (

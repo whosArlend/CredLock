@@ -36,11 +36,11 @@ export function HomePage() {
       </div>
 
       {/* 2. Primary Workspace (Terminal Console) + Security Utilities Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <div className="lg:col-span-7 xl:col-span-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        <div className="lg:col-span-7 xl:col-span-8 flex flex-col">
           <HeroMasterInput />
         </div>
-        <div className="lg:col-span-5 xl:col-span-4">
+        <div className="lg:col-span-5 xl:col-span-4 flex flex-col">
           <SecurityFeatureIndex />
         </div>
       </div>
