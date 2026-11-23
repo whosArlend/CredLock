@@ -360,74 +360,139 @@ export function ArticlesPage() {
           </div>
         )}
 
-        {/* Articles Editorial Grid (1 col on mobile, 2 cols on tablet, 3 cols on desktop) */}
-        {status === 'success' && articles.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {articles.map((article) => (
-              <div
-                key={article.id}
-                className="group rounded-2xl border border-enclave-border/80 bg-enclave-plate/90 hover:border-accent/40 shadow-card-tactical hover:shadow-plate-tactical transition-all duration-200 flex flex-col justify-between p-4 sm:p-5"
-              >
-                <Link
-                  to={`/articles/${article.slug}`}
-                  className="block focus:outline-none h-full flex flex-col justify-between space-y-3"
-                  aria-label={`Read advisory: ${article.title}`}
-                >
-                  <div className="space-y-2.5">
-                    {/* Header: Stream badge & Read time */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        {getCategoryIcon(article.category)}
-                        <Badge variant={getCategoryBadgeVariant(article.category)} size="sm">
-                          {formatCategoryLabel(article.category)}
+        {/* Articles Editorial Layout */}
+        {status === 'success' && articles.length > 0 && (() => {
+          const leadArticle = currentPage === 1 && !activeSearch && categoryFilter === 'all' ? articles[0] : null;
+          const gridArticles = leadArticle ? articles.slice(1) : articles;
+
+          return (
+            <div className="space-y-4">
+              {/* Featured Lead Briefing */}
+              {leadArticle && (
+                <div className="rounded-2xl border border-accent/40 bg-enclave-plate/95 p-6 sm:p-8 shadow-plate-tactical relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-80 h-80 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
+                  <Link
+                    to={`/articles/${leadArticle.slug}`}
+                    className="block focus:outline-none space-y-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="amber" size="sm" dot>
+                          FEATURED BRIEFING
+                        </Badge>
+                        <Badge variant={getCategoryBadgeVariant(leadArticle.category)} size="sm">
+                          {formatCategoryLabel(leadArticle.category)}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-1 text-[11px] font-mono text-muted-dim">
-                        <Clock className="w-3 h-3 text-muted-dim" />
-                        <span>{article.read_time_minutes}m read</span>
+                      <div className="flex items-center gap-1.5 font-mono text-xs text-accent">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>{leadArticle.read_time_minutes} min in-depth read</span>
                       </div>
                     </div>
 
-                    {/* Title & Summary */}
-                    <div className="space-y-1">
-                      <h3 className="text-sm sm:text-base font-bold text-foreground group-hover:text-accent transition-colors font-sans leading-snug line-clamp-2">
-                        {article.title}
-                      </h3>
-                      <p className="text-xs text-muted leading-relaxed font-sans line-clamp-2">
-                        {article.summary}
+                    <div className="space-y-2">
+                      <h2 className="text-xl sm:text-2xl font-extrabold text-foreground group-hover:text-accent transition-colors font-sans tracking-tight leading-tight">
+                        {leadArticle.title}
+                      </h2>
+                      <p className="text-xs sm:text-sm text-foreground-secondary leading-relaxed font-sans max-w-3xl">
+                        {leadArticle.summary}
                       </p>
                     </div>
 
-                    {/* Byline & Date */}
-                    <div className="flex items-center justify-between text-[11px] font-mono text-muted-dim pt-1 border-t border-border/40">
-                      <span className="truncate flex items-center gap-1">
-                        <PenLine className="w-3 h-3 text-muted-dim shrink-0" />
-                        {article.author_name}
-                      </span>
-                      {article.published_at && (
-                        <span className="shrink-0 flex items-center gap-1">
-                          <Calendar className="w-3 h-3 text-muted-dim shrink-0" />
-                          {formatPublishDate(article.published_at)}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-enclave-border/80 font-mono text-xs">
+                      <div className="flex items-center gap-3 text-foreground-dim">
+                        <span className="flex items-center gap-1.5 text-foreground">
+                          <PenLine className="w-3.5 h-3.5 text-accent" />
+                          {leadArticle.author_name}
                         </span>
-                      )}
-                    </div>
-                  </div>
+                        {leadArticle.published_at && (
+                          <>
+                            <span>•</span>
+                            <span>{formatPublishDate(leadArticle.published_at)}</span>
+                          </>
+                        )}
+                      </div>
 
-                  {/* Card Footer: Read Action */}
-                  <div className="pt-2 border-t border-border/40 flex items-center justify-between text-xs font-mono">
-                    <span className="text-[10px] text-muted-dim uppercase tracking-wider">
-                      Advisory
-                    </span>
-                    <div className="flex items-center gap-1 text-accent font-semibold text-[11px] uppercase tracking-wider">
-                      <span>Read Full</span>
-                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                      <div className="inline-flex items-center gap-1.5 text-xs font-bold font-mono text-accent uppercase tracking-wider group-hover:translate-x-1 transition-transform">
+                        <span>Examine Research</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </div>
                     </div>
-                  </div>
-                </Link>
-              </div>
-            ))}
-          </div>
-        )}
+                  </Link>
+                </div>
+              )}
+
+              {/* Secondary Editorial Grid */}
+              {gridArticles.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                  {gridArticles.map((article) => (
+                    <div
+                      key={article.id}
+                      className="group rounded-2xl border border-enclave-border/80 bg-enclave-plate/90 hover:border-accent/40 shadow-card-tactical hover:shadow-plate-tactical transition-all duration-200 flex flex-col justify-between p-4 sm:p-5"
+                    >
+                      <Link
+                        to={`/articles/${article.slug}`}
+                        className="block focus:outline-none h-full flex flex-col justify-between space-y-3"
+                        aria-label={`Read advisory: ${article.title}`}
+                      >
+                        <div className="space-y-2.5">
+                          {/* Header: Stream badge & Read time */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5">
+                              {getCategoryIcon(article.category)}
+                              <Badge variant={getCategoryBadgeVariant(article.category)} size="sm">
+                                {formatCategoryLabel(article.category)}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-1 text-[11px] font-mono text-muted-dim">
+                              <Clock className="w-3 h-3 text-muted-dim" />
+                              <span>{article.read_time_minutes}m read</span>
+                            </div>
+                          </div>
+
+                          {/* Title & Summary */}
+                          <div className="space-y-1">
+                            <h3 className="text-sm sm:text-base font-bold text-foreground group-hover:text-accent transition-colors font-sans leading-snug line-clamp-2">
+                              {article.title}
+                            </h3>
+                            <p className="text-xs text-muted leading-relaxed font-sans line-clamp-2">
+                              {article.summary}
+                            </p>
+                          </div>
+
+                          {/* Byline & Date */}
+                          <div className="flex items-center justify-between text-[11px] font-mono text-muted-dim pt-1 border-t border-border/40">
+                            <span className="truncate flex items-center gap-1">
+                              <PenLine className="w-3 h-3 text-muted-dim shrink-0" />
+                              {article.author_name}
+                            </span>
+                            {article.published_at && (
+                              <span className="shrink-0 flex items-center gap-1">
+                                <Calendar className="w-3 h-3 text-muted-dim shrink-0" />
+                                {formatPublishDate(article.published_at)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Card Footer: Read Action */}
+                        <div className="pt-2 border-t border-border/40 flex items-center justify-between text-xs font-mono">
+                          <span className="text-[10px] text-muted-dim uppercase tracking-wider">
+                            Advisory
+                          </span>
+                          <div className="flex items-center gap-1 text-accent font-semibold text-[11px] uppercase tracking-wider">
+                            <span>Read Full</span>
+                            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                          </div>
+                        </div>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Pagination Navigation Controls */}
         {status === 'success' && pagination.totalPages > 1 && (

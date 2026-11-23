@@ -3,7 +3,7 @@ import { ShieldCheck, ChevronDown } from 'lucide-react';
 
 export const GeneratorNoticeCard: React.FC = () => {
   return (
-    <div className="p-3.5 rounded-card bg-background-surface/60 border border-border/80 space-y-2">
+    <div className="p-4 sm:p-5 rounded-2xl bg-enclave-plate/90 border border-enclave-border/80 shadow-plate-tactical space-y-2 text-left">
       {/* Compact Primary Security Note */}
       <div className="flex items-center gap-2 text-xs">
         <ShieldCheck className="w-4 h-4 text-accent shrink-0" aria-hidden="true" />

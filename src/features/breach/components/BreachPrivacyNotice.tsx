@@ -2,7 +2,7 @@ import { ShieldCheck, ChevronDown } from 'lucide-react';
 
 export function BreachPrivacyNotice() {
   return (
-    <div className="p-3.5 rounded-xl bg-surface border border-border space-y-2 shadow-sm">
+    <div className="p-4 sm:p-5 rounded-2xl bg-enclave-plate/90 border border-enclave-border/80 shadow-plate-tactical space-y-2 text-left">
       {/* Compact Primary Privacy Statement */}
       <div className="flex items-center gap-2 text-xs">
         <ShieldCheck className="w-4 h-4 text-accent shrink-0" aria-hidden="true" />

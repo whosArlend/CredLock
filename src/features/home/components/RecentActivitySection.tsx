@@ -9,7 +9,6 @@ import {
   Clock,
   Database,
 } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useAnalysisHistory, useBreachHistory } from '@/hooks/useHistory';
@@ -86,24 +85,21 @@ export function RecentActivitySection() {
       </div>
 
       {isLoading ? (
-        <Card variant="inset" padding="md" className="text-center py-8 border-border">
+        <div className="text-center py-8 rounded-2xl border border-enclave-border/80 bg-enclave-plate/90 shadow-card-tactical p-4">
           <div className="flex items-center justify-center gap-2 text-xs font-mono text-muted">
             <div className="w-3.5 h-3.5 rounded-full border border-accent/20 border-t-accent animate-spin" />
             <span>Loading activity timeline from IndexedDB...</span>
           </div>
-        </Card>
+        </div>
       ) : hasActivities ? (
         <div className="space-y-2.5">
           {unifiedActivities.map((item) => {
             if (item.type === 'analysis') {
               const rec = item.record;
               return (
-                <Card
+                <div
                   key={`analysis-${rec.id}`}
-                  variant="default"
-                  padding="none"
-                  isInteractive
-                  className="border-border hover:border-border-subtle group bg-surface overflow-hidden"
+                  className="rounded-2xl border border-enclave-border/80 bg-enclave-plate/90 shadow-card-tactical hover:border-accent/40 transition-all duration-200 group overflow-hidden"
                 >
                   <Link
                     to={`/analysis-history/${rec.id}`}
@@ -149,19 +145,16 @@ export function RecentActivitySection() {
                       <ArrowRight className="w-4 h-4 text-muted group-hover:text-accent transform group-hover:translate-x-1 transition-all" />
                     </div>
                   </Link>
-                </Card>
+                </div>
               );
             }
 
             // item.type === 'breach'
             const rec = item.record;
             return (
-              <Card
+              <div
                 key={`breach-${rec.id}`}
-                variant="default"
-                padding="none"
-                isInteractive
-                className="border-border hover:border-border-subtle group bg-surface overflow-hidden"
+                className="rounded-2xl border border-enclave-border/80 bg-enclave-plate/90 shadow-card-tactical hover:border-accent/40 transition-all duration-200 group overflow-hidden"
               >
                 <Link
                   to={`/breach-history/${rec.id}`}
@@ -211,13 +204,13 @@ export function RecentActivitySection() {
                     <ArrowRight className="w-4 h-4 text-muted group-hover:text-accent transform group-hover:translate-x-1 transition-all" />
                   </div>
                 </Link>
-              </Card>
+              </div>
             );
           })}
         </div>
       ) : (
         /* Compact Deliberate Empty State */
-        <div className="p-4 rounded-xl bg-surface border border-border text-center space-y-2">
+        <div className="p-5 rounded-2xl bg-enclave-plate/90 border border-enclave-border/80 shadow-card-tactical text-center space-y-2">
           <div className="flex items-center justify-center gap-2 text-muted">
             <History className="w-4 h-4 text-accent" />
             <span className="text-xs font-semibold text-foreground font-sans">No local activity logs yet</span>

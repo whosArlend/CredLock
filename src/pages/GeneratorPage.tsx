@@ -134,13 +134,14 @@ export function GeneratorPage() {
 
       {/* Action to send to analyzer */}
       {result && result.password.length > 0 && (
-        <div className="p-4 rounded-xl bg-enclave-plate border border-border-strong flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
+        <div className="p-5 rounded-2xl bg-enclave-plate/95 border border-accent/40 shadow-card-tactical flex flex-col sm:flex-row items-center justify-between gap-4 text-left">
           <div className="space-y-0.5">
-            <span className="text-xs font-bold text-foreground font-sans block">
+            <span className="text-xs font-bold text-foreground font-sans block flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
               Verify Theoretical Resilience
             </span>
             <span className="text-[11px] text-foreground-secondary font-sans">
-              Pipe this generated credential directly into the password analyzer for attack scenario simulation.
+              Pipe this generated credential directly into the password analyzer for brute-force scenario simulations.
             </span>
           </div>
           <Button
@@ -148,7 +149,7 @@ export function GeneratorPage() {
             size="sm"
             onClick={handleAnalyzeGenerated}
             rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-            className="w-full sm:w-auto font-mono text-xs shrink-0"
+            className="w-full sm:w-auto font-mono text-xs font-bold shrink-0 border-accent/40 hover:bg-accent/10"
           >
             Inspect in Analyzer
           </Button>

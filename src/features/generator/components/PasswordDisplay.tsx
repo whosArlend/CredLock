@@ -72,7 +72,19 @@ export const PasswordDisplay: React.FC<PasswordDisplayProps> = ({
               aria-label="Generated Password Output"
             >
               {isVisible ? (
-                result.password
+                <span className="inline-flex flex-wrap gap-x-0.5">
+                  {result.password.split('').map((char, index) => {
+                    let charClass = 'text-foreground';
+                    if (/[0-9]/.test(char)) charClass = 'text-accent font-bold';
+                    else if (/[^a-zA-Z0-9]/.test(char)) charClass = 'text-cyan-400 font-bold';
+                    else if (/[A-Z]/.test(char)) charClass = 'text-white font-semibold';
+                    return (
+                      <span key={index} className={charClass}>
+                        {char}
+                      </span>
+                    );
+                  })}
+                </span>
               ) : (
                 <span className="text-foreground-dim tracking-[0.3em]">
                   {'•'.repeat(result.password.length)}

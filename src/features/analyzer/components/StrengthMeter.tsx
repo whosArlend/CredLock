@@ -32,17 +32,32 @@ export function StrengthMeter({
     return 'bg-status-success shadow-[0_0_8px_rgba(16,185,129,0.4)]';
   };
 
+  // SVG Gauge Calculations: 240 degree arc from -210 deg to 30 deg
+  const radius = 38;
+  const strokeWidth = 6;
+  const arcLength = 2 * Math.PI * radius * (240 / 360); // approx 159.2
+  const normalizedEntropy = isEmpty ? 0 : Math.min(128, crackDifficultyBits);
+  const strokeDashoffset = arcLength - (arcLength * (normalizedEntropy / 128));
+
+  const getGaugeColor = () => {
+    if (isEmpty) return '#383E46';
+    if (score <= 1) return '#EF4444';
+    if (score === 2) return '#E5A93C';
+    if (score === 3) return '#34D399';
+    return '#10B981';
+  };
+
   return (
-    <div className="space-y-4 p-5 rounded-2xl bg-enclave-plate border border-border-strong shadow-card-tactical text-left">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-enclave-void border border-border-strong text-foreground">
+    <div className="space-y-5 p-5 sm:p-6 rounded-2xl bg-enclave-plate border border-border-strong shadow-card-tactical text-left relative overflow-hidden">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5 flex-1 min-w-0">
+          <div className="p-2.5 rounded-xl bg-enclave-void border border-border-strong text-foreground shrink-0 mt-0.5">
             <ShieldCheck className={cn('w-5 h-5', isEmpty ? 'text-muted' : score >= 2 ? 'text-status-success' : 'text-status-danger')} />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold text-foreground-secondary font-mono uppercase tracking-wider">
-                Resilience Score:
+                Resilience Rating:
               </span>
               <Badge
                 variant={isEmpty ? 'neutral' : currentVariant.badgeVariant}
@@ -52,7 +67,7 @@ export function StrengthMeter({
                 {isEmpty ? 'AWAITING INPUT' : `${currentVariant.label.toUpperCase()} (${score}/4)`}
               </Badge>
             </div>
-            <p className="text-xs text-foreground-muted mt-1 leading-relaxed">
+            <p className="text-xs text-foreground-muted leading-relaxed font-sans max-w-sm">
               {isEmpty
                 ? 'Enter a password above to execute multi-scenario heuristic analysis.'
                 : currentVariant.description}
@@ -60,12 +75,57 @@ export function StrengthMeter({
           </div>
         </div>
 
-        {!isEmpty && (
-          <div className="flex items-center gap-1.5 self-start sm:self-auto text-xs font-mono text-accent bg-enclave-void px-3 py-1 rounded-lg border border-border-strong">
-            <Zap className="w-3.5 h-3.5 text-accent" />
-            <span className="tabular-nums font-bold">{calculationTimeMs}ms local</span>
+        {/* Interactive Circular Entropy Gauge */}
+        <div className="flex items-center gap-4 self-center sm:self-auto shrink-0 p-2.5 rounded-xl bg-enclave-void/90 border border-enclave-border/80">
+          <div className="relative w-20 h-20 flex items-center justify-center">
+            <svg className="w-20 h-20 -rotate-90 transform" viewBox="0 0 96 96">
+              {/* Background Track */}
+              <circle
+                cx="48"
+                cy="48"
+                r={radius}
+                stroke="#242A34"
+                strokeWidth={strokeWidth}
+                fill="none"
+                strokeDasharray={`${arcLength} 360`}
+                strokeLinecap="round"
+                className="transform origin-center rotate-[30deg]"
+              />
+              {/* Dynamic Active Arc */}
+              <circle
+                cx="48"
+                cy="48"
+                r={radius}
+                stroke={getGaugeColor()}
+                strokeWidth={strokeWidth}
+                fill="none"
+                strokeDasharray={`${arcLength} 360`}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round"
+                className="transform origin-center rotate-[30deg] transition-all duration-500 ease-out"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center leading-none">
+              <span className="text-sm font-black font-mono text-foreground tabular-nums">
+                {isEmpty ? '0' : crackDifficultyBits}
+              </span>
+              <span className="text-[9px] font-mono text-foreground-dim uppercase tracking-wider pt-0.5">
+                BITS
+              </span>
+            </div>
           </div>
-        )}
+
+          <div className="text-right space-y-1 font-mono text-xs">
+            <span className="text-[10px] text-foreground-dim uppercase block">Engine Latency</span>
+            <div className="flex items-center justify-end gap-1 text-accent font-bold">
+              <Zap className="w-3 h-3 text-accent" />
+              <span>{isEmpty ? '0' : calculationTimeMs}ms</span>
+            </div>
+            <span className="text-[9px] text-status-success font-semibold block uppercase">
+              Client RAM
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* 4 Segmented Tactical Bars */}
