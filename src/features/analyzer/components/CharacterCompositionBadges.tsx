@@ -48,7 +48,7 @@ export function CharacterCompositionBadges({
         </span>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
         {categories.map((cat) => (
           <div
             key={cat.label}
@@ -58,16 +58,16 @@ export function CharacterCompositionBadges({
                 : 'bg-enclave-void/60 border-border/50 text-foreground-dim'
             }`}
           >
-            <div>
-              <span className="text-xs font-bold block font-sans">{cat.label}</span>
+            <div className="min-w-0 pr-2">
+              <span className="text-xs font-bold block font-sans truncate">{cat.label}</span>
               <span className="text-[10px] font-mono text-foreground-dim">{cat.sub}</span>
             </div>
             {cat.present ? (
-              <Badge variant="emerald" size="sm">
+              <Badge variant="emerald" size="sm" className="shrink-0 tabular-nums">
                 <Check className="w-3 h-3 mr-0.5" /> {cat.count}
               </Badge>
             ) : (
-              <Badge variant="neutral" size="sm">
+              <Badge variant="neutral" size="sm" className="shrink-0 tabular-nums text-foreground-dim">
                 <X className="w-3 h-3 mr-0.5" /> 0
               </Badge>
             )}

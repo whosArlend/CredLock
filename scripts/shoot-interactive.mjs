@@ -1,13 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import zlib from 'node:zlib';
 import { spawn, execFileSync } from 'node:child_process';
-
-const url = 'http://localhost:4173/';
-const out = 'shots/home-password-entered.png';
-const W = 1440;
-const VH = 900;
 
 function findChrome() {
   const local = process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Google/Chrome/Application/chrome.exe') : null;
@@ -20,18 +14,18 @@ function findChrome() {
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-const profile = path.join(process.cwd(), '.taste-skill', 'chrome-interactive');
-fs.mkdirSync(profile, { recursive: true });
-const portFile = path.join(profile, 'DevToolsActivePort');
-try { fs.rmSync(portFile); } catch {}
+async function captureRouteWithPassword(routeUrl, inputSelector, passwordVal, outPath) {
+  const profile = path.join(process.cwd(), '.taste-skill', 'chrome-interactive-' + Date.now());
+  fs.mkdirSync(profile, { recursive: true });
+  const portFile = path.join(profile, 'DevToolsActivePort');
+  try { fs.rmSync(portFile); } catch {}
 
-const child = spawn(findChrome(), ['--headless=new', `--user-data-dir=${profile}`, '--remote-debugging-port=0', '--no-first-run',
-  '--no-default-browser-check', '--disable-extensions', '--hide-scrollbars', '--mute-audio', '--disable-gpu',
-  `--window-size=${W},${VH}`, 'about:blank'], { stdio: 'ignore', windowsHide: true });
+  const child = spawn(findChrome(), ['--headless=new', `--user-data-dir=${profile}`, '--remote-debugging-port=0', '--no-first-run',
+    '--no-default-browser-check', '--disable-extensions', '--hide-scrollbars', '--mute-audio', '--disable-gpu',
+    `--window-size=1440,900`, 'about:blank'], { stdio: 'ignore', windowsHide: true });
 
-const kill = () => { if (child.exitCode != null) return; try { execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch { try { child.kill(); } catch {} } };
+  const kill = () => { if (child.exitCode != null) return; try { execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch { try { child.kill(); } catch {} } };
 
-(async () => {
   try {
     let port = null;
     for (let i = 0; i < 150 && !port; i++) { await sleep(100); try { port = parseInt(fs.readFileSync(portFile, 'utf8'), 10) || null; } catch {} }
@@ -50,36 +44,37 @@ const kill = () => { if (child.exitCode != null) return; try { execFileSync('tas
 
     await S('Page.enable');
     await S('Runtime.enable');
-    await S('Emulation.setDeviceMetricsOverride', { width: W, height: VH, deviceScaleFactor: 1, mobile: false });
+    await S('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
 
     const loaded = new Promise(r => subs.push(m => { if (m.method === 'Page.loadEventFired') r(); }));
-    await S('Page.navigate', { url });
+    await S('Page.navigate', { url: routeUrl });
     await Promise.race([loaded, sleep(15000)]);
     await sleep(1500);
 
-    // Enter a test password by interacting with React state via setter simulation or typing
-    const res = await ev(`(async () => {
-      const input = document.querySelector('#hero-password-input');
-      if (!input) return { ok: false, error: 'no input found' };
-      // Simulate typing a strong password
+    await ev(`(async () => {
+      const input = document.querySelector('${inputSelector}');
+      if (!input) return false;
       const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-      nativeInputValueSetter.call(input, 'Tr0ub4dor&3#StrongKey2026');
+      nativeInputValueSetter.call(input, '${passwordVal}');
       input.dispatchEvent(new Event('input', { bubbles: true }));
       input.dispatchEvent(new Event('change', { bubbles: true }));
       await new Promise(r => setTimeout(r, 600));
-      return { ok: true, value: input.value };
+      return true;
     })()`);
-    console.log('Password input interaction result:', res);
 
     await sleep(1000);
     const { data } = await S('Page.captureScreenshot', { format: 'png' });
-    fs.writeFileSync(out, Buffer.from(data, 'base64'));
-    console.log('Saved interactive screenshot to', out);
+    fs.writeFileSync(outPath, Buffer.from(data, 'base64'));
+    console.log('Saved', outPath);
 
     kill();
   } catch (err) {
-    console.error('Interactive shoot error:', err);
+    console.error('Error on route', routeUrl, err);
     kill();
-    process.exit(1);
   }
+}
+
+(async () => {
+  await captureRouteWithPassword('http://localhost:4173/', '#hero-password-input', 'Tr0ub4dor&3#StrongKey2026', 'shots/home-password-1440.png');
+  await captureRouteWithPassword('http://localhost:4173/analyzer', 'input[type="password"], input[type="text"]', 'Tr0ub4dor&3#StrongKey2026', 'shots/analyzer-password-1440.png');
 })();

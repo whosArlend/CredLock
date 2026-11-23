@@ -148,8 +148,8 @@ export function HeroMasterInput() {
 
         {/* 2. Interactive Main Terminal Input Well */}
         <div className="space-y-1.5">
-          <div className="relative flex items-center w-full rounded-xl border border-enclave-border bg-enclave-void shadow-inner transition-all duration-200 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20">
-            <div className="pl-4 pr-1 text-accent select-none font-mono text-base font-bold">
+          <div className="relative flex items-center w-full rounded-xl lg:rounded-2xl border border-enclave-border bg-enclave-void shadow-inner transition-all duration-200 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25">
+            <div className="pl-4 sm:pl-5 pr-2 sm:pr-2.5 text-accent select-none font-mono text-base sm:text-lg lg:text-xl font-bold shrink-0">
               &gt;
             </div>
             <input
@@ -161,33 +161,22 @@ export function HeroMasterInput() {
                 setPassword(e.target.value);
                 ensureZxcvbn();
               }}
-              placeholder="Enter credential to evaluate offline & online attack resistance..."
+              placeholder="Enter credential to simulate attack resistance..."
               autoComplete="off"
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              className="w-full h-13 pl-2 pr-28 bg-transparent text-foreground placeholder:text-foreground-dim/60 text-sm sm:text-base font-mono tracking-wide focus:outline-none selection:bg-accent/30 selection:text-accent"
+              className="w-full h-13 sm:h-14 lg:h-16 pl-1 pr-14 sm:pr-16 bg-transparent text-foreground placeholder:text-foreground-dim/60 text-sm sm:text-base lg:text-lg font-mono tracking-wide focus:outline-none selection:bg-accent/30 selection:text-accent"
               aria-describedby="hero-password-description"
             />
 
             {/* Inline Action Controls */}
-            <div className="absolute right-2.5 flex items-center gap-1">
-              {password.length === 0 && (
-                <button
-                  type="button"
-                  onClick={handleSynthesizeSample}
-                  className="h-8 px-2 flex items-center gap-1 rounded-lg text-accent hover:bg-accent/10 border border-accent/30 text-[11px] font-mono font-medium transition-colors"
-                  title="Synthesize 16-character CSPRNG test password"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">CSPRNG</span>
-                </button>
-              )}
+            <div className="absolute right-2.5 sm:right-3.5 flex items-center gap-1.5">
               {password.length > 0 && (
                 <button
                   type="button"
                   onClick={handleClear}
-                  className="h-8 w-8 flex items-center justify-center rounded-lg text-foreground-secondary hover:text-foreground hover:bg-enclave-elevated transition-colors"
+                  className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-lg text-foreground-secondary hover:text-foreground hover:bg-enclave-elevated transition-colors"
                   aria-label="Clear password"
                   title="Clear input"
                 >
@@ -197,7 +186,7 @@ export function HeroMasterInput() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="h-8 w-8 flex items-center justify-center rounded-lg text-foreground-secondary hover:text-accent hover:bg-enclave-elevated transition-colors"
+                className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-lg text-foreground-secondary hover:text-accent hover:bg-enclave-elevated transition-colors"
                 aria-label={showPassword ? 'Mask credential' : 'Reveal credential'}
                 title={showPassword ? 'Mask credential' : 'Reveal credential'}
               >
