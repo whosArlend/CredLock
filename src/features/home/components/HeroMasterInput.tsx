@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Eye,
@@ -22,6 +22,8 @@ export function HeroMasterInput() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [zxcvbnLoaded, setZxcvbnLoaded] = useState(() => isZxcvbnLoaded());
+  const terminalRef = useRef<HTMLDivElement>(null);
+  const [synthesisTriggerId, setSynthesisTriggerId] = useState(0);
 
   const ensureZxcvbn = useCallback(() => {
     if (!zxcvbnLoaded) {
@@ -34,6 +36,31 @@ export function HeroMasterInput() {
       initZxcvbn().then(() => setZxcvbnLoaded(true));
     }
   }, [password, zxcvbnLoaded]);
+
+  // Smoothly scroll to the terminal/assessment when a test key is synthesized
+  useEffect(() => {
+    if (synthesisTriggerId === 0) return;
+
+    const frameId = requestAnimationFrame(() => {
+      const scrollTarget = terminalRef.current;
+      if (!scrollTarget) return;
+
+      const headerElement = document.querySelector('header');
+      const headerHeight = headerElement ? headerElement.getBoundingClientRect().height : 56;
+      const targetPadding = 12;
+
+      const elementRect = scrollTarget.getBoundingClientRect();
+      const absoluteElementTop = elementRect.top + window.scrollY;
+      const targetScrollY = Math.max(0, absoluteElementTop - headerHeight - targetPadding);
+
+      window.scrollTo({
+        top: targetScrollY,
+        behavior: 'smooth',
+      });
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [synthesisTriggerId]);
 
   // Instant local evaluation using engine (client-side only, zero telemetry/storage)
   const analysisResult = useMemo(() => {
@@ -76,6 +103,7 @@ export function HeroMasterInput() {
     ensureZxcvbn();
     const result = generatePassword(DEFAULT_GENERATOR_OPTIONS);
     setPassword(result.password);
+    setSynthesisTriggerId((prev) => prev + 1);
   };
 
   const getScoreVariant = (score: number) => {
@@ -92,7 +120,10 @@ export function HeroMasterInput() {
   }, [analysisResult]);
 
   return (
-    <div className="rounded-2xl bg-enclave-plate/95 border border-enclave-border/90 shadow-plate-tactical p-5 sm:p-6 space-y-5 text-left relative overflow-hidden backdrop-blur-md flex flex-col justify-between h-full">
+    <div
+      ref={terminalRef}
+      className="rounded-2xl bg-enclave-plate/95 border border-enclave-border/90 shadow-plate-tactical p-4 sm:p-6 space-y-4 sm:space-y-5 text-left relative overflow-hidden backdrop-blur-md flex flex-col justify-between h-full scroll-mt-20 sm:scroll-mt-24"
+    >
       {/* Ambient background glow mapped to security state */}
       <div
         className={`absolute -top-24 -right-24 w-80 h-80 rounded-full blur-3xl pointer-events-none transition-all duration-700 opacity-20 ${
@@ -149,7 +180,7 @@ export function HeroMasterInput() {
         {/* 2. Interactive Main Terminal Input Well */}
         <div className="space-y-1.5">
           <div className="relative flex items-center w-full rounded-xl lg:rounded-2xl border border-enclave-border bg-enclave-void shadow-inner transition-all duration-200 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25">
-            <div className="pl-4 sm:pl-5 pr-2 sm:pr-2.5 text-accent select-none font-mono text-base sm:text-lg lg:text-xl font-bold shrink-0">
+            <div className="pl-3.5 sm:pl-5 pr-2 sm:pr-2.5 text-accent select-none font-mono text-xl sm:text-xl font-bold shrink-0">
               &gt;
             </div>
             <input
@@ -166,31 +197,37 @@ export function HeroMasterInput() {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              className="w-full h-13 sm:h-14 lg:h-16 pl-1 pr-14 sm:pr-16 bg-transparent text-foreground placeholder:text-foreground-dim/60 text-sm sm:text-base lg:text-lg font-mono tracking-wide focus:outline-none selection:bg-accent/30 selection:text-accent"
+              className={`w-full h-15 sm:h-16 pl-1 bg-transparent text-foreground placeholder:text-foreground-dim/60 text-base sm:text-base lg:text-lg font-mono tracking-wide focus:outline-none selection:bg-accent/30 selection:text-accent ${
+                password.length > 0 ? 'pr-24 sm:pr-24' : 'pr-14 sm:pr-16'
+              }`}
               aria-describedby="hero-password-description"
             />
 
             {/* Inline Action Controls */}
-            <div className="absolute right-2.5 sm:right-3.5 flex items-center gap-1.5">
+            <div className="absolute right-2 sm:right-3 flex items-center gap-1">
               {password.length > 0 && (
                 <button
                   type="button"
                   onClick={handleClear}
-                  className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-lg text-foreground-secondary hover:text-foreground hover:bg-enclave-elevated transition-colors"
+                  className="min-w-[44px] min-h-[44px] h-11 w-11 sm:h-10 sm:w-10 sm:min-w-0 sm:min-h-0 flex items-center justify-center rounded-xl text-foreground-secondary hover:text-foreground hover:bg-enclave-elevated active:bg-enclave-elevated transition-colors"
                   aria-label="Clear password"
                   title="Clear input"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5 sm:w-4.5 sm:h-4.5" />
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-lg text-foreground-secondary hover:text-accent hover:bg-enclave-elevated transition-colors"
+                className="min-w-[44px] min-h-[44px] h-11 w-11 sm:h-10 sm:w-10 sm:min-w-0 sm:min-h-0 flex items-center justify-center rounded-xl text-foreground-secondary hover:text-accent hover:bg-enclave-elevated active:bg-enclave-elevated transition-colors"
                 aria-label={showPassword ? 'Mask credential' : 'Reveal credential'}
                 title={showPassword ? 'Mask credential' : 'Reveal credential'}
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPassword ? (
+                  <EyeOff className="w-5 h-5 sm:w-4.5 sm:h-4.5" />
+                ) : (
+                  <Eye className="w-5 h-5 sm:w-4.5 sm:h-4.5" />
+                )}
               </button>
             </div>
           </div>
