@@ -1272,5 +1272,27 @@ describe('CredLock v2.0 — Phase 2.1: Username-Only Authentication Test Suite',
       assert.match(guardSource, /if\s*\(\s*profile\s*&&\s*profile\.isActive\s*===\s*false\s*\)/);
       assert.match(guardSource, /Enclave Access Suspended/);
     });
+
+    it('verifies ProfilePage renders dynamic enclave status for authenticated vs guest state', () => {
+      const profileSource = fs.readFileSync(
+        path.resolve(process.cwd(), 'src/pages/ProfilePage.tsx'),
+        'utf8'
+      );
+
+      // Must import useAuth
+      assert.match(profileSource, /import\s+\{[^}]*useAuth[^}]*\}\s+from\s+['"]@\/hooks\/useAuth['"]/);
+
+      // Must derive operative username from profile or user metadata
+      assert.match(profileSource, /operativeUsername\s*=\s*profile\?\.username/);
+
+      // Must dynamically display Authenticated Enclave with username when authenticated
+      assert.match(profileSource, /\{isAuthenticated\s*\?\s*\(/);
+      assert.match(profileSource, /Authenticated Enclave\s*\{operativeUsername\s*\?\s*`\(@\$\{operativeUsername\}\)`/);
+      assert.match(profileSource, /owner-scoped to your account/);
+
+      // Must provide fallback to Guest Mode if unauthenticated
+      assert.match(profileSource, /Local Enclave \(Guest Mode\)/);
+      assert.match(profileSource, /under local guest scope/);
+    });
   });
 });

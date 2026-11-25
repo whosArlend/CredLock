@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
 import { clearLocalUserDataAsync } from '@/services/historyStorage';
 import { AuthModal } from '@/features/auth';
 import {
@@ -24,10 +25,14 @@ import {
 } from 'lucide-react';
 
 export function ProfilePage() {
+  const { user, profile, isAuthenticated } = useAuth();
   const { showToast } = useToast();
   const [showConfirm, setShowConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+
+  // Derived operative identity matching Header conventions
+  const operativeUsername = profile?.username || (user?.user_metadata?.username as string) || null;
 
   const handleClearLocalData = async () => {
     try {
@@ -264,10 +269,23 @@ export function ProfilePage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
           <div className="p-3 rounded-lg bg-background-secondary/60 border border-border/70 space-y-1">
             <span className="text-[10px] font-mono text-muted uppercase block">CURRENT STATE</span>
-            <span className="font-bold text-foreground block font-sans">Local Enclave (Guest Mode)</span>
-            <span className="text-muted text-[11px]">
-              Audit history stored strictly in this browser’s IndexedDB (<code className="font-mono text-foreground font-semibold">credlock-db</code>).
-            </span>
+            {isAuthenticated ? (
+              <>
+                <span className="font-bold text-foreground block font-sans">
+                  Authenticated Enclave {operativeUsername ? `(@${operativeUsername})` : ''}
+                </span>
+                <span className="text-muted text-[11px]">
+                  Audit history stored strictly in this browser’s IndexedDB (<code className="font-mono text-foreground font-semibold">credlock-db</code>) and owner-scoped to your account.
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="font-bold text-foreground block font-sans">Local Enclave (Guest Mode)</span>
+                <span className="text-muted text-[11px]">
+                  Audit history stored strictly in this browser’s IndexedDB (<code className="font-mono text-foreground font-semibold">credlock-db</code>) under local guest scope.
+                </span>
+              </>
+            )}
           </div>
 
           <div className="p-3 rounded-lg bg-background-secondary/60 border border-border/70 space-y-1">
