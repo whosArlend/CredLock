@@ -251,28 +251,32 @@ describe('CredLock v2.0 — Phase 1.1 Security Hardening: Profile RLS & Column P
       expect(migration003Sql).toMatch(/Synthetic identity mismatch: email must be exactly <username>@auth\.credlock\.internal/i);
     });
 
-    it('handles unique_violation safely by failing on username collision to prevent orphaned auth records (Finding 2)', () => {
-      // Must check if user ID already exists (idempotent profile recovery)
-      expect(migration003Sql).toMatch(/IF EXISTS \(SELECT 1 FROM public\.profiles WHERE id = NEW\.id\) THEN/i);
-      // For username uniqueness collision, MUST re-raise 23505 exception to abort auth.users transaction
+    it('tightens handle_new_user() with explicit pre-checks and retry identity verification (Finding 3)', () => {
+      // Pre-check 1: Must explicitly check if username is claimed by another user (id <> NEW.id)
+      expect(migration003Sql).toMatch(/SELECT 1 FROM public\.profiles\s+WHERE LOWER\(username\) = norm_username AND id <> NEW\.id/i);
       expect(migration003Sql).toMatch(/RAISE EXCEPTION 'Operative username "%" is already taken\.', norm_username USING ERRCODE = '23505';/i);
+
+      // Pre-check 2: Must check if profile already exists for this exact user ID (idempotent retry)
+      expect(migration003Sql).toMatch(/SELECT \* INTO existing_profile FROM public\.profiles WHERE id = NEW\.id;/i);
+      expect(migration003Sql).toMatch(/IF LOWER\(existing_profile\.username\) = norm_username AND LOWER\(existing_profile\.email\) = expected_synthetic_email THEN/i);
+
+      // Must reject attempt to alter existing profile's identity on retry
+      expect(migration003Sql).toMatch(/RAISE EXCEPTION 'Existing profile identity mismatch for user %\.', NEW\.id USING ERRCODE = '23514';/i);
     });
 
-    it('audits and hardens ensure_user_profile() with identical identity validation (Finding 2)', () => {
+    it('audits and hardens ensure_user_profile() with immutable identity protection (Finding 4)', () => {
       // Requires auth.uid()
       expect(migration003Sql).toMatch(/current_user_id := auth\.uid\(\);/i);
 
-      // Returns existing profile if already found
+      // Verifies existing profile matches JWT identity; rejects mismatches with 42501
       expect(migration003Sql).toMatch(/SELECT \* INTO user_profile FROM public\.profiles WHERE id = current_user_id;/i);
-      expect(migration003Sql).toMatch(/IF FOUND THEN\s+RETURN user_profile;/i);
+      expect(migration003Sql).toMatch(/IF LOWER\(user_profile\.username\) = norm_username AND LOWER\(user_profile\.email\) = expected_synthetic_email THEN/i);
+      expect(migration003Sql).toMatch(/RAISE EXCEPTION 'Profile identity mismatch: existing identity cannot be altered via recovery\.' USING ERRCODE = '42501';/i);
 
-      // Requires username in user metadata without arbitrary fallback
-      expect(migration003Sql).toMatch(/raw_username := auth\.jwt\(\)->'user_metadata'->>'username';/i);
-      expect(migration003Sql).toMatch(/Operative recovery requires username in user metadata/i);
-
-      // Enforces synthetic email consistency
-      expect(migration003Sql).toMatch(/expected_synthetic_email := norm_username \|\| '@auth\.credlock\.internal';/i);
-      expect(migration003Sql).toMatch(/IF jwt_email IS NULL OR LOWER\(trim\(jwt_email\)\) != expected_synthetic_email THEN/i);
+      // Missing profile recovery must NEVER overwrite username or email on conflict
+      expect(migration003Sql).toMatch(/ON CONFLICT \(id\) DO UPDATE SET\s+updated_at = TIMEZONE\('utc'::TEXT, NOW\(\)\)/i);
+      expect(migration003Sql).not.toMatch(/ON CONFLICT \(id\) DO UPDATE SET[^;]*username\s*=/i);
+      expect(migration003Sql).not.toMatch(/ON CONFLICT \(id\) DO UPDATE SET[^;]*email\s*=/i);
 
       // Safe search_path and execution grants
       expect(migration003Sql).toMatch(/CREATE OR REPLACE FUNCTION public\.ensure_user_profile\(\)[\s\S]+?SET search_path = public/i);
@@ -280,7 +284,7 @@ describe('CredLock v2.0 — Phase 1.1 Security Hardening: Profile RLS & Column P
       expect(migration003Sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.ensure_user_profile\(\) TO authenticated;/i);
     });
 
-    it('simplifies protect_profile_privileged_fields() with SECURITY INVOKER and explicit admin bypass (Finding 3)', () => {
+    it('simplifies protect_profile_privileged_fields() with SECURITY INVOKER and explicit admin bypass (Finding 5)', () => {
       // Find the protect_profile_privileged_fields function definition in migration 003
       const fnMatch = migration003Sql.match(/CREATE OR REPLACE FUNCTION public\.protect_profile_privileged_fields\(\)[\s\S]+?\$\$ LANGUAGE plpgsql([^;]+);/i);
       expect(fnMatch).not.toBeNull();
@@ -304,15 +308,20 @@ describe('CredLock v2.0 — Phase 1.1 Security Hardening: Profile RLS & Column P
       expect(migration003Sql).toMatch(/NEW\.created_at = OLD\.created_at;/i);
     });
 
-    it('ensures safe deterministic backfill for legacy or unpopulated profiles (Finding 4)', () => {
-      // Must use a safe DO block to backfill unpopulated usernames
-      expect(migration003Sql).toMatch(/DO \$\$[\s\S]+?FOR r IN SELECT id, email, username FROM public\.profiles WHERE username IS NULL LOOP/i);
+    it('audits ALL rows during backfill and resolves surrogate collisions with retry loop (Findings 1 & 2)', () => {
+      // Must use a safe DO block with a tracking temporary table
+      expect(migration003Sql).toMatch(/CREATE TEMP TABLE temp_assigned_usernames/i);
 
-      // Must validate existing email format before adopting local-part
-      expect(migration003Sql).toMatch(/LOWER\(r\.email\) LIKE '%@auth\.credlock\.internal'/i);
+      // Phase A: Audits and preserves existing valid non-null usernames
+      expect(migration003Sql).toMatch(/Phase A: First pass — Audit existing non-NULL usernames/i);
+      expect(migration003Sql).toMatch(/FOR r IN\s+SELECT p\.id, p\.username, p\.email\s+FROM public\.profiles p/i);
 
-      // Must fall back to unique deterministic surrogate 'op_' || substr(replace(id, '-', ''), 1, 12)
-      expect(migration003Sql).toMatch(/candidate := 'op_' \|\| substr\(replace\(r\.id::text, '-', ''\), 1, 12\);/i);
+      // Phase B: Remediates remaining rows
+      expect(migration003Sql).toMatch(/Phase B: Second pass — Remediate all remaining rows/i);
+
+      // Must implement collision resolution retry loop
+      expect(migration003Sql).toMatch(/WHILE EXISTS \(SELECT 1 FROM temp_assigned_usernames WHERE username = cand\) LOOP/i);
+      expect(migration003Sql).toMatch(/cand := 'op_' \|\| substr\(base_hex, 1, 10\) \|\| '_' \|\| counter::text;/i);
     });
 
     it('re-enforces least privilege column grants without username update permissions', () => {

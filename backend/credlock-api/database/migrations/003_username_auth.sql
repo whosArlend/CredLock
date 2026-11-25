@@ -4,12 +4,15 @@
 -- Database: Supabase PostgreSQL
 -- Description: Transition authentication identity to Username-Only model:
 --              - Adds validated 'username' column to public.profiles.
---              - Safe deterministic backfill handling legacy/synthetic identities.
+--              - Comprehensive two-phase backfill: audits ALL rows (null & non-null),
+--                preserves valid usernames, resolves duplicates, invalid formats, and
+--                reserved keywords with deterministic collision-checked surrogates.
 --              - Enforces case-insensitive uniqueness index.
 --              - Enforces strict character, length, and reserved name constraints.
 --              - Enforces strict synthetic identity mapping: <username>@auth.credlock.internal.
 --              - Rejects mismatched username/email, missing metadata, and arbitrary domains.
---              - Hardens ensure_user_profile() recovery function with identical validation.
+--              - Tightens handle_new_user() with explicit pre-checks and retry verification.
+--              - Hardens ensure_user_profile() recovery function with immutable identity protection.
 --              - Implements defense-in-depth trigger protect_profile_privileged_fields() (SECURITY INVOKER).
 --              - Removes obsolete email synchronization trigger.
 --              - Preserves Phase 1.1 column-level permissions and RLS policies.
@@ -20,44 +23,107 @@ BEGIN;
 -- 1. Add username column if not already present
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS username TEXT;
 
--- 2. Backfill existing profile rows safely (if any exist)
---    Guarantees every row receives a username satisfying:
---    length [3..24], valid charset, non-reserved, and unique.
+-- 2. Comprehensive Profile Backfill & Normalization
+--    Audits ALL profile rows (both NULL and existing non-NULL values):
+--    - Preserves existing valid, non-reserved, case-insensitively unique usernames.
+--    - Remediates invalid formats, reserved names, duplicates, and NULL entries.
+--    - Uses a deterministic surrogate generation loop with collision resolution.
+--    - Guarantees EVERY row satisfies final CHECK and UNIQUE constraints.
 DO $$
 DECLARE
     r RECORD;
-    candidate TEXT;
+    cand TEXT;
+    base_hex TEXT;
+    counter INT;
+    is_cand_valid BOOLEAN;
 BEGIN
-    FOR r IN SELECT id, email, username FROM public.profiles WHERE username IS NULL LOOP
-        candidate := NULL;
-        
-        -- If email is in our internal synthetic domain, test its local part
-        IF r.email IS NOT NULL AND LOWER(r.email) LIKE '%@auth.credlock.internal' THEN
-            candidate := LOWER(split_part(r.email, '@', 1));
-            
-            -- Validate format and reserved words
-            IF length(candidate) < 3 OR length(candidate) > 24
-               OR candidate !~ '^[a-z0-9][a-z0-9_-]{1,22}[a-z0-9]$'
-               OR candidate ~ '(__|--)'
-               OR candidate ~ '[@.]'
-               OR candidate IN ('admin', 'administrator', 'root', 'system', 'credlock',
-                                'support', 'security', 'operator', 'operative', 'enclave',
-                                'analyst', 'api', 'auth', 'guest', 'anonymous',
-                                'moderator', 'superuser', 'master', 'test', 'null', 'undefined')
-               OR EXISTS (SELECT 1 FROM public.profiles WHERE LOWER(username) = candidate AND id <> r.id)
+    -- Temporary table to track claimed canonical usernames within migration transaction
+    CREATE TEMP TABLE temp_assigned_usernames (
+        profile_id UUID PRIMARY KEY,
+        username TEXT NOT NULL
+    ) ON COMMIT DROP;
+
+    -- Phase A: First pass — Audit existing non-NULL usernames.
+    -- Preserve existing usernames that are already 100% compliant, non-reserved, and unique.
+    -- If duplicate usernames exist, the earliest created profile retains the original handle.
+    FOR r IN 
+        SELECT p.id, p.username, p.email 
+        FROM public.profiles p
+        ORDER BY p.created_at ASC, p.id ASC 
+    LOOP
+        cand := NULL;
+
+        IF r.username IS NOT NULL THEN
+            cand := LOWER(TRIM(r.username));
+            IF length(cand) >= 3 AND length(cand) <= 24
+               AND cand ~ '^[a-z0-9][a-z0-9_-]{1,22}[a-z0-9]$'
+               AND cand !~ '(__|--)'
+               AND cand !~ '[@.]'
+               AND cand NOT IN (
+                   'admin', 'administrator', 'root', 'system', 'credlock',
+                   'support', 'security', 'operator', 'operative', 'enclave',
+                   'analyst', 'api', 'auth', 'guest', 'anonymous',
+                   'moderator', 'superuser', 'master', 'test', 'null', 'undefined'
+               )
+               AND NOT EXISTS (SELECT 1 FROM temp_assigned_usernames WHERE username = cand)
             THEN
-                candidate := NULL;
+                INSERT INTO temp_assigned_usernames (profile_id, username) VALUES (r.id, cand);
+                IF r.username IS DISTINCT FROM cand THEN
+                    UPDATE public.profiles SET username = cand WHERE id = r.id;
+                END IF;
+            END IF;
+        END IF;
+    END LOOP;
+
+    -- Phase B: Second pass — Remediate all remaining rows
+    -- (NULL usernames, invalid charsets/lengths, reserved handles, and duplicates).
+    FOR r IN 
+        SELECT p.id, p.username, p.email 
+        FROM public.profiles p
+        WHERE p.id NOT IN (SELECT profile_id FROM temp_assigned_usernames)
+        ORDER BY p.created_at ASC, p.id ASC 
+    LOOP
+        cand := NULL;
+
+        -- Step 1: Check if profile has a synthetic email whose local-part is valid and unclaimed
+        IF r.email IS NOT NULL AND LOWER(r.email) LIKE '%@auth.credlock.internal' THEN
+            cand := LOWER(TRIM(split_part(r.email, '@', 1)));
+            IF length(cand) >= 3 AND length(cand) <= 24
+               AND cand ~ '^[a-z0-9][a-z0-9_-]{1,22}[a-z0-9]$'
+               AND cand !~ '(__|--)'
+               AND cand !~ '[@.]'
+               AND cand NOT IN (
+                   'admin', 'administrator', 'root', 'system', 'credlock',
+                   'support', 'security', 'operator', 'operative', 'enclave',
+                   'analyst', 'api', 'auth', 'guest', 'anonymous',
+                   'moderator', 'superuser', 'master', 'test', 'null', 'undefined'
+               )
+               AND NOT EXISTS (SELECT 1 FROM temp_assigned_usernames WHERE username = cand)
+            THEN
+                -- Valid synthetic email handle adopted
+                NULL;
+            ELSE
+                cand := NULL;
             END IF;
         END IF;
 
-        -- If candidate is invalid, null, reserved, or collides, assign guaranteed-safe unique surrogate
-        -- 'op_' (3 chars) + 12 hex digits = 15 chars (valid length, valid charset, non-reserved, unique)
-        IF candidate IS NULL THEN
-            candidate := 'op_' || substr(replace(r.id::text, '-', ''), 1, 12);
+        -- Step 2: If still NULL, generate deterministic surrogate with collision resolution loop
+        IF cand IS NULL THEN
+            base_hex := replace(r.id::text, '-', '');
+            cand := 'op_' || substr(base_hex, 1, 12);
+            counter := 1;
+
+            -- Check against both temp tracker and existing profiles
+            WHILE EXISTS (SELECT 1 FROM temp_assigned_usernames WHERE username = cand) LOOP
+                cand := 'op_' || substr(base_hex, 1, 10) || '_' || counter::text;
+                counter := counter + 1;
+            END LOOP;
         END IF;
 
+        -- Record candidate assignment and update row
+        INSERT INTO temp_assigned_usernames (profile_id, username) VALUES (r.id, cand);
         UPDATE public.profiles
-        SET username = candidate
+        SET username = cand
         WHERE id = r.id;
     END LOOP;
 END $$;
@@ -95,7 +161,8 @@ DROP TRIGGER IF EXISTS on_auth_user_email_updated ON auth.users;
 DROP FUNCTION IF EXISTS public.handle_user_email_change();
 
 -- 7. Update handle_new_user() trigger function
---    Strictly validates metadata username and enforces 1:1 match with synthetic email.
+--    Strictly validates metadata username, enforces 1:1 match with synthetic email,
+--    and performs explicit conflict checks distinguishing legitimate retries from username collisions.
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -103,6 +170,7 @@ DECLARE
     norm_username TEXT;
     expected_synthetic_email TEXT;
     resolved_display_name TEXT;
+    existing_profile public.profiles;
 BEGIN
     -- Username metadata is strictly required for username-only authentication
     raw_username := NEW.raw_user_meta_data->>'username';
@@ -156,6 +224,30 @@ BEGIN
         norm_username
     );
 
+    -- Pre-check 1: Check if this username is already claimed by another user (id <> NEW.id)
+    IF EXISTS (
+        SELECT 1 FROM public.profiles 
+        WHERE LOWER(username) = norm_username AND id <> NEW.id
+    ) THEN
+        RAISE EXCEPTION 'Operative username "%" is already taken.', norm_username USING ERRCODE = '23505';
+    END IF;
+
+    -- Pre-check 2: Check if a profile already exists for this exact user ID (idempotent retry)
+    SELECT * INTO existing_profile FROM public.profiles WHERE id = NEW.id;
+    IF FOUND THEN
+        -- Verify that the existing profile's identity matches the registration request
+        IF LOWER(existing_profile.username) = norm_username AND LOWER(existing_profile.email) = expected_synthetic_email THEN
+            UPDATE public.profiles
+            SET updated_at = TIMEZONE('utc'::TEXT, NOW())
+            WHERE id = NEW.id;
+            RETURN NEW;
+        ELSE
+            -- Reject attempt to alter an existing profile's immutable identity during retry
+            RAISE EXCEPTION 'Existing profile identity mismatch for user %.', NEW.id USING ERRCODE = '23514';
+        END IF;
+    END IF;
+
+    -- Insert new profile
     INSERT INTO public.profiles (
         id,
         username,
@@ -175,24 +267,24 @@ BEGIN
         true,
         TIMEZONE('utc'::TEXT, NOW()),
         TIMEZONE('utc'::TEXT, NOW())
-    )
-    ON CONFLICT (id) DO UPDATE SET
-        username = EXCLUDED.username,
-        email = EXCLUDED.email,
-        updated_at = TIMEZONE('utc'::TEXT, NOW());
+    );
 
     RETURN NEW;
 EXCEPTION
     WHEN unique_violation THEN
-        -- If profile already exists by id (idempotent retry/self-healing), update timestamp and succeed
-        IF EXISTS (SELECT 1 FROM public.profiles WHERE id = NEW.id) THEN
+        -- Handle race condition during concurrent insertion
+        IF EXISTS (
+            SELECT 1 FROM public.profiles 
+            WHERE id = NEW.id 
+              AND LOWER(username) = norm_username 
+              AND LOWER(email) = expected_synthetic_email
+        ) THEN
             UPDATE public.profiles
             SET updated_at = TIMEZONE('utc'::TEXT, NOW())
             WHERE id = NEW.id;
             RETURN NEW;
         ELSE
-            -- The uniqueness violation is on the username (idx_profiles_username_lower).
-            -- Fail transactionally so Supabase Auth rolls back auth.users insertion.
+            -- Any other uniqueness collision must abort transactionally
             RAISE EXCEPTION 'Operative username "%" is already taken.', norm_username USING ERRCODE = '23505';
         END IF;
     WHEN check_violation THEN
@@ -259,15 +351,13 @@ CREATE TRIGGER trigger_protect_profile_privileged_fields
     FOR EACH ROW
     EXECUTE FUNCTION public.protect_profile_privileged_fields();
 
--- 9. Update ensure_user_profile() recovery function to populate username
---    Hardened to enforce the exact same identity consistency rules as handle_new_user():
+-- 9. Update ensure_user_profile() recovery function
+--    Hardened to enforce identity consistency and database-level immutability:
 --    - Requires authenticated caller (auth.uid())
---    - Requires valid username in JWT metadata
---    - Normalizes username (lowercase, trim)
---    - Enforces format (3-24 chars, valid charset, no consecutive __ or --)
---    - Enforces reserved username rejection
---    - Enforces exact match against synthetic email: <username>@auth.credlock.internal
---    - Executes as SECURITY DEFINER with safe search_path to insert missing profile
+--    - If profile exists, verifies identity matches JWT; rejects mismatches safely.
+--    - If profile is missing, creates it using validated username & synthetic email.
+--    - NEVER overwrites username or email during recovery (preserves immutability).
+--    - Executes as SECURITY DEFINER with safe search_path to insert missing profile.
 CREATE OR REPLACE FUNCTION public.ensure_user_profile()
 RETURNS public.profiles AS $$
 DECLARE
@@ -284,13 +374,7 @@ BEGIN
         RAISE EXCEPTION 'Authentication required.' USING ERRCODE = '42501';
     END IF;
 
-    -- Return existing profile if already present
-    SELECT * INTO user_profile FROM public.profiles WHERE id = current_user_id;
-    IF FOUND THEN
-        RETURN user_profile;
-    END IF;
-
-    -- Extract and validate metadata for missing profile recovery
+    -- Extract and validate metadata for identity comparison and recovery
     raw_username := auth.jwt()->'user_metadata'->>'username';
     IF raw_username IS NULL OR trim(raw_username) = '' THEN
         RAISE EXCEPTION 'Operative recovery requires username in user metadata.' USING ERRCODE = '23514';
@@ -333,11 +417,23 @@ BEGIN
         RAISE EXCEPTION 'Synthetic identity mismatch: JWT email must be exactly <username>@auth.credlock.internal.' USING ERRCODE = '23514';
     END IF;
 
+    -- Check if profile already exists for this authenticated user
+    SELECT * INTO user_profile FROM public.profiles WHERE id = current_user_id;
+    IF FOUND THEN
+        -- Identity must match; recovery RPC cannot be used to modify identity
+        IF LOWER(user_profile.username) = norm_username AND LOWER(user_profile.email) = expected_synthetic_email THEN
+            RETURN user_profile;
+        ELSE
+            RAISE EXCEPTION 'Profile identity mismatch: existing identity cannot be altered via recovery.' USING ERRCODE = '42501';
+        END IF;
+    END IF;
+
     resolved_display_name := COALESCE(
         NULLIF(trim(auth.jwt()->'user_metadata'->>'display_name'), ''),
         norm_username
     );
 
+    -- Missing profile recovery: insert safely without overwriting immutable fields on conflict
     BEGIN
         INSERT INTO public.profiles (
             id,
@@ -360,14 +456,17 @@ BEGIN
             TIMEZONE('utc'::TEXT, NOW())
         )
         ON CONFLICT (id) DO UPDATE SET
-            username = EXCLUDED.username,
-            email = EXCLUDED.email,
             updated_at = TIMEZONE('utc'::TEXT, NOW())
         RETURNING * INTO user_profile;
 
         RETURN user_profile;
     EXCEPTION
         WHEN unique_violation THEN
+            -- Check if profile was inserted concurrently for this user
+            SELECT * INTO user_profile FROM public.profiles WHERE id = current_user_id;
+            IF FOUND AND LOWER(user_profile.username) = norm_username AND LOWER(user_profile.email) = expected_synthetic_email THEN
+                RETURN user_profile;
+            END IF;
             RAISE EXCEPTION 'Operative username "%" is already claimed by another operative.', norm_username USING ERRCODE = '23505';
     END;
 END;

@@ -743,4 +743,385 @@ describe('CredLock v2.0 — Phase 2.1: Username-Only Authentication Test Suite',
       assert.strictEqual(res3.valid, false);
     });
   });
+
+  // ==========================================================================
+  // 10. Migration Backfill Simulation (Real Unit Tests)
+  // ==========================================================================
+  describe('10. Migration Backfill Algorithm Simulation (Real Unit Tests)', () => {
+    interface ProfileRecord {
+      id: string;
+      email: string | null;
+      username: string | null;
+      createdAt: string;
+    }
+
+    // Pure function simulating the two-phase SQL backfill logic in 003_username_auth.sql
+    function simulateBackfill(profiles: ProfileRecord[]): Map<string, string> {
+      const tempAssigned = new Map<string, string>(); // profileId -> canonical username
+      const claimedUsernames = new Set<string>();
+
+      function isValidCandidate(candidate: string): boolean {
+        const lower = candidate.toLowerCase();
+        if (lower.length < 3 || lower.length > 24) return false;
+        if (!/^[a-z0-9][a-z0-9_-]{1,22}[a-z0-9]$/.test(lower)) return false;
+        if (/(__|--)/.test(lower)) return false;
+        if (/[@.]/.test(lower)) return false;
+        if (RESERVED_USERNAMES.has(lower)) return false;
+        return true;
+      }
+
+      // Sort profiles by createdAt ASC, id ASC
+      const sorted = [...profiles].sort((a, b) => {
+        const timeDiff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        return timeDiff !== 0 ? timeDiff : a.id.localeCompare(b.id);
+      });
+
+      // Phase A: First pass — audit existing non-null usernames
+      for (const p of sorted) {
+        if (p.username) {
+          const cand = p.username.trim().toLowerCase();
+          if (isValidCandidate(cand) && !claimedUsernames.has(cand)) {
+            claimedUsernames.add(cand);
+            tempAssigned.set(p.id, cand);
+          }
+        }
+      }
+
+      // Phase B: Second pass — remediate remaining profiles
+      for (const p of sorted) {
+        if (tempAssigned.has(p.id)) continue;
+
+        let cand: string | null = null;
+
+        // Step 1: Check synthetic email local-part
+        if (p.email && p.email.toLowerCase().endsWith('@auth.credlock.internal')) {
+          const localPart = p.email.split('@')[0].trim().toLowerCase();
+          if (isValidCandidate(localPart) && !claimedUsernames.has(localPart)) {
+            cand = localPart;
+          }
+        }
+
+        // Step 2: Surrogate generation loop with collision resolution
+        if (!cand) {
+          const baseHex = p.id.replace(/-/g, '').toLowerCase();
+          cand = `op_${baseHex.slice(0, 12)}`;
+          let counter = 1;
+
+          while (claimedUsernames.has(cand)) {
+            cand = `op_${baseHex.slice(0, 10)}_${counter}`;
+            counter++;
+          }
+        }
+
+        claimedUsernames.add(cand);
+        tempAssigned.set(p.id, cand);
+      }
+
+      return tempAssigned;
+    }
+
+    it('preserves existing valid, non-reserved, unique usernames', () => {
+      const records: ProfileRecord[] = [
+        { id: '11111111-1111-1111-1111-111111111111', email: 'neo@auth.credlock.internal', username: 'neo', createdAt: '2026-01-01' },
+        { id: '22222222-2222-2222-2222-222222222222', email: 'trinity@auth.credlock.internal', username: 'trinity', createdAt: '2026-01-02' },
+      ];
+
+      const result = simulateBackfill(records);
+      assert.strictEqual(result.get(records[0].id), 'neo');
+      assert.strictEqual(result.get(records[1].id), 'trinity');
+    });
+
+    it('remediates NULL usernames with valid deterministic surrogate handles', () => {
+      const records: ProfileRecord[] = [
+        { id: 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', email: 'user@company.com', username: null, createdAt: '2026-01-01' },
+      ];
+
+      const result = simulateBackfill(records);
+      const assigned = result.get(records[0].id);
+      assert.ok(assigned);
+      assert.strictEqual(assigned?.startsWith('op_'), true);
+      assert.strictEqual(assigned?.length, 15);
+      assert.strictEqual(validateUsername(assigned!).isValid, true);
+    });
+
+    it('remediates invalid existing usernames (dots, consecutive delimiters, out-of-range length)', () => {
+      const records: ProfileRecord[] = [
+        { id: '11111111-1111-1111-1111-111111111111', email: 'john.doe@test.com', username: 'john.doe', createdAt: '2026-01-01' }, // dot
+        { id: '22222222-2222-2222-2222-222222222222', email: 'bad@test.com', username: 'bad__delim', createdAt: '2026-01-02' }, // __
+        { id: '33333333-3333-3333-3333-333333333333', email: 'short@test.com', username: 'a', createdAt: '2026-01-03' }, // < 3 chars
+      ];
+
+      const result = simulateBackfill(records);
+      for (const r of records) {
+        const username = result.get(r.id)!;
+        assert.notStrictEqual(username, r.username);
+        assert.strictEqual(validateUsername(username).isValid, true);
+      }
+    });
+
+    it('remediates reserved existing usernames safely', () => {
+      const records: ProfileRecord[] = [
+        { id: '11111111-1111-1111-1111-111111111111', email: 'admin@auth.credlock.internal', username: 'admin', createdAt: '2026-01-01' },
+        { id: '22222222-2222-2222-2222-222222222222', email: 'root@company.com', username: 'root', createdAt: '2026-01-02' },
+      ];
+
+      const result = simulateBackfill(records);
+      for (const r of records) {
+        const username = result.get(r.id)!;
+        assert.notStrictEqual(username, r.username);
+        assert.strictEqual(validateUsername(username).isValid, true);
+        assert.strictEqual(RESERVED_USERNAMES.has(username), false);
+      }
+    });
+
+    it('resolves duplicate usernames deterministically in favor of earliest created profile', () => {
+      const records: ProfileRecord[] = [
+        { id: '11111111-1111-1111-1111-111111111111', email: 'first@auth.credlock.internal', username: 'agent_smith', createdAt: '2026-01-01' },
+        { id: '22222222-2222-2222-2222-222222222222', email: 'second@auth.credlock.internal', username: 'AGENT_SMITH', createdAt: '2026-01-02' },
+      ];
+
+      const result = simulateBackfill(records);
+      assert.strictEqual(result.get(records[0].id), 'agent_smith'); // Earliest preserved
+      assert.notStrictEqual(result.get(records[1].id), 'agent_smith'); // Later remediated
+      assert.strictEqual(validateUsername(result.get(records[1].id)!).isValid, true);
+    });
+
+    it('resolves surrogate collisions using deterministic counter loop', () => {
+      // Simulate two records with identical first 12 hex characters in ID
+      const records: ProfileRecord[] = [
+        { id: 'abcdef01-2345-0000-0000-000000000001', email: null, username: null, createdAt: '2026-01-01' },
+        { id: 'abcdef01-2345-9999-9999-999999999999', email: null, username: null, createdAt: '2026-01-02' },
+      ];
+
+      const result = simulateBackfill(records);
+      const user1 = result.get(records[0].id)!;
+      const user2 = result.get(records[1].id)!;
+
+      assert.strictEqual(user1, 'op_abcdef012345');
+      assert.strictEqual(user2, 'op_abcdef0123_1');
+      assert.notStrictEqual(user1, user2);
+      assert.strictEqual(validateUsername(user1).isValid, true);
+      assert.strictEqual(validateUsername(user2).isValid, true);
+    });
+  });
+
+  // ==========================================================================
+  // 11. Registration Trigger Simulation: Conflict & Retry Handling
+  // ==========================================================================
+  describe('11. Registration Trigger Simulation (Real Unit Tests)', () => {
+    interface MockProfile {
+      id: string;
+      username: string;
+      email: string;
+    }
+
+    function simulateHandleNewUser(
+      existingProfiles: MockProfile[],
+      newUser: { id: string; email: string; metadata?: { username?: string } }
+    ): { success: boolean; errorCode?: string; profile?: MockProfile } {
+      const rawUser = newUser.metadata?.username;
+      if (!rawUser || rawUser.trim() === '') {
+        return { success: false, errorCode: '23514' }; // missing metadata
+      }
+
+      const normUser = rawUser.trim().toLowerCase();
+      const userCheck = validateUsername(normUser);
+      if (!userCheck.isValid) {
+        return { success: false, errorCode: '23514' };
+      }
+
+      const expectedSynthetic = `${normUser}@auth.credlock.internal`;
+      if (newUser.email.trim().toLowerCase() !== expectedSynthetic) {
+        return { success: false, errorCode: '23514' }; // email mismatch
+      }
+
+      // Pre-check 1: Check username taken by another user (id <> NEW.id)
+      const usernameOwner = existingProfiles.find(
+        (p) => p.username.toLowerCase() === normUser && p.id !== newUser.id
+      );
+      if (usernameOwner) {
+        return { success: false, errorCode: '23505' }; // username collision
+      }
+
+      // Pre-check 2: Check same-ID retry
+      const sameIdProfile = existingProfiles.find((p) => p.id === newUser.id);
+      if (sameIdProfile) {
+        if (
+          sameIdProfile.username.toLowerCase() === normUser &&
+          sameIdProfile.email.toLowerCase() === expectedSynthetic
+        ) {
+          return { success: true, profile: sameIdProfile }; // Idempotent success
+        } else {
+          return { success: false, errorCode: '23514' }; // Identity alteration attempt rejected
+        }
+      }
+
+      const created: MockProfile = {
+        id: newUser.id,
+        username: normUser,
+        email: expectedSynthetic,
+      };
+      return { success: true, profile: created };
+    }
+
+    it('succeeds for valid registration with matching synthetic email', () => {
+      const res = simulateHandleNewUser([], {
+        id: 'usr-1',
+        email: 'operative_alpha@auth.credlock.internal',
+        metadata: { username: 'operative_alpha' },
+      });
+      assert.strictEqual(res.success, true);
+      assert.strictEqual(res.profile?.username, 'operative_alpha');
+    });
+
+    it('rejects registration when username is already taken by another operative (23505)', () => {
+      const existing: MockProfile[] = [
+        { id: 'usr-owner', username: 'cipher_boss', email: 'cipher_boss@auth.credlock.internal' },
+      ];
+
+      const res = simulateHandleNewUser(existing, {
+        id: 'usr-new-attacker',
+        email: 'cipher_boss@auth.credlock.internal',
+        metadata: { username: 'cipher_boss' },
+      });
+      assert.strictEqual(res.success, false);
+      assert.strictEqual(res.errorCode, '23505');
+    });
+
+    it('allows legitimate idempotent retry for the same user ID and identity', () => {
+      const existing: MockProfile[] = [
+        { id: 'usr-same-id', username: 'lead_operator', email: 'lead_operator@auth.credlock.internal' },
+      ];
+
+      const res = simulateHandleNewUser(existing, {
+        id: 'usr-same-id',
+        email: 'lead_operator@auth.credlock.internal',
+        metadata: { username: 'lead_operator' },
+      });
+      assert.strictEqual(res.success, true);
+      assert.strictEqual(res.profile?.username, 'lead_operator');
+    });
+
+    it('rejects attempt to alter existing identity during same-ID retry (23514)', () => {
+      const existing: MockProfile[] = [
+        { id: 'usr-same-id', username: 'original_user', email: 'original_user@auth.credlock.internal' },
+      ];
+
+      const res = simulateHandleNewUser(existing, {
+        id: 'usr-same-id',
+        email: 'altered_user@auth.credlock.internal',
+        metadata: { username: 'altered_user' },
+      });
+      assert.strictEqual(res.success, false);
+      assert.strictEqual(res.errorCode, '23514');
+    });
+  });
+
+  // ==========================================================================
+  // 12. Profile Recovery RPC Simulation: Identity Immutability
+  // ==========================================================================
+  describe('12. Profile Recovery RPC Simulation (Real Unit Tests)', () => {
+    interface MockProfile {
+      id: string;
+      username: string;
+      email: string;
+    }
+
+    function simulateEnsureUserProfile(
+      existingProfiles: MockProfile[],
+      currentUserId: string,
+      jwt: { email?: string; metadata?: { username?: string } }
+    ): { success: boolean; errorCode?: string; profile?: MockProfile } {
+      const rawUser = jwt.metadata?.username;
+      if (!rawUser || rawUser.trim() === '') {
+        return { success: false, errorCode: '23514' };
+      }
+
+      const normUser = rawUser.trim().toLowerCase();
+      if (!validateUsername(normUser).isValid) {
+        return { success: false, errorCode: '23514' };
+      }
+
+      const expectedSynthetic = `${normUser}@auth.credlock.internal`;
+      if (!jwt.email || jwt.email.trim().toLowerCase() !== expectedSynthetic) {
+        return { success: false, errorCode: '23514' };
+      }
+
+      // If profile already exists, verify identity match
+      const existing = existingProfiles.find((p) => p.id === currentUserId);
+      if (existing) {
+        if (
+          existing.username.toLowerCase() === normUser &&
+          existing.email.toLowerCase() === expectedSynthetic
+        ) {
+          return { success: true, profile: existing };
+        } else {
+          return { success: false, errorCode: '42501' }; // Prohibited alteration via recovery
+        }
+      }
+
+      // If missing profile, check username collision with other users
+      const collision = existingProfiles.find(
+        (p) => p.username.toLowerCase() === normUser && p.id !== currentUserId
+      );
+      if (collision) {
+        return { success: false, errorCode: '23505' };
+      }
+
+      const recovered: MockProfile = {
+        id: currentUserId,
+        username: normUser,
+        email: expectedSynthetic,
+      };
+      return { success: true, profile: recovered };
+    }
+
+    it('recovers missing profile using authenticated JWT identity', () => {
+      const res = simulateEnsureUserProfile([], 'usr-missing-profile', {
+        email: 'field_agent@auth.credlock.internal',
+        metadata: { username: 'field_agent' },
+      });
+      assert.strictEqual(res.success, true);
+      assert.strictEqual(res.profile?.username, 'field_agent');
+    });
+
+    it('returns existing matching profile without modifying identity', () => {
+      const existing: MockProfile[] = [
+        { id: 'usr-1', username: 'field_agent', email: 'field_agent@auth.credlock.internal' },
+      ];
+
+      const res = simulateEnsureUserProfile(existing, 'usr-1', {
+        email: 'field_agent@auth.credlock.internal',
+        metadata: { username: 'field_agent' },
+      });
+      assert.strictEqual(res.success, true);
+      assert.strictEqual(res.profile?.username, 'field_agent');
+    });
+
+    it('fails safely with 42501 when existing profile identity does not match JWT', () => {
+      const existing: MockProfile[] = [
+        { id: 'usr-1', username: 'legitimate_user', email: 'legitimate_user@auth.credlock.internal' },
+      ];
+
+      const res = simulateEnsureUserProfile(existing, 'usr-1', {
+        email: 'hijacked_user@auth.credlock.internal',
+        metadata: { username: 'hijacked_user' },
+      });
+      assert.strictEqual(res.success, false);
+      assert.strictEqual(res.errorCode, '42501');
+    });
+
+    it('fails with 23505 if recovering a profile whose username was taken by another user', () => {
+      const existing: MockProfile[] = [
+        { id: 'usr-other', username: 'contested_handle', email: 'contested_handle@auth.credlock.internal' },
+      ];
+
+      const res = simulateEnsureUserProfile(existing, 'usr-new', {
+        email: 'contested_handle@auth.credlock.internal',
+        metadata: { username: 'contested_handle' },
+      });
+      assert.strictEqual(res.success, false);
+      assert.strictEqual(res.errorCode, '23505');
+    });
+  });
 });
