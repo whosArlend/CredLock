@@ -808,8 +808,12 @@ describe('CredLock v2.0 — Phase 2.1: Username-Only Authentication Test Suite',
           let counter = 1;
 
           while (claimedUsernames.has(cand)) {
-            cand = `op_${baseHex.slice(0, 10)}_${counter}`;
+            // Strictly bounded format: 'op_' (3) + 8 hex chars + '_' (1) + counter (up to 12 digits) <= 24 chars
+            cand = `op_${baseHex.slice(0, 8)}_${counter}`;
             counter++;
+            if (cand.length > 24) {
+              cand = `op_${baseHex.slice(0, 6)}_${counter}`;
+            }
           }
         }
 
@@ -898,7 +902,7 @@ describe('CredLock v2.0 — Phase 2.1: Username-Only Authentication Test Suite',
       const user2 = result.get(records[1].id)!;
 
       assert.strictEqual(user1, 'op_abcdef012345');
-      assert.strictEqual(user2, 'op_abcdef0123_1');
+      assert.strictEqual(user2, 'op_abcdef01_1');
       assert.notStrictEqual(user1, user2);
       assert.strictEqual(validateUsername(user1).isValid, true);
       assert.strictEqual(validateUsername(user2).isValid, true);

@@ -6,12 +6,12 @@
 --              - Adds validated 'username' column to public.profiles.
 --              - Comprehensive two-phase backfill: audits ALL rows (null & non-null),
 --                preserves valid usernames, resolves duplicates, invalid formats, and
---                reserved keywords with deterministic collision-checked surrogates.
+--                reserved keywords with strictly bounded, format-safe surrogates.
 --              - Enforces case-insensitive uniqueness index.
 --              - Enforces strict character, length, and reserved name constraints.
 --              - Enforces strict synthetic identity mapping: <username>@auth.credlock.internal.
 --              - Rejects mismatched username/email, missing metadata, and arbitrary domains.
---              - Tightens handle_new_user() with explicit pre-checks and retry verification.
+--              - Tightens handle_new_user() with explicit pre-checks (zero exception swallowing).
 --              - Hardens ensure_user_profile() recovery function with immutable identity protection.
 --              - Implements defense-in-depth trigger protect_profile_privileged_fields() (SECURITY INVOKER).
 --              - Removes obsolete email synchronization trigger.
@@ -27,7 +27,7 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS username TEXT;
 --    Audits ALL profile rows (both NULL and existing non-NULL values):
 --    - Preserves existing valid, non-reserved, case-insensitively unique usernames.
 --    - Remediates invalid formats, reserved names, duplicates, and NULL entries.
---    - Uses a deterministic surrogate generation loop with collision resolution.
+--    - Uses a strictly bounded, format-safe surrogate generation loop with collision resolution.
 --    - Guarantees EVERY row satisfies final CHECK and UNIQUE constraints.
 DO $$
 DECLARE
@@ -113,11 +113,30 @@ BEGIN
             cand := 'op_' || substr(base_hex, 1, 12);
             counter := 1;
 
-            -- Check against both temp tracker and existing profiles
+            -- Bounded, format-safe collision resolution loop
             WHILE EXISTS (SELECT 1 FROM temp_assigned_usernames WHERE username = cand) LOOP
-                cand := 'op_' || substr(base_hex, 1, 10) || '_' || counter::text;
+                -- Format: 'op_' (3) + 8 hex chars + '_' (1) + counter (up to 12 digits) <= 24 chars
+                cand := 'op_' || substr(base_hex, 1, 8) || '_' || counter::text;
                 counter := counter + 1;
+
+                -- Overflow safeguard: if counter grew beyond 12 digits, hash deterministically
+                IF length(cand) > 24 THEN
+                    cand := 'op_' || substr(md5(base_hex || counter::text), 1, 18);
+                END IF;
             END LOOP;
+
+            -- Strict format assertion: candidate must strictly satisfy all username policies
+            IF length(cand) < 3 OR length(cand) > 24
+               OR cand !~ '^[a-z0-9][a-z0-9_-]{1,22}[a-z0-9]$'
+               OR cand ~ '(__|--)'
+               OR cand ~ '[@.]'
+               OR cand IN ('admin', 'administrator', 'root', 'system', 'credlock',
+                           'support', 'security', 'operator', 'operative', 'enclave',
+                           'analyst', 'api', 'auth', 'guest', 'anonymous',
+                           'moderator', 'superuser', 'master', 'test', 'null', 'undefined')
+            THEN
+                RAISE EXCEPTION 'Generated surrogate username "%" violates format policy.', cand USING ERRCODE = '23514';
+            END IF;
         END IF;
 
         -- Record candidate assignment and update row
@@ -163,6 +182,7 @@ DROP FUNCTION IF EXISTS public.handle_user_email_change();
 -- 7. Update handle_new_user() trigger function
 --    Strictly validates metadata username, enforces 1:1 match with synthetic email,
 --    and performs explicit conflict checks distinguishing legitimate retries from username collisions.
+--    NOTE: Contains ZERO broad exception handlers. Unhandled errors bubble up and abort transactionally.
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -247,7 +267,7 @@ BEGIN
         END IF;
     END IF;
 
-    -- Insert new profile
+    -- Insert new profile (any unique collision bubbles up directly and aborts auth.users transaction)
     INSERT INTO public.profiles (
         id,
         username,
@@ -270,27 +290,6 @@ BEGIN
     );
 
     RETURN NEW;
-EXCEPTION
-    WHEN unique_violation THEN
-        -- Handle race condition during concurrent insertion
-        IF EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE id = NEW.id 
-              AND LOWER(username) = norm_username 
-              AND LOWER(email) = expected_synthetic_email
-        ) THEN
-            UPDATE public.profiles
-            SET updated_at = TIMEZONE('utc'::TEXT, NOW())
-            WHERE id = NEW.id;
-            RETURN NEW;
-        ELSE
-            -- Any other uniqueness collision must abort transactionally
-            RAISE EXCEPTION 'Operative username "%" is already taken.', norm_username USING ERRCODE = '23505';
-        END IF;
-    WHEN check_violation THEN
-        RAISE;
-    WHEN OTHERS THEN
-        RAISE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
@@ -356,7 +355,8 @@ CREATE TRIGGER trigger_protect_profile_privileged_fields
 --    - Requires authenticated caller (auth.uid())
 --    - If profile exists, verifies identity matches JWT; rejects mismatches safely.
 --    - If profile is missing, creates it using validated username & synthetic email.
---    - NEVER overwrites username or email during recovery (preserves immutability).
+--    - Explicit ON CONFLICT (id) handles concurrent recovery without modifying username or email.
+--    - Zero broad exception handling: username collisions fail directly with 23505.
 --    - Executes as SECURITY DEFINER with safe search_path to insert missing profile.
 CREATE OR REPLACE FUNCTION public.ensure_user_profile()
 RETURNS public.profiles AS $$
@@ -433,42 +433,38 @@ BEGIN
         norm_username
     );
 
-    -- Missing profile recovery: insert safely without overwriting immutable fields on conflict
-    BEGIN
-        INSERT INTO public.profiles (
-            id,
-            username,
-            email,
-            display_name,
-            role,
-            is_active,
-            created_at,
-            updated_at
-        )
-        VALUES (
-            current_user_id,
-            norm_username,
-            expected_synthetic_email,
-            resolved_display_name,
-            'user',
-            true,
-            TIMEZONE('utc'::TEXT, NOW()),
-            TIMEZONE('utc'::TEXT, NOW())
-        )
-        ON CONFLICT (id) DO UPDATE SET
-            updated_at = TIMEZONE('utc'::TEXT, NOW())
-        RETURNING * INTO user_profile;
+    -- Missing profile recovery: insert safely using explicit ON CONFLICT (id)
+    -- NEVER modifies username or email. Any username collision fails with 23505 without broad exception catching.
+    INSERT INTO public.profiles (
+        id,
+        username,
+        email,
+        display_name,
+        role,
+        is_active,
+        created_at,
+        updated_at
+    )
+    VALUES (
+        current_user_id,
+        norm_username,
+        expected_synthetic_email,
+        resolved_display_name,
+        'user',
+        true,
+        TIMEZONE('utc'::TEXT, NOW()),
+        TIMEZONE('utc'::TEXT, NOW())
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        updated_at = TIMEZONE('utc'::TEXT, NOW())
+    RETURNING * INTO user_profile;
 
-        RETURN user_profile;
-    EXCEPTION
-        WHEN unique_violation THEN
-            -- Check if profile was inserted concurrently for this user
-            SELECT * INTO user_profile FROM public.profiles WHERE id = current_user_id;
-            IF FOUND AND LOWER(user_profile.username) = norm_username AND LOWER(user_profile.email) = expected_synthetic_email THEN
-                RETURN user_profile;
-            END IF;
-            RAISE EXCEPTION 'Operative username "%" is already claimed by another operative.', norm_username USING ERRCODE = '23505';
-    END;
+    -- Verify that the resulting profile's immutable identity matches the JWT
+    IF LOWER(user_profile.username) != norm_username OR LOWER(user_profile.email) != expected_synthetic_email THEN
+        RAISE EXCEPTION 'Profile identity mismatch: existing identity cannot be altered via recovery.' USING ERRCODE = '42501';
+    END IF;
+
+    RETURN user_profile;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 

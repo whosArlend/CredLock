@@ -251,7 +251,7 @@ describe('CredLock v2.0 — Phase 1.1 Security Hardening: Profile RLS & Column P
       expect(migration003Sql).toMatch(/Synthetic identity mismatch: email must be exactly <username>@auth\.credlock\.internal/i);
     });
 
-    it('tightens handle_new_user() with explicit pre-checks and retry identity verification (Finding 3)', () => {
+    it('tightens handle_new_user() with explicit pre-checks and eliminates broad exception handling (Finding 1 & 3)', () => {
       // Pre-check 1: Must explicitly check if username is claimed by another user (id <> NEW.id)
       expect(migration003Sql).toMatch(/SELECT 1 FROM public\.profiles\s+WHERE LOWER\(username\) = norm_username AND id <> NEW\.id/i);
       expect(migration003Sql).toMatch(/RAISE EXCEPTION 'Operative username "%" is already taken\.', norm_username USING ERRCODE = '23505';/i);
@@ -262,9 +262,14 @@ describe('CredLock v2.0 — Phase 1.1 Security Hardening: Profile RLS & Column P
 
       // Must reject attempt to alter existing profile's identity on retry
       expect(migration003Sql).toMatch(/RAISE EXCEPTION 'Existing profile identity mismatch for user %\.', NEW\.id USING ERRCODE = '23514';/i);
+
+      // Must NOT contain broad WHEN unique_violation exception handler in handle_new_user
+      const handleFn = migration003Sql.match(/CREATE OR REPLACE FUNCTION public\.handle_new_user\(\)[\s\S]+?\$\$ LANGUAGE plpgsql/i)?.[0];
+      expect(handleFn).toBeDefined();
+      expect(handleFn).not.toMatch(/WHEN unique_violation/i);
     });
 
-    it('audits and hardens ensure_user_profile() with immutable identity protection (Finding 4)', () => {
+    it('audits and hardens ensure_user_profile() with immutable identity and eliminates broad exception handling (Finding 3 & 4)', () => {
       // Requires auth.uid()
       expect(migration003Sql).toMatch(/current_user_id := auth\.uid\(\);/i);
 
@@ -277,6 +282,11 @@ describe('CredLock v2.0 — Phase 1.1 Security Hardening: Profile RLS & Column P
       expect(migration003Sql).toMatch(/ON CONFLICT \(id\) DO UPDATE SET\s+updated_at = TIMEZONE\('utc'::TEXT, NOW\(\)\)/i);
       expect(migration003Sql).not.toMatch(/ON CONFLICT \(id\) DO UPDATE SET[^;]*username\s*=/i);
       expect(migration003Sql).not.toMatch(/ON CONFLICT \(id\) DO UPDATE SET[^;]*email\s*=/i);
+
+      // Must NOT contain broad WHEN unique_violation exception handler in ensure_user_profile
+      const ensureFn = migration003Sql.match(/CREATE OR REPLACE FUNCTION public\.ensure_user_profile\(\)[\s\S]+?\$\$ LANGUAGE plpgsql/i)?.[0];
+      expect(ensureFn).toBeDefined();
+      expect(ensureFn).not.toMatch(/WHEN unique_violation/i);
 
       // Safe search_path and execution grants
       expect(migration003Sql).toMatch(/CREATE OR REPLACE FUNCTION public\.ensure_user_profile\(\)[\s\S]+?SET search_path = public/i);
@@ -308,7 +318,7 @@ describe('CredLock v2.0 — Phase 1.1 Security Hardening: Profile RLS & Column P
       expect(migration003Sql).toMatch(/NEW\.created_at = OLD\.created_at;/i);
     });
 
-    it('audits ALL rows during backfill and resolves surrogate collisions with retry loop (Findings 1 & 2)', () => {
+    it('audits ALL rows during backfill and enforces strictly format-safe surrogate loop (Findings 1 & 2)', () => {
       // Must use a safe DO block with a tracking temporary table
       expect(migration003Sql).toMatch(/CREATE TEMP TABLE temp_assigned_usernames/i);
 
@@ -319,9 +329,12 @@ describe('CredLock v2.0 — Phase 1.1 Security Hardening: Profile RLS & Column P
       // Phase B: Remediates remaining rows
       expect(migration003Sql).toMatch(/Phase B: Second pass — Remediate all remaining rows/i);
 
-      // Must implement collision resolution retry loop
+      // Must implement strictly bounded collision resolution retry loop
       expect(migration003Sql).toMatch(/WHILE EXISTS \(SELECT 1 FROM temp_assigned_usernames WHERE username = cand\) LOOP/i);
-      expect(migration003Sql).toMatch(/cand := 'op_' \|\| substr\(base_hex, 1, 10\) \|\| '_' \|\| counter::text;/i);
+      expect(migration003Sql).toMatch(/cand := 'op_' \|\| substr\(base_hex, 1, 8\) \|\| '_' \|\| counter::text;/i);
+
+      // Must explicitly assert candidate validity before assigning
+      expect(migration003Sql).toMatch(/IF length\(cand\) < 3 OR length\(cand\) > 24/i);
     });
 
     it('re-enforces least privilege column grants without username update permissions', () => {
