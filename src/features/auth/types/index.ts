@@ -1,18 +1,18 @@
 import type { User, Session } from '@supabase/supabase-js';
 
 /**
- * Authentication & Registration Types for CredLock v2.0
+ * Authentication & Registration Types for CredLock v2.0 (Username-Only Identity Model)
  */
 
 export interface SignUpCredentials {
-  email: string;
+  username: string;
   password: string;
   confirmPassword?: string;
   displayName?: string;
 }
 
 export interface SignInCredentials {
-  email: string;
+  username: string;
   password: string;
 }
 
@@ -33,27 +33,26 @@ export interface AuthSuccessResult {
   success: true;
   user: {
     id: string;
-    email: string;
+    username: string;
     displayName?: string;
   };
   sessionEstablished: boolean;
-  requiresEmailVerification: boolean;
   message: string;
 }
 
 export interface AuthErrorResult {
   success: false;
   code:
-    | 'INVALID_EMAIL'
+    | 'INVALID_USERNAME'
+    | 'USERNAME_TAKEN'
     | 'WEAK_PASSWORD'
     | 'PASSWORD_MISMATCH'
-    | 'USER_ALREADY_EXISTS'
     | 'SUPABASE_NOT_CONFIGURED'
     | 'RATE_LIMITED'
     | 'NETWORK_ERROR'
     | 'UNKNOWN_ERROR';
   message: string;
-  field?: 'email' | 'password' | 'confirmPassword';
+  field?: 'username' | 'password' | 'confirmPassword';
 }
 
 export type SignUpResult = AuthSuccessResult | AuthErrorResult;
@@ -62,7 +61,7 @@ export interface SignInSuccessResult {
   success: true;
   user: {
     id: string;
-    email: string;
+    username: string;
     displayName?: string;
   };
   session: {
@@ -75,23 +74,22 @@ export interface SignInSuccessResult {
 export interface SignInErrorResult {
   success: false;
   code:
-    | 'INVALID_EMAIL'
+    | 'INVALID_USERNAME'
     | 'MISSING_PASSWORD'
     | 'INVALID_CREDENTIALS'
-    | 'EMAIL_NOT_CONFIRMED'
     | 'SUPABASE_NOT_CONFIGURED'
     | 'RATE_LIMITED'
     | 'NETWORK_ERROR'
     | 'UNKNOWN_ERROR';
   message: string;
-  field?: 'email' | 'password';
+  field?: 'username' | 'password';
 }
 
 export type SignInResult = SignInSuccessResult | SignInErrorResult;
 
 export interface UserProfile {
   id: string;
-  email: string | null;
+  username: string;
   displayName: string | null;
   avatarUrl: string | null;
   role: 'user' | 'admin' | 'analyst';

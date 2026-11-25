@@ -47,9 +47,9 @@ export function Header() {
   }, [isAccountMenuOpen]);
 
   // Derive display initials and name
-  const displayName = profile?.displayName || user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Operative';
-  const displayEmail = user?.email || profile?.email || 'enclave@credlock.local';
-  const initials = (displayName.slice(0, 2) || 'OP').toUpperCase();
+  const operativeUsername = profile?.username || (user?.user_metadata?.username as string) || 'operative';
+  const displayName = profile?.displayName || (user?.user_metadata?.display_name as string) || operativeUsername;
+  const initials = (operativeUsername.slice(0, 2) || 'OP').toUpperCase();
   const roleLabel = (profile?.role || 'user').toUpperCase();
 
   const handleSignOut = async () => {
@@ -178,7 +178,7 @@ export function Header() {
                           </span>
                         </div>
                         <p className="text-[11px] font-mono text-muted truncate">
-                          {displayEmail}
+                          @{operativeUsername}
                         </p>
                         <div className="flex items-center gap-1.5 pt-1 text-[10px] font-mono text-emerald-400">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />

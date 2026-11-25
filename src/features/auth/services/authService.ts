@@ -1,6 +1,8 @@
 import { getSupabase, isSupabaseConfigured } from '../../../lib/supabase.ts';
 import {
-  validateEmail,
+  validateUsername,
+  normalizeUsername,
+  toSyntheticEmail,
   evaluatePasswordRequirements,
   validatePasswordConfirmation,
 } from '../utils/validation.ts';
@@ -13,52 +15,57 @@ import type {
 } from '../types/index.ts';
 
 /**
- * Executes secure user registration against Supabase Auth.
- * Adheres strictly to Zero-Knowledge and Least-Privilege design:
- * - Credentials never pass through custom backend intermediary servers.
- * - Password confirmation is validated purely in memory before submission.
- * - Clear, user-friendly feedback without leaking account enumeration data.
+ * Executes secure user registration against Supabase Auth using a deterministic
+ * synthetic identity mapping (Approach A).
+ *
+ * Privacy & Security Guarantees:
+ * - Operatives never provide a personal email address or phone number.
+ * - Username uniqueness is enforced case-insensitively.
+ * - Credentials travel directly to the Supabase Auth enclave via TLS without
+ *   intermediary backend server exposure.
  */
-export async function signUpWithEmail(
+export async function signUpWithUsername(
   credentials: SignUpCredentials,
   customSupabaseClient?: ReturnType<typeof getSupabase>
 ): Promise<SignUpResult> {
-  const { email, password, confirmPassword, displayName } = credentials;
+  const { username, password, confirmPassword, displayName } = credentials;
 
-  // 1. Client-side input validation
-  const emailCheck = validateEmail(email);
-  if (!emailCheck.isValid) {
+  // 1. Client-side username validation
+  const usernameCheck = validateUsername(username);
+  if (!usernameCheck.isValid) {
     return {
       success: false,
-      code: 'INVALID_EMAIL',
-      message: emailCheck.error || 'Invalid email address.',
-      field: 'email',
+      code: 'INVALID_USERNAME',
+      message: usernameCheck.error || 'Invalid username format.',
+      field: 'username',
     };
   }
 
+  // 2. Client-side password complexity check
   const passwordEvaluation = evaluatePasswordRequirements(password);
   if (!passwordEvaluation.isAllMet) {
     return {
       success: false,
       code: 'WEAK_PASSWORD',
-      message: 'Password does not satisfy all cryptographic security requirements.',
+      message: 'Master passphrase does not satisfy all cryptographic security requirements.',
       field: 'password',
     };
   }
 
+  // 3. Client-side password confirmation check
   if (confirmPassword !== undefined) {
     const confirmationCheck = validatePasswordConfirmation(password, confirmPassword);
     if (!confirmationCheck.isValid) {
       return {
         success: false,
         code: 'PASSWORD_MISMATCH',
-        message: confirmationCheck.error || 'Passwords do not match.',
+        message: confirmationCheck.error || 'Passphrases do not match.',
         field: 'confirmPassword',
       };
     }
   }
 
-  // 2. Supabase client resolution
+  // 4. Supabase client resolution
   const supabase = customSupabaseClient ?? getSupabase();
   const configured = customSupabaseClient ? true : isSupabaseConfigured();
   if (!supabase || !configured) {
@@ -70,24 +77,27 @@ export async function signUpWithEmail(
     };
   }
 
-  // 3. Supabase Auth execution
-  try {
-    const trimmedEmail = email.trim().toLowerCase();
-    const resolvedDisplayName = displayName?.trim() || trimmedEmail.split('@')[0];
+  // 5. Normalization and synthetic identity derivation
+  const normalized = normalizeUsername(username);
+  const syntheticEmail = toSyntheticEmail(normalized);
+  const resolvedDisplayName = displayName?.trim() || username.trim();
 
+  try {
     const { data, error } = await supabase.auth.signUp({
-      email: trimmedEmail,
+      email: syntheticEmail,
       password,
       options: {
         data: {
+          username: normalized,
           display_name: resolvedDisplayName,
         },
-        emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/` : undefined,
       },
     });
 
     if (error) {
       const msg = error.message.toLowerCase();
+
+      // Duplicate username conflict
       if (
         msg.includes('already registered') ||
         msg.includes('user already exists') ||
@@ -95,12 +105,13 @@ export async function signUpWithEmail(
       ) {
         return {
           success: false,
-          code: 'USER_ALREADY_EXISTS',
-          message: 'An account with this email address already exists. Please sign in or recover your account.',
-          field: 'email',
+          code: 'USERNAME_TAKEN',
+          message: 'This username is already taken. Please choose another username.',
+          field: 'username',
         };
       }
 
+      // Security rate limit
       if (msg.includes('rate limit') || error.status === 429) {
         return {
           success: false,
@@ -124,29 +135,25 @@ export async function signUpWithEmail(
       };
     }
 
+    // GoTrue returns empty identities array when user already exists with email confirmations disabled
     if (data.user.identities && data.user.identities.length === 0) {
       return {
         success: false,
-        code: 'USER_ALREADY_EXISTS',
-        message: 'An account with this email address already exists. Please sign in instead.',
-        field: 'email',
+        code: 'USERNAME_TAKEN',
+        message: 'This username is already taken. Please choose another username.',
+        field: 'username',
       };
     }
-
-    const requiresEmailVerification = !data.session;
 
     return {
       success: true,
       user: {
         id: data.user.id,
-        email: data.user.email || trimmedEmail,
+        username: normalized,
         displayName: resolvedDisplayName,
       },
       sessionEstablished: Boolean(data.session),
-      requiresEmailVerification,
-      message: requiresEmailVerification
-        ? 'Account registered successfully. A verification link has been dispatched to your email address.'
-        : 'Account created successfully. Welcome to CredLock.',
+      message: 'Operative account initialized successfully. Welcome to CredLock.',
     };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Network communication error.';
@@ -159,26 +166,27 @@ export async function signUpWithEmail(
 }
 
 /**
- * Authenticates user credentials against Supabase Auth.
- * Requirements:
- * - Direct authentication via supabase.auth.signInWithPassword()
- * - Secure handling of invalid credentials, unverified email, and network errors
- * - Zero plaintext password persistence
+ * Authenticates user credentials against Supabase Auth using their operative username.
+ *
+ * Security Requirements:
+ * - Both unknown username and incorrect passphrase return the exact same generic error:
+ *   "Invalid username or master passphrase."
+ * - Zero username enumeration vectors.
+ * - Zero plaintext passphrase logging.
  */
-export async function signInWithEmail(
+export async function signInWithUsername(
   credentials: SignInCredentials,
   customSupabaseClient?: ReturnType<typeof getSupabase>
 ): Promise<SignInResult> {
-  const { email, password } = credentials;
+  const { username, password } = credentials;
 
   // 1. Client-side input validation
-  const emailCheck = validateEmail(email);
-  if (!emailCheck.isValid) {
+  if (!username || username.trim().length === 0) {
     return {
       success: false,
-      code: 'INVALID_EMAIL',
-      message: emailCheck.error || 'Please enter a valid email address.',
-      field: 'email',
+      code: 'INVALID_USERNAME',
+      message: 'Username is required to authenticate.',
+      field: 'username',
     };
   }
 
@@ -186,7 +194,7 @@ export async function signInWithEmail(
     return {
       success: false,
       code: 'MISSING_PASSWORD',
-      message: 'Password is required to authenticate.',
+      message: 'Master passphrase is required to authenticate.',
       field: 'password',
     };
   }
@@ -203,34 +211,20 @@ export async function signInWithEmail(
     };
   }
 
-  // 3. Supabase Auth execution
-  try {
-    const trimmedEmail = email.trim().toLowerCase();
+  // 3. Normalization and synthetic identity derivation
+  const normalized = normalizeUsername(username);
+  const syntheticEmail = toSyntheticEmail(normalized);
 
+  try {
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: trimmedEmail,
+      email: syntheticEmail,
       password,
     });
 
     if (error) {
       const msg = error.message.toLowerCase();
 
-      // Email unconfirmed error (check before general 400)
-      if (
-        msg.includes('email not confirmed') ||
-        msg.includes('unverified') ||
-        msg.includes('email_not_confirmed')
-      ) {
-        return {
-          success: false,
-          code: 'EMAIL_NOT_CONFIRMED',
-          message:
-            'Your email address has not been confirmed yet. Please verify your account via the activation link sent to your inbox.',
-          field: 'email',
-        };
-      }
-
-      // Rate limiting
+      // Security rate limit
       if (msg.includes('rate limit') || error.status === 429) {
         return {
           success: false,
@@ -239,24 +233,11 @@ export async function signInWithEmail(
         };
       }
 
-      // Invalid credentials error mapping (OWASP: avoid leaking whether email vs password was wrong)
-      if (
-        msg.includes('invalid login credentials') ||
-        msg.includes('invalid grant') ||
-        msg.includes('user not found') ||
-        error.status === 400
-      ) {
-        return {
-          success: false,
-          code: 'INVALID_CREDENTIALS',
-          message: 'Invalid email address or master password. Please verify your credentials.',
-        };
-      }
-
+      // Universal generic credentials error to defeat account enumeration
       return {
         success: false,
-        code: 'UNKNOWN_ERROR',
-        message: error.message || 'Unable to authenticate. Please check your network connection.',
+        code: 'INVALID_CREDENTIALS',
+        message: 'Invalid username or master passphrase. Please verify your credentials.',
       };
     }
 
@@ -268,16 +249,19 @@ export async function signInWithEmail(
       };
     }
 
+    const resolvedUsername =
+      data.user.user_metadata?.username ||
+      normalized;
+
     const resolvedDisplayName =
       data.user.user_metadata?.display_name ||
-      data.user.email?.split('@')[0] ||
-      'Operative';
+      resolvedUsername;
 
     return {
       success: true,
       user: {
         id: data.user.id,
-        email: data.user.email || trimmedEmail,
+        username: resolvedUsername,
         displayName: resolvedDisplayName,
       },
       session: {
@@ -323,18 +307,18 @@ export async function signOutUser(
 
 /**
  * Safely fetches the public profile associated with an authenticated user id.
- * Falls back to local defaults if the profile table is not yet accessible.
+ * Exposes username and avoids any synthetic email leakage in the returned UserProfile.
  */
 export async function fetchUserProfile(
   userId: string,
   userMetadata?: Record<string, unknown>,
-  userEmail?: string | null,
   customSupabaseClient?: ReturnType<typeof getSupabase>
 ): Promise<UserProfile> {
+  const fallbackUsername = (userMetadata?.username as string) || 'operative';
   const fallbackProfile: UserProfile = {
     id: userId,
-    email: userEmail ?? null,
-    displayName: (userMetadata?.display_name as string) ?? (userEmail ? userEmail.split('@')[0] : 'Operative'),
+    username: fallbackUsername,
+    displayName: (userMetadata?.display_name as string) ?? fallbackUsername,
     avatarUrl: (userMetadata?.avatar_url as string) ?? null,
     role: 'user',
     isActive: true,
@@ -349,7 +333,7 @@ export async function fetchUserProfile(
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, email, display_name, avatar_url, role, is_active, created_at, updated_at')
+      .select('id, username, display_name, avatar_url, role, is_active, created_at, updated_at')
       .eq('id', userId)
       .maybeSingle();
 
@@ -359,8 +343,8 @@ export async function fetchUserProfile(
 
     return {
       id: data.id,
-      email: data.email ?? userEmail ?? null,
-      displayName: data.display_name ?? fallbackProfile.displayName,
+      username: data.username || fallbackUsername,
+      displayName: data.display_name ?? data.username ?? fallbackProfile.displayName,
       avatarUrl: data.avatar_url ?? null,
       role: (data.role as 'user' | 'admin' | 'analyst') || 'user',
       isActive: Boolean(data.is_active ?? true),

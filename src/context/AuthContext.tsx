@@ -10,8 +10,8 @@ import {
 import type { User, Session } from '@supabase/supabase-js';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 import {
-  signInWithEmail,
-  signUpWithEmail,
+  signInWithUsername,
+  signUpWithUsername,
   signOutUser,
   fetchUserProfile,
 } from '@/features/auth/services/authService';
@@ -61,8 +61,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setUser(initialSession.user);
           const userProf = await fetchUserProfile(
             initialSession.user.id,
-            initialSession.user.user_metadata,
-            initialSession.user.email
+            initialSession.user.user_metadata
           );
           if (isMounted) {
             setProfile(userProf);
@@ -90,8 +89,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (currentSession?.user) {
         const userProf = await fetchUserProfile(
           currentSession.user.id,
-          currentSession.user.user_metadata,
-          currentSession.user.email
+          currentSession.user.user_metadata
         );
         if (isMounted) {
           setProfile(userProf);
@@ -111,14 +109,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Sign In action
   const signIn = useCallback(async (credentials: SignInCredentials): Promise<SignInResult> => {
-    const result = await signInWithEmail(credentials);
+    const result = await signInWithUsername(credentials);
     if (result.success) {
-      // The onAuthStateChange handler will automatically catch the session update,
-      // but we also immediately fetch and prime the profile for low latency.
       const userProf = await fetchUserProfile(
         result.user.id,
-        { display_name: result.user.displayName },
-        result.user.email
+        {
+          username: result.user.username,
+          display_name: result.user.displayName,
+        }
       );
       setProfile(userProf);
     }
@@ -127,7 +125,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Sign Up action
   const signUp = useCallback(async (credentials: SignUpCredentials): Promise<SignUpResult> => {
-    return await signUpWithEmail(credentials);
+    return await signUpWithUsername(credentials);
   }, []);
 
   // Sign Out action

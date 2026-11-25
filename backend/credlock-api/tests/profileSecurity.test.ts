@@ -178,4 +178,53 @@ describe('CredLock v2.0 — Phase 1.1 Security Hardening: Profile RLS & Column P
       }
     });
   });
+
+  // ==========================================================================
+  // 5. CredLock v2.0 Phase 2.1 — Username Authentication Migration (003)
+  // ==========================================================================
+  describe('5. Migration 003_username_auth.sql Verification', () => {
+    const migration003Path = path.resolve(__dirname, '../database/migrations/003_username_auth.sql');
+    const migration003Sql = fs.readFileSync(migration003Path, 'utf8');
+
+    it('adds username column with NOT NULL and format validation', () => {
+      expect(migration003Sql).toMatch(/ALTER TABLE public\.profiles ADD COLUMN IF NOT EXISTS username TEXT;/i);
+      expect(migration003Sql).toMatch(/ALTER TABLE public\.profiles ALTER COLUMN username SET NOT NULL;/i);
+      expect(migration003Sql).toMatch(/CONSTRAINT chk_profiles_username_format CHECK/i);
+      expect(migration003Sql).toMatch(/length\(username\) >= 3 AND length\(username\) <= 24/i);
+      expect(migration003Sql).toMatch(/username ~ '\^\[a-zA-Z0-9\]\[a-zA-Z0-9_-\]\{1,22\}\[a-zA-Z0-9\]\$'/i);
+    });
+
+    it('enforces case-insensitive lowercase uniqueness index', () => {
+      expect(migration003Sql).toMatch(/CREATE UNIQUE INDEX idx_profiles_username_lower ON public\.profiles \(LOWER\(username\)\);/i);
+    });
+
+    it('enforces database-level username immutability in protect_profile_privileged_fields()', () => {
+      expect(migration003Sql).toMatch(/NEW\.username IS DISTINCT FROM OLD\.username/i);
+      expect(migration003Sql).toMatch(/Modifying profile username is prohibited/i);
+    });
+
+    it('extracts username from user metadata in handle_new_user()', () => {
+      expect(migration003Sql).toMatch(/raw_username := NEW\.raw_user_meta_data->>'username';/i);
+      expect(migration003Sql).toMatch(/INSERT INTO public\.profiles/i);
+    });
+
+    it('drops obsolete email synchronization trigger on auth.users', () => {
+      expect(migration003Sql).toMatch(/DROP TRIGGER IF EXISTS on_auth_user_email_updated ON auth\.users;/i);
+      expect(migration003Sql).toMatch(/DROP FUNCTION IF EXISTS public\.handle_user_email_change\(\);/i);
+    });
+
+    it('re-enforces least privilege column grants without username update permissions', () => {
+      const grantRegex = /GRANT UPDATE \(([^)]+)\) ON TABLE public\.profiles TO authenticated;/i;
+      const match = migration003Sql.match(grantRegex);
+      expect(match).not.toBeNull();
+      if (match) {
+        const columns = match[1].split(',').map((c) => c.trim().toLowerCase());
+        expect(columns).toContain('display_name');
+        expect(columns).toContain('avatar_url');
+        expect(columns).not.toContain('username');
+        expect(columns).not.toContain('role');
+        expect(columns).not.toContain('is_active');
+      }
+    });
+  });
 });

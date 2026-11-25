@@ -1,59 +1,137 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  validateEmail,
+  validateUsername,
+  normalizeUsername,
+  toSyntheticEmail,
   evaluatePasswordRequirements,
   validatePasswordConfirmation,
+  RESERVED_USERNAMES,
 } from '../src/features/auth/utils/validation.ts';
 import {
-  signUpWithEmail,
-  signInWithEmail,
+  signUpWithUsername,
+  signInWithUsername,
   signOutUser,
   fetchUserProfile,
 } from '../src/features/auth/services/authService.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)', () => {
+describe('CredLock v2.0 — Phase 2.1: Username-Only Authentication Test Suite', () => {
   // ==========================================================================
-  // 1. Email Format Validation
+  // 1. Username Format & Character Validation
   // ==========================================================================
-  describe('1. Email Format Validation (RFC 5322 & OWASP)', () => {
-    it('accepts standard valid email addresses', () => {
-      assert.strictEqual(validateEmail('operative@credlock.io').isValid, true);
-      assert.strictEqual(validateEmail('agent.007@domain.co.uk').isValid, true);
-      assert.strictEqual(validateEmail('sec-ops+analyst@sub.enterprise.org').isValid, true);
+  describe('1. Username Format & Character Validation', () => {
+    it('accepts standard valid operative usernames', () => {
+      assert.strictEqual(validateUsername('cipher_operative').isValid, true);
+      assert.strictEqual(validateUsername('agent-007').isValid, true);
+      assert.strictEqual(validateUsername('secOps99').isValid, true);
+      assert.strictEqual(validateUsername('neo').isValid, true); // exactly 3 chars
+      assert.strictEqual(validateUsername('a'.repeat(24)).isValid, true); // exactly 24 chars
     });
 
-    it('rejects empty or whitespace-only email', () => {
-      const emptyRes = validateEmail('');
+    it('rejects empty or whitespace-only usernames', () => {
+      const emptyRes = validateUsername('');
       assert.strictEqual(emptyRes.isValid, false);
-      assert.strictEqual(emptyRes.error, 'Email address is required.');
+      assert.strictEqual(emptyRes.error, 'Username is required.');
 
-      const spaceRes = validateEmail('   ');
+      const spaceRes = validateUsername('   ');
       assert.strictEqual(spaceRes.isValid, false);
-      assert.strictEqual(spaceRes.error, 'Email address is required.');
+      assert.strictEqual(spaceRes.error, 'Username is required.');
     });
 
-    it('rejects invalid email formats without @ or domain', () => {
-      assert.strictEqual(validateEmail('plainaddress').isValid, false);
-      assert.strictEqual(validateEmail('@missinguser.com').isValid, false);
-      assert.strictEqual(validateEmail('user@.com').isValid, false);
-      assert.strictEqual(validateEmail('user@domain').isValid, false);
-      assert.strictEqual(validateEmail('user@domain..com').isValid, false);
-    });
-
-    it('rejects emails exceeding maximum 254 RFC character limit', () => {
-      const longEmail = 'a'.repeat(250) + '@domain.com';
-      const res = validateEmail(longEmail);
+    it('rejects usernames containing whitespace', () => {
+      const res = validateUsername('cipher op');
       assert.strictEqual(res.isValid, false);
-      assert.match(res.error || '', /exceeds maximum length/i);
+      assert.match(res.error || '', /cannot contain spaces/i);
+    });
+
+    it('rejects usernames under 3 characters', () => {
+      const res1 = validateUsername('a');
+      assert.strictEqual(res1.isValid, false);
+      assert.match(res1.error || '', /at least 3 characters/i);
+
+      const res2 = validateUsername('op');
+      assert.strictEqual(res2.isValid, false);
+      assert.match(res2.error || '', /at least 3 characters/i);
+    });
+
+    it('rejects usernames exceeding 24 characters', () => {
+      const longUser = 'a'.repeat(25);
+      const res = validateUsername(longUser);
+      assert.strictEqual(res.isValid, false);
+      assert.match(res.error || '', /cannot exceed 24 characters/i);
+    });
+
+    it('rejects usernames with leading or trailing special characters', () => {
+      assert.strictEqual(validateUsername('_cipher').isValid, false);
+      assert.strictEqual(validateUsername('cipher_').isValid, false);
+      assert.strictEqual(validateUsername('-cipher').isValid, false);
+      assert.strictEqual(validateUsername('cipher-').isValid, false);
+    });
+
+    it('rejects usernames with consecutive special characters (__ or --)', () => {
+      const res1 = validateUsername('cipher__op');
+      assert.strictEqual(res1.isValid, false);
+      assert.match(res1.error || '', /consecutive underscores/i);
+
+      const res2 = validateUsername('cipher--op');
+      assert.strictEqual(res2.isValid, false);
+      assert.match(res2.error || '', /consecutive hyphens/i);
+    });
+
+    it('strictly rejects email characters (@ and .)', () => {
+      const res1 = validateUsername('user@domain.com');
+      assert.strictEqual(res1.isValid, false);
+      assert.match(res1.error || '', /cannot contain email characters/i);
+
+      const res2 = validateUsername('user.name');
+      assert.strictEqual(res2.isValid, false);
+      assert.match(res2.error || '', /cannot contain email characters/i);
+    });
+
+    it('rejects reserved system and role identities', () => {
+      for (const reserved of RESERVED_USERNAMES) {
+        const res = validateUsername(reserved);
+        assert.strictEqual(res.isValid, false, `Expected ${reserved} to be rejected as reserved`);
+        assert.match(res.error || '', /reserved/i);
+      }
     });
   });
 
   // ==========================================================================
-  // 2. Password Requirements & Cryptographic Scoring
+  // 2. Username Normalization & Synthetic Identity Mapping (Approach A)
   // ==========================================================================
-  describe('2. Password Requirements Evaluation & Complexity Scoring', () => {
+  describe('2. Username Normalization & Synthetic Email Mapping', () => {
+    it('normalizes usernames by trimming whitespace and lowercasing', () => {
+      assert.strictEqual(normalizeUsername('  Cipher_Operative  '), 'cipher_operative');
+      assert.strictEqual(normalizeUsername('AGENT-007'), 'agent-007');
+      assert.strictEqual(normalizeUsername(''), '');
+    });
+
+    it('generates deterministic synthetic email with unroutable .internal domain', () => {
+      assert.strictEqual(
+        toSyntheticEmail('Cipher_Operative'),
+        'cipher_operative@auth.credlock.internal'
+      );
+      assert.strictEqual(
+        toSyntheticEmail('  agent-007  '),
+        'agent-007@auth.credlock.internal'
+      );
+    });
+
+    it('guarantees identical synthetic identities for differently cased inputs', () => {
+      const id1 = toSyntheticEmail('OperativeOne');
+      const id2 = toSyntheticEmail('operativeone');
+      const id3 = toSyntheticEmail('  OPERATIVEONE  ');
+      assert.strictEqual(id1, id2);
+      assert.strictEqual(id2, id3);
+    });
+  });
+
+  // ==========================================================================
+  // 3. Password Complexity & Requirements Scoring
+  // ==========================================================================
+  describe('3. Password Requirements Evaluation & Complexity Scoring', () => {
     it('evaluates empty password as awaiting input with score 0', () => {
       const evalResult = evaluatePasswordRequirements('');
       assert.strictEqual(evalResult.score, 0);
@@ -95,9 +173,9 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
   });
 
   // ==========================================================================
-  // 3. Password Confirmation Matching
+  // 4. Password Confirmation Matching
   // ==========================================================================
-  describe('3. Password Confirmation Matching', () => {
+  describe('4. Password Confirmation Matching', () => {
     it('accepts identical passwords', () => {
       const res = validatePasswordConfirmation('ComplexPass#2026', 'ComplexPass#2026');
       assert.strictEqual(res.isValid, true);
@@ -106,21 +184,21 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
     it('rejects empty confirmation', () => {
       const res = validatePasswordConfirmation('ComplexPass#2026', '');
       assert.strictEqual(res.isValid, false);
-      assert.strictEqual(res.error, 'Please confirm your password.');
+      assert.strictEqual(res.error, 'Please confirm your master passphrase.');
     });
 
     it('rejects mismatched passwords with clear error', () => {
       const res = validatePasswordConfirmation('ComplexPass#2026', 'DifferentPass#2026');
       assert.strictEqual(res.isValid, false);
-      assert.strictEqual(res.error, 'Passwords do not match.');
+      assert.strictEqual(res.error, 'Passphrases do not match.');
     });
   });
 
   // ==========================================================================
-  // 4. Supabase Sign Up Service Integration
+  // 5. Sign Up Service Integration (signUpWithUsername)
   // ==========================================================================
-  describe('4. Sign Up Service Logic & Error Handling', () => {
-    it('aborts early on invalid email without calling auth provider', async () => {
+  describe('5. Sign Up Service Integration (signUpWithUsername)', () => {
+    it('aborts early on invalid username without calling auth provider', async () => {
       let called = false;
       const mockSupabase = {
         auth: {
@@ -131,9 +209,9 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
         },
       } as unknown as SupabaseClient;
 
-      const result = await signUpWithEmail(
+      const result = await signUpWithUsername(
         {
-          email: 'invalid-email',
+          username: 'inv@lid',
           password: 'ValidPassword123#',
           confirmPassword: 'ValidPassword123#',
         },
@@ -141,7 +219,7 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
       );
 
       assert.strictEqual(result.success, false);
-      assert.strictEqual(result.code, 'INVALID_EMAIL');
+      assert.strictEqual(result.code, 'INVALID_USERNAME');
       assert.strictEqual(called, false);
     });
 
@@ -156,9 +234,9 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
         },
       } as unknown as SupabaseClient;
 
-      const result = await signUpWithEmail(
+      const result = await signUpWithUsername(
         {
-          email: 'valid@credlock.io',
+          username: 'valid_user',
           password: 'short',
           confirmPassword: 'short',
         },
@@ -181,9 +259,9 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
         },
       } as unknown as SupabaseClient;
 
-      const result = await signUpWithEmail(
+      const result = await signUpWithUsername(
         {
-          email: 'valid@credlock.io',
+          username: 'valid_user',
           password: 'ValidPassword123#',
           confirmPassword: 'DifferentPassword123#',
         },
@@ -195,49 +273,19 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
       assert.strictEqual(called, false);
     });
 
-    it('handles successful registration with email verification pending (session null)', async () => {
-      const mockSupabase = {
-        auth: {
-          signUp: async ({ email }: { email: string }) => {
-            return {
-              data: {
-                user: {
-                  id: 'usr-12345-uuid',
-                  email,
-                  identities: [{ id: 'identity-1' }],
-                },
-                session: null,
-              },
-              error: null,
-            };
-          },
-        },
-      } as unknown as SupabaseClient;
-
-      const result = await signUpWithEmail(
-        {
-          email: 'operative@credlock.io',
-          password: 'Crypt0-Pass#2026',
-          confirmPassword: 'Crypt0-Pass#2026',
-        },
-        mockSupabase
-      );
-
-      assert.strictEqual(result.success, true);
-      assert.strictEqual(result.requiresEmailVerification, true);
-      assert.strictEqual(result.sessionEstablished, false);
-      assert.strictEqual(result.user.id, 'usr-12345-uuid');
-      assert.strictEqual(result.user.email, 'operative@credlock.io');
-    });
-
     it('handles successful registration with immediate session', async () => {
+      let passedEmail = '';
+      let passedMetadata: Record<string, unknown> = {};
+
       const mockSupabase = {
         auth: {
-          signUp: async ({ email }: { email: string }) => {
+          signUp: async ({ email, options }: { email: string; options?: { data?: Record<string, unknown> } }) => {
+            passedEmail = email;
+            passedMetadata = options?.data || {};
             return {
               data: {
                 user: {
-                  id: 'usr-67890-uuid',
+                  id: 'usr-operative-uuid',
                   email,
                   identities: [{ id: 'identity-1' }],
                 },
@@ -249,9 +297,9 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
         },
       } as unknown as SupabaseClient;
 
-      const result = await signUpWithEmail(
+      const result = await signUpWithUsername(
         {
-          email: 'active@credlock.io',
+          username: 'Cipher_Agent',
           password: 'Crypt0-Pass#2026',
           confirmPassword: 'Crypt0-Pass#2026',
         },
@@ -259,44 +307,14 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
       );
 
       assert.strictEqual(result.success, true);
-      assert.strictEqual(result.requiresEmailVerification, false);
       assert.strictEqual(result.sessionEstablished, true);
+      assert.strictEqual(result.user.id, 'usr-operative-uuid');
+      assert.strictEqual(result.user.username, 'cipher_agent');
+      assert.strictEqual(passedEmail, 'cipher_agent@auth.credlock.internal');
+      assert.strictEqual(passedMetadata.username, 'cipher_agent');
     });
 
-    it('mitigates user enumeration when Supabase returns user with empty identities', async () => {
-      const mockSupabase = {
-        auth: {
-          signUp: async () => {
-            return {
-              data: {
-                user: {
-                  id: 'usr-existing-uuid',
-                  email: 'existing@credlock.io',
-                  identities: [],
-                },
-                session: null,
-              },
-              error: null,
-            };
-          },
-        },
-      } as unknown as SupabaseClient;
-
-      const result = await signUpWithEmail(
-        {
-          email: 'existing@credlock.io',
-          password: 'Crypt0-Pass#2026',
-          confirmPassword: 'Crypt0-Pass#2026',
-        },
-        mockSupabase
-      );
-
-      assert.strictEqual(result.success, false);
-      assert.strictEqual(result.code, 'USER_ALREADY_EXISTS');
-      assert.strictEqual(result.field, 'email');
-    });
-
-    it('handles explicit duplicate user registration error', async () => {
+    it('handles duplicate username conflict when Supabase returns 422', async () => {
       const mockSupabase = {
         auth: {
           signUp: async () => {
@@ -311,9 +329,9 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
         },
       } as unknown as SupabaseClient;
 
-      const result = await signUpWithEmail(
+      const result = await signUpWithUsername(
         {
-          email: 'existing@credlock.io',
+          username: 'existing_user',
           password: 'Crypt0-Pass#2026',
           confirmPassword: 'Crypt0-Pass#2026',
         },
@@ -321,7 +339,42 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
       );
 
       assert.strictEqual(result.success, false);
-      assert.strictEqual(result.code, 'USER_ALREADY_EXISTS');
+      assert.strictEqual(result.code, 'USERNAME_TAKEN');
+      assert.strictEqual(result.field, 'username');
+      assert.match(result.message, /already taken/i);
+    });
+
+    it('handles duplicate username when GoTrue returns user with empty identities', async () => {
+      const mockSupabase = {
+        auth: {
+          signUp: async () => {
+            return {
+              data: {
+                user: {
+                  id: 'usr-existing-uuid',
+                  email: 'existing_user@auth.credlock.internal',
+                  identities: [],
+                },
+                session: null,
+              },
+              error: null,
+            };
+          },
+        },
+      } as unknown as SupabaseClient;
+
+      const result = await signUpWithUsername(
+        {
+          username: 'existing_user',
+          password: 'Crypt0-Pass#2026',
+          confirmPassword: 'Crypt0-Pass#2026',
+        },
+        mockSupabase
+      );
+
+      assert.strictEqual(result.success, false);
+      assert.strictEqual(result.code, 'USERNAME_TAKEN');
+      assert.strictEqual(result.field, 'username');
     });
 
     it('handles rate limiting responses', async () => {
@@ -331,7 +384,7 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
             return {
               data: { user: null, session: null },
               error: {
-                message: 'Email rate limit exceeded',
+                message: 'Rate limit exceeded',
                 status: 429,
               },
             };
@@ -339,9 +392,9 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
         },
       } as unknown as SupabaseClient;
 
-      const result = await signUpWithEmail(
+      const result = await signUpWithUsername(
         {
-          email: 'ratelimited@credlock.io',
+          username: 'ratelimited_user',
           password: 'Crypt0-Pass#2026',
           confirmPassword: 'Crypt0-Pass#2026',
         },
@@ -351,36 +404,13 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
       assert.strictEqual(result.success, false);
       assert.strictEqual(result.code, 'RATE_LIMITED');
     });
-
-    it('handles unexpected exceptions safely without crashing', async () => {
-      const mockSupabase = {
-        auth: {
-          signUp: async () => {
-            throw new Error('Connection refused / ECONNREFUSED');
-          },
-        },
-      } as unknown as SupabaseClient;
-
-      const result = await signUpWithEmail(
-        {
-          email: 'networkerror@credlock.io',
-          password: 'Crypt0-Pass#2026',
-          confirmPassword: 'Crypt0-Pass#2026',
-        },
-        mockSupabase
-      );
-
-      assert.strictEqual(result.success, false);
-      assert.strictEqual(result.code, 'NETWORK_ERROR');
-      assert.strictEqual(result.message, 'Connection refused / ECONNREFUSED');
-    });
   });
 
   // ==========================================================================
-  // 5. Sign In Validation & Error Pre-checks (Phase 2)
+  // 6. Sign In Service Integration (signInWithUsername)
   // ==========================================================================
-  describe('5. Sign In Validation Pre-Checks', () => {
-    it('rejects invalid email address before calling Supabase', async () => {
+  describe('6. Sign In Service Integration (signInWithUsername)', () => {
+    it('rejects empty username before calling Supabase', async () => {
       let called = false;
       const mockSupabase = {
         auth: {
@@ -391,18 +421,18 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
         },
       } as unknown as SupabaseClient;
 
-      const result = await signInWithEmail(
-        { email: 'not-an-email', password: 'AnyPassword123!' },
+      const result = await signInWithUsername(
+        { username: '', password: 'AnyPassword123!' },
         mockSupabase
       );
 
       assert.strictEqual(result.success, false);
-      assert.strictEqual(result.code, 'INVALID_EMAIL');
-      assert.strictEqual(result.field, 'email');
+      assert.strictEqual(result.code, 'INVALID_USERNAME');
+      assert.strictEqual(result.field, 'username');
       assert.strictEqual(called, false);
     });
 
-    it('rejects empty or whitespace password before calling Supabase', async () => {
+    it('rejects empty password before calling Supabase', async () => {
       let called = false;
       const mockSupabase = {
         auth: {
@@ -413,8 +443,8 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
         },
       } as unknown as SupabaseClient;
 
-      const result = await signInWithEmail(
-        { email: 'operative@credlock.io', password: '   ' },
+      const result = await signInWithUsername(
+        { username: 'operative', password: '   ' },
         mockSupabase
       );
 
@@ -423,22 +453,19 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
       assert.strictEqual(result.field, 'password');
       assert.strictEqual(called, false);
     });
-  });
 
-  // ==========================================================================
-  // 6. Sign In Service Authentication (Phase 2)
-  // ==========================================================================
-  describe('6. Sign In Service Authentication (signInWithEmail)', () => {
     it('authenticates valid credentials and establishes session', async () => {
+      let passedEmail = '';
       const mockSupabase = {
         auth: {
           signInWithPassword: async ({ email }: { email: string }) => {
+            passedEmail = email;
             return {
               data: {
                 user: {
                   id: 'usr-authenticated-uuid',
                   email,
-                  user_metadata: { display_name: 'Lead Analyst' },
+                  user_metadata: { username: 'lead_analyst', display_name: 'Lead Analyst' },
                 },
                 session: {
                   access_token: 'valid-jwt-token-12345',
@@ -451,19 +478,20 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
         },
       } as unknown as SupabaseClient;
 
-      const result = await signInWithEmail(
-        { email: 'analyst@credlock.io', password: 'SecPass#2026!' },
+      const result = await signInWithUsername(
+        { username: 'Lead_Analyst', password: 'SecPass#2026!' },
         mockSupabase
       );
 
       assert.strictEqual(result.success, true);
       assert.strictEqual(result.user.id, 'usr-authenticated-uuid');
-      assert.strictEqual(result.user.email, 'analyst@credlock.io');
+      assert.strictEqual(result.user.username, 'lead_analyst');
       assert.strictEqual(result.user.displayName, 'Lead Analyst');
       assert.strictEqual(result.session.accessToken, 'valid-jwt-token-12345');
+      assert.strictEqual(passedEmail, 'lead_analyst@auth.credlock.internal');
     });
 
-    it('maps invalid credentials to unified OWASP-compliant error', async () => {
+    it('maps wrong password and unknown username to the exact same generic error (defeating enumeration)', async () => {
       const mockSupabase = {
         auth: {
           signInWithPassword: async () => {
@@ -478,40 +506,17 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
         },
       } as unknown as SupabaseClient;
 
-      const result = await signInWithEmail(
-        { email: 'wrong@credlock.io', password: 'WrongPassword123!' },
+      const result = await signInWithUsername(
+        { username: 'nonexistent_or_wrong', password: 'WrongPassword123!' },
         mockSupabase
       );
 
       assert.strictEqual(result.success, false);
       assert.strictEqual(result.code, 'INVALID_CREDENTIALS');
-      assert.match(result.message, /invalid email address or master password/i);
-    });
-
-    it('handles unconfirmed email with actionable instructions', async () => {
-      const mockSupabase = {
-        auth: {
-          signInWithPassword: async () => {
-            return {
-              data: { user: null, session: null },
-              error: {
-                message: 'Email not confirmed',
-                status: 400,
-              },
-            };
-          },
-        },
-      } as unknown as SupabaseClient;
-
-      const result = await signInWithEmail(
-        { email: 'unconfirmed@credlock.io', password: 'ValidPass#123' },
-        mockSupabase
+      assert.strictEqual(
+        result.message,
+        'Invalid username or master passphrase. Please verify your credentials.'
       );
-
-      assert.strictEqual(result.success, false);
-      assert.strictEqual(result.code, 'EMAIL_NOT_CONFIRMED');
-      assert.strictEqual(result.field, 'email');
-      assert.match(result.message, /has not been confirmed yet/i);
     });
 
     it('maps rate limits appropriately during brute force attempts', async () => {
@@ -529,8 +534,8 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
         },
       } as unknown as SupabaseClient;
 
-      const result = await signInWithEmail(
-        { email: 'bruteforce@credlock.io', password: 'AnyPassword' },
+      const result = await signInWithUsername(
+        { username: 'bruteforce_user', password: 'AnyPassword' },
         mockSupabase
       );
 
@@ -547,8 +552,8 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
         },
       } as unknown as SupabaseClient;
 
-      const result = await signInWithEmail(
-        { email: 'network@credlock.io', password: 'AnyPassword123' },
+      const result = await signInWithUsername(
+        { username: 'network_user', password: 'AnyPassword123' },
         mockSupabase
       );
 
@@ -558,7 +563,7 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
   });
 
   // ==========================================================================
-  // 7. Session Termination & Sign Out (Phase 2)
+  // 7. Session Termination & Sign Out
   // ==========================================================================
   describe('7. Sign Out Service Logic (signOutUser)', () => {
     it('terminates active session cleanly when Supabase succeeds', async () => {
@@ -593,7 +598,7 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
   });
 
   // ==========================================================================
-  // 8. User Profile Resolution (Phase 2)
+  // 8. User Profile Resolution (fetchUserProfile)
   // ==========================================================================
   describe('8. User Profile Resolution (fetchUserProfile)', () => {
     it('returns public profile when database query succeeds', async () => {
@@ -606,7 +611,7 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
                 maybeSingle: async () => ({
                   data: {
                     id: 'usr-profile-uuid',
-                    email: 'lead@credlock.io',
+                    username: 'lead_operative',
                     display_name: 'Lead Operative',
                     avatar_url: 'https://avatar.url/img.png',
                     role: 'analyst',
@@ -624,12 +629,12 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
 
       const profile = await fetchUserProfile(
         'usr-profile-uuid',
-        { display_name: 'Metadata Name' },
-        'lead@credlock.io',
+        { username: 'lead_operative', display_name: 'Metadata Name' },
         mockSupabase
       );
 
       assert.strictEqual(profile.id, 'usr-profile-uuid');
+      assert.strictEqual(profile.username, 'lead_operative');
       assert.strictEqual(profile.displayName, 'Lead Operative');
       assert.strictEqual(profile.role, 'analyst');
       assert.strictEqual(profile.isActive, true);
@@ -651,12 +656,12 @@ describe('CredLock v2.0 — Authentication Foundation Test Suite (Phases 1 & 2)'
 
       const profile = await fetchUserProfile(
         'usr-fallback-uuid',
-        { display_name: 'Fallback Agent' },
-        'fallback@credlock.io',
+        { username: 'fallback_agent', display_name: 'Fallback Agent' },
         mockSupabase
       );
 
       assert.strictEqual(profile.id, 'usr-fallback-uuid');
+      assert.strictEqual(profile.username, 'fallback_agent');
       assert.strictEqual(profile.displayName, 'Fallback Agent');
       assert.strictEqual(profile.role, 'user');
       assert.strictEqual(profile.isActive, true);

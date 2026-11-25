@@ -1,13 +1,11 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Shield, ArrowLeft } from 'lucide-react';
 import { Container } from '@/components/layout/Container';
 import { Badge } from '@/components/ui/Badge';
 import { SignUpForm } from '@/features/auth/components/SignUpForm';
-import { AuthModal } from '@/features/auth/components/AuthModal';
 
 export function SignUpPage() {
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-[calc(100vh-4rem)] pt-6 pb-36 sm:py-12 flex flex-col justify-center animate-in fade-in duration-200">
@@ -40,13 +38,13 @@ export function SignUpPage() {
                 Create CredLock Account
               </h1>
               <p className="text-xs sm:text-sm text-muted leading-relaxed font-sans">
-                Initialize your authenticated credential enclave. Account ownership provides cross-device encrypted telemetry synchronization with strict client-side data isolation.
+                Initialize your authenticated credential enclave with an operative username and master passphrase. No personal email address or phone number is ever collected.
               </p>
             </div>
 
             {/* Form */}
             <SignUpForm
-              onNavigateToSignIn={() => setIsAuthModalOpen(true)}
+              onNavigateToSignIn={() => navigate('/signin')}
             />
 
             {/* Cryptographic Specs Pill */}
@@ -57,23 +55,16 @@ export function SignUpPage() {
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-                <span>ROW LEVEL SECURITY</span>
+                <span>USERNAME IDENTITY</span>
               </div>
               <div className="flex items-center gap-1.5 col-span-2 sm:col-span-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                <span>OWASP COMPLIANT</span>
+                <span>ZERO-KNOWLEDGE</span>
               </div>
             </div>
           </div>
         </div>
       </Container>
-
-      {/* AuthModal instance for navigation to Sign In preview */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        initialView="login"
-      />
     </div>
   );
 }

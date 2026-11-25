@@ -1,17 +1,14 @@
-import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Shield, ArrowLeft } from 'lucide-react';
 import { Container } from '@/components/layout/Container';
 import { Badge } from '@/components/ui/Badge';
 import { SignInForm } from '@/features/auth/components/SignInForm';
-import { AuthModal } from '@/features/auth/components/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
 
 export function SignInPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated } = useAuth();
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Preserve intended redirect destination or default to home
   const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/';
@@ -63,7 +60,6 @@ export function SignInPage() {
                 navigate(from, { replace: true });
               }}
               onNavigateToSignUp={() => navigate('/signup')}
-              onForgotPassword={() => setIsAuthModalOpen(true)}
             />
 
             {/* Cryptographic Specs Pill */}
@@ -74,7 +70,7 @@ export function SignInPage() {
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-                <span>ZERO-KNOWLEDGE</span>
+                <span>USERNAME IDENTITY</span>
               </div>
               <div className="flex items-center gap-1.5 col-span-2 sm:col-span-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
@@ -84,13 +80,6 @@ export function SignInPage() {
           </div>
         </div>
       </Container>
-
-      {/* AuthModal instance for forgot password view */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        initialView="forgot-password"
-      />
     </div>
   );
 }
