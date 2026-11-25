@@ -280,24 +280,55 @@ export async function signInWithUsername(
   }
 }
 
+export const SUPABASE_AUTH_STORAGE_KEY = 'credlock-auth-token' as const;
+
+function clearLocalAuthStorage(storage?: Pick<Storage, 'removeItem'> | null): void {
+  const targetStorage =
+    storage !== undefined
+      ? storage
+      : typeof window !== 'undefined' && window.localStorage
+        ? window.localStorage
+        : null;
+
+  if (targetStorage) {
+    targetStorage.removeItem(SUPABASE_AUTH_STORAGE_KEY);
+  }
+}
+
 /**
- * Terminates the active Supabase session and flushes client state.
+ * Terminates the active Supabase session and flushes client auth credentials.
+ * If remote revocation fails due to network/API error, explicitly falls back to
+ * local-scope signOut and removes only the CredLock auth storage key.
  */
 export async function signOutUser(
-  customSupabaseClient?: ReturnType<typeof getSupabase>
+  customSupabaseClient?: ReturnType<typeof getSupabase>,
+  customStorage?: Pick<Storage, 'removeItem'> | null
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = customSupabaseClient ?? getSupabase();
   if (!supabase) {
+    clearLocalAuthStorage(customStorage);
     return { success: true };
   }
 
   try {
     const { error } = await supabase.auth.signOut();
     if (error) {
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch {
+        // Ignore secondary local signOut error; explicit fallback below clears token key
+      }
+      clearLocalAuthStorage(customStorage);
       return { success: false, error: error.message };
     }
     return { success: true };
   } catch (err) {
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch {
+      // Ignore secondary local signOut error
+    }
+    clearLocalAuthStorage(customStorage);
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Failed to terminate session',

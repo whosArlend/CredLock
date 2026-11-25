@@ -14,6 +14,7 @@ import {
   signUpWithUsername,
   signInWithUsername,
   signOutUser,
+  SUPABASE_AUTH_STORAGE_KEY,
 } from '../src/features/auth/services/authService.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -644,18 +645,97 @@ describe('CredLock v2.0 — Phase 2.1: Username-Only Authentication Test Suite',
       assert.strictEqual(signedOut, true);
     });
 
-    it('handles sign out failure without crashing', async () => {
+    it('handles sign out failure without crashing and removes only local auth storage key as fallback', async () => {
+      const scopesCalled: Array<string | undefined> = [];
+      const mockStorageMap = new Map<string, string>([
+        [SUPABASE_AUTH_STORAGE_KEY, '{"access_token":"stale-token"}'],
+        ['credlock-ui-theme', 'dark'],
+        ['unrelated-key', 'keep-me'],
+      ]);
+      const mockStorage = {
+        removeItem: (key: string) => {
+          mockStorageMap.delete(key);
+        },
+      };
+
       const mockSupabase = {
         auth: {
-          signOut: async () => {
+          signOut: async (opts?: { scope?: string }) => {
+            scopesCalled.push(opts?.scope);
             return { error: { message: 'Session token already expired' } };
           },
         },
       } as unknown as SupabaseClient;
 
-      const result = await signOutUser(mockSupabase);
+      const result = await signOutUser(mockSupabase, mockStorage);
       assert.strictEqual(result.success, false);
       assert.strictEqual(result.error, 'Session token already expired');
+      assert.deepStrictEqual(scopesCalled, [undefined, 'local']);
+      assert.strictEqual(mockStorageMap.has(SUPABASE_AUTH_STORAGE_KEY), false);
+      assert.strictEqual(mockStorageMap.get('credlock-ui-theme'), 'dark');
+      assert.strictEqual(mockStorageMap.get('unrelated-key'), 'keep-me');
+    });
+
+    it('handles network exceptions during signOut and clears only local auth storage key', async () => {
+      const mockStorageMap = new Map<string, string>([
+        [SUPABASE_AUTH_STORAGE_KEY, '{"access_token":"stale-token"}'],
+        ['credlock-ui-theme', 'dark'],
+      ]);
+      const mockStorage = {
+        removeItem: (key: string) => {
+          mockStorageMap.delete(key);
+        },
+      };
+
+      const mockSupabase = {
+        auth: {
+          signOut: async () => {
+            throw new Error('Network offline');
+          },
+        },
+      } as unknown as SupabaseClient;
+
+      const result = await signOutUser(mockSupabase, mockStorage);
+      assert.strictEqual(result.success, false);
+      assert.strictEqual(result.error, 'Network offline');
+      assert.strictEqual(mockStorageMap.has(SUPABASE_AUTH_STORAGE_KEY), false);
+      assert.strictEqual(mockStorageMap.get('credlock-ui-theme'), 'dark');
+    });
+
+    it('is safe when signOutUser is called repeatedly (re-entrant/idempotent)', async () => {
+      const mockStorageMap = new Map<string, string>([
+        [SUPABASE_AUTH_STORAGE_KEY, '{"access_token":"token"}'],
+      ]);
+      const mockStorage = {
+        removeItem: (key: string) => {
+          mockStorageMap.delete(key);
+        },
+      };
+      const mockSupabase = {
+        auth: {
+          signOut: async () => ({ error: null }),
+        },
+      } as unknown as SupabaseClient;
+
+      const r1 = await signOutUser(mockSupabase, mockStorage);
+      const r2 = await signOutUser(mockSupabase, mockStorage);
+      assert.strictEqual(r1.success, true);
+      assert.strictEqual(r2.success, true);
+    });
+
+    it('integrates resetHistoryMemoryCache, immediate auth state clearing, SIGNED_OUT handling, and epoch guards in AuthContext', () => {
+      const authContextSource = fs.readFileSync(
+        path.resolve(process.cwd(), 'src/context/AuthContext.tsx'),
+        'utf8'
+      );
+
+      assert.match(authContextSource, /import\s+\{\s*resetHistoryMemoryCache\s*\}\s+from\s+['"]@\/services\/historyStorage['"]/);
+      assert.match(authContextSource, /authEpochRef/);
+      assert.match(authContextSource, /hasActiveSessionRef/);
+      assert.match(authContextSource, /resetHistoryMemoryCache\(\)/);
+      assert.match(authContextSource, /event === 'SIGNED_OUT' \|\| !currentSession\?\.user/);
+      assert.match(authContextSource, /clearLocalAuthAndMemoryState\(\)/);
+      assert.match(authContextSource, /try\s*\{\s*return await signOutUser\(\);\s*\}\s*finally/);
     });
   });
 

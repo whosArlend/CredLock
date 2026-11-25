@@ -5,6 +5,7 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   type ReactNode,
 } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
@@ -15,6 +16,7 @@ import {
   signOutUser,
   fetchUserProfile,
 } from '@/features/auth/services/authService';
+import { resetHistoryMemoryCache } from '@/services/historyStorage';
 import type {
   AuthContextValue,
   SignInCredentials,
@@ -36,9 +38,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  // Epoch counter prevents stale async getSession()/fetchUserProfile() calls
+  // from restoring authenticated state after signOut() or SIGNED_OUT.
+  const authEpochRef = useRef<number>(0);
+  const hasActiveSessionRef = useRef<boolean>(false);
+
+  const clearLocalAuthAndMemoryState = useCallback(() => {
+    authEpochRef.current += 1;
+    setUser(null);
+    setSession(null);
+    setProfile(null);
+    if (hasActiveSessionRef.current) {
+      hasActiveSessionRef.current = false;
+      resetHistoryMemoryCache();
+    }
+  }, []);
+
   // Initialize and restore session on mount
   useEffect(() => {
     let isMounted = true;
+    const mountEpoch = authEpochRef.current;
     const supabase = getSupabase();
 
     if (!supabase || !isSupabaseConfigured()) {
@@ -50,20 +69,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     supabase.auth
       .getSession()
       .then(async ({ data: { session: initialSession }, error }) => {
-        if (!isMounted) return;
+        if (!isMounted || authEpochRef.current !== mountEpoch) return;
         if (error) {
           setIsLoading(false);
           return;
         }
 
         if (initialSession?.user) {
+          hasActiveSessionRef.current = true;
           setSession(initialSession);
           setUser(initialSession.user);
           const userProf = await fetchUserProfile(
             initialSession.user.id,
             initialSession.user.user_metadata
           );
-          if (isMounted) {
+          if (isMounted && authEpochRef.current === mountEpoch) {
             setProfile(userProf);
           }
         }
@@ -72,7 +92,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Fallback silently if offline or blocked
       })
       .finally(() => {
-        if (isMounted) {
+        if (isMounted && authEpochRef.current === mountEpoch) {
           setIsLoading(false);
         }
       });
@@ -80,37 +100,44 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // 2. Subscribe to auth lifecycle events (sign in, sign out, token refresh)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, currentSession) => {
+    } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       if (!isMounted) return;
 
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-
-      if (currentSession?.user) {
-        const userProf = await fetchUserProfile(
-          currentSession.user.id,
-          currentSession.user.user_metadata
-        );
-        if (isMounted) {
-          setProfile(userProf);
-        }
-      } else {
-        setProfile(null);
+      if (event === 'SIGNED_OUT' || !currentSession?.user) {
+        clearLocalAuthAndMemoryState();
+        setIsLoading(false);
+        return;
       }
 
-      setIsLoading(false);
+      const eventEpoch = ++authEpochRef.current;
+      hasActiveSessionRef.current = true;
+      setSession(currentSession);
+      setUser(currentSession.user);
+
+      const userProf = await fetchUserProfile(
+        currentSession.user.id,
+        currentSession.user.user_metadata
+      );
+      if (isMounted && authEpochRef.current === eventEpoch) {
+        setProfile(userProf);
+      }
+
+      if (isMounted && authEpochRef.current === eventEpoch) {
+        setIsLoading(false);
+      }
     });
 
     return () => {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [clearLocalAuthAndMemoryState]);
 
   // Sign In action
   const signIn = useCallback(async (credentials: SignInCredentials): Promise<SignInResult> => {
     const result = await signInWithUsername(credentials);
     if (result.success) {
+      hasActiveSessionRef.current = true;
       const userProf = await fetchUserProfile(
         result.user.id,
         {
@@ -128,14 +155,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return await signUpWithUsername(credentials);
   }, []);
 
-  // Sign Out action
+  // Sign Out action: clears local React auth state & in-memory history cache immediately
+  // so slow or failed network sign-out cannot leave the UI in an authenticated state.
   const signOut = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
-    const result = await signOutUser();
-    setUser(null);
-    setSession(null);
-    setProfile(null);
-    return result;
-  }, []);
+    clearLocalAuthAndMemoryState();
+    try {
+      return await signOutUser();
+    } finally {
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+    }
+  }, [clearLocalAuthAndMemoryState]);
 
   // Refresh active session token
   const refreshSession = useCallback(async (): Promise<void> => {
