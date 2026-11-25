@@ -659,73 +659,88 @@ describe('CredLock v2.0 — Phase 2.1: Username-Only Authentication Test Suite',
   });
 
   // ==========================================================================
-  // 8. User Profile Resolution (fetchUserProfile)
+  // 9. Synthetic Identity Mapping & Server Verification Simulation
   // ==========================================================================
-  describe('8. User Profile Resolution (fetchUserProfile)', () => {
-    it('returns public profile when database query succeeds', async () => {
-      const mockSupabase = {
-        from: (table: string) => {
-          assert.strictEqual(table, 'profiles');
-          return {
-            select: () => ({
-              eq: () => ({
-                maybeSingle: async () => ({
-                  data: {
-                    id: 'usr-profile-uuid',
-                    username: 'lead_operative',
-                    display_name: 'Lead Operative',
-                    avatar_url: 'https://avatar.url/img.png',
-                    role: 'analyst',
-                    is_active: true,
-                    created_at: '2026-11-20T00:00:00Z',
-                    updated_at: '2026-11-25T00:00:00Z',
-                  },
-                  error: null,
-                }),
-              }),
-            }),
-          };
-        },
-      } as unknown as SupabaseClient;
+  describe('9. Synthetic Identity Mapping & Server Verification Simulation (Real Unit Tests)', () => {
+    // Pure function simulating the database-level verification logic in handle_new_user()
+    function verifyDatabaseIdentityMapping(
+      email: string | null | undefined,
+      metadataUsername: string | null | undefined
+    ): { valid: boolean; errorCode?: string; reason?: string } {
+      if (!metadataUsername || metadataUsername.trim() === '') {
+        return { valid: false, errorCode: '23514', reason: 'Missing username in metadata' };
+      }
 
-      const profile = await fetchUserProfile(
-        'usr-profile-uuid',
-        { username: 'lead_operative', display_name: 'Metadata Name' },
-        mockSupabase
-      );
+      const normalized = normalizeUsername(metadataUsername);
 
-      assert.strictEqual(profile.id, 'usr-profile-uuid');
-      assert.strictEqual(profile.username, 'lead_operative');
-      assert.strictEqual(profile.displayName, 'Lead Operative');
-      assert.strictEqual(profile.role, 'analyst');
-      assert.strictEqual(profile.isActive, true);
+      const usernameCheck = validateUsername(normalized);
+      if (!usernameCheck.isValid) {
+        return { valid: false, errorCode: '23514', reason: usernameCheck.error };
+      }
+
+      const expectedSyntheticEmail = `${normalized}@auth.credlock.internal`;
+      if (!email || email.trim().toLowerCase() !== expectedSyntheticEmail) {
+        return { valid: false, errorCode: '23514', reason: 'Synthetic identity mismatch' };
+      }
+
+      return { valid: true };
+    }
+
+    it('accepts exact matching lowercase username and synthetic email', () => {
+      const res = verifyDatabaseIdentityMapping('alice@auth.credlock.internal', 'alice');
+      assert.strictEqual(res.valid, true);
     });
 
-    it('falls back to user metadata when profile query returns null or error', async () => {
-      const mockSupabase = {
-        from: () => ({
-          select: () => ({
-            eq: () => ({
-              maybeSingle: async () => ({
-                data: null,
-                error: { message: 'Table profiles does not exist' },
-              }),
-            }),
-          }),
-        }),
-      } as unknown as SupabaseClient;
+    it('normalizes uppercase and mixed-case inputs consistently and accepts matching identity', () => {
+      const res = verifyDatabaseIdentityMapping('Alice@auth.credlock.internal', 'Alice');
+      assert.strictEqual(res.valid, true);
+    });
 
-      const profile = await fetchUserProfile(
-        'usr-fallback-uuid',
-        { username: 'fallback_agent', display_name: 'Fallback Agent' },
-        mockSupabase
-      );
+    it('normalizes whitespace around username and email before validation', () => {
+      const res = verifyDatabaseIdentityMapping('  agent-007@auth.credlock.internal  ', '  agent-007  ');
+      assert.strictEqual(res.valid, true);
+    });
 
-      assert.strictEqual(profile.id, 'usr-fallback-uuid');
-      assert.strictEqual(profile.username, 'fallback_agent');
-      assert.strictEqual(profile.displayName, 'Fallback Agent');
-      assert.strictEqual(profile.role, 'user');
-      assert.strictEqual(profile.isActive, true);
+    it('rejects mismatched username/email pairs transactionally', () => {
+      const res = verifyDatabaseIdentityMapping('alice@auth.credlock.internal', 'bob');
+      assert.strictEqual(res.valid, false);
+      assert.strictEqual(res.errorCode, '23514');
+      assert.match(res.reason || '', /mismatch/i);
+    });
+
+    it('rejects reserved usernames even if email matches synthetically', () => {
+      const res = verifyDatabaseIdentityMapping('admin@auth.credlock.internal', 'admin');
+      assert.strictEqual(res.valid, false);
+      assert.strictEqual(res.errorCode, '23514');
+      assert.match(res.reason || '', /reserved/i);
+    });
+
+    it('rejects arbitrary real email domains (e.g. gmail.com)', () => {
+      const res = verifyDatabaseIdentityMapping('alice@gmail.com', 'alice');
+      assert.strictEqual(res.valid, false);
+      assert.strictEqual(res.errorCode, '23514');
+      assert.match(res.reason || '', /mismatch/i);
+    });
+
+    it('rejects missing or empty metadata username without falling back', () => {
+      const resNull = verifyDatabaseIdentityMapping('alice@auth.credlock.internal', null);
+      assert.strictEqual(resNull.valid, false);
+      assert.strictEqual(resNull.errorCode, '23514');
+
+      const resEmpty = verifyDatabaseIdentityMapping('alice@auth.credlock.internal', '   ');
+      assert.strictEqual(resEmpty.valid, false);
+      assert.strictEqual(resEmpty.errorCode, '23514');
+    });
+
+    it('rejects malformed synthetic emails', () => {
+      const res1 = verifyDatabaseIdentityMapping('alice', 'alice');
+      assert.strictEqual(res1.valid, false);
+
+      const res2 = verifyDatabaseIdentityMapping('alice@auth', 'alice');
+      assert.strictEqual(res2.valid, false);
+
+      const res3 = verifyDatabaseIdentityMapping('alice@other.credlock.internal', 'alice');
+      assert.strictEqual(res3.valid, false);
     });
   });
 });

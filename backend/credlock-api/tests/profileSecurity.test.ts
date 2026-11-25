@@ -231,19 +231,56 @@ describe('CredLock v2.0 — Phase 1.1 Security Hardening: Profile RLS & Column P
     });
 
     it('enforces database-level reserved username check inside handle_new_user() (Finding 1)', () => {
-      expect(migration003Sql).toMatch(/IF LOWER\(resolved_username\) IN \(/i);
+      expect(migration003Sql).toMatch(/IF norm_username IN \(/i);
       expect(migration003Sql).toMatch(/RAISE EXCEPTION 'Operative username "%" is reserved by system policy\.'/i);
       expect(migration003Sql).toMatch(/USING ERRCODE = '23514'/i);
+    });
+
+    it('enforces strict synthetic email and username consistency in handle_new_user() (Finding 1)', () => {
+      // Must require username in metadata and reject empty/null without silent fallback
+      expect(migration003Sql).toMatch(/raw_username := NEW\.raw_user_meta_data->>'username';/i);
+      expect(migration003Sql).toMatch(/IF raw_username IS NULL OR trim\(raw_username\) = '' THEN/i);
+      expect(migration003Sql).toMatch(/Operative registration requires username in user metadata/i);
+
+      // Must normalize username to lowercase and trimmed form
+      expect(migration003Sql).toMatch(/norm_username := LOWER\(trim\(raw_username\)\);/i);
+
+      // Must enforce exact synthetic email mapping: norm_username || '@auth.credlock.internal'
+      expect(migration003Sql).toMatch(/expected_synthetic_email := norm_username \|\| '@auth\.credlock\.internal';/i);
+      expect(migration003Sql).toMatch(/IF NEW\.email IS NULL OR LOWER\(trim\(NEW\.email\)\) != expected_synthetic_email THEN/i);
+      expect(migration003Sql).toMatch(/Synthetic identity mismatch: email must be exactly <username>@auth\.credlock\.internal/i);
     });
 
     it('handles unique_violation safely by failing on username collision to prevent orphaned auth records (Finding 2)', () => {
       // Must check if user ID already exists (idempotent profile recovery)
       expect(migration003Sql).toMatch(/IF EXISTS \(SELECT 1 FROM public\.profiles WHERE id = NEW\.id\) THEN/i);
       // For username uniqueness collision, MUST re-raise 23505 exception to abort auth.users transaction
-      expect(migration003Sql).toMatch(/RAISE EXCEPTION 'Operative username "%" is already taken\.', resolved_username USING ERRCODE = '23505';/i);
+      expect(migration003Sql).toMatch(/RAISE EXCEPTION 'Operative username "%" is already taken\.', norm_username USING ERRCODE = '23505';/i);
     });
 
-    it('omits SECURITY DEFINER from protect_profile_privileged_fields() so CURRENT_USER evaluates to caller (Finding 3)', () => {
+    it('audits and hardens ensure_user_profile() with identical identity validation (Finding 2)', () => {
+      // Requires auth.uid()
+      expect(migration003Sql).toMatch(/current_user_id := auth\.uid\(\);/i);
+
+      // Returns existing profile if already found
+      expect(migration003Sql).toMatch(/SELECT \* INTO user_profile FROM public\.profiles WHERE id = current_user_id;/i);
+      expect(migration003Sql).toMatch(/IF FOUND THEN\s+RETURN user_profile;/i);
+
+      // Requires username in user metadata without arbitrary fallback
+      expect(migration003Sql).toMatch(/raw_username := auth\.jwt\(\)->'user_metadata'->>'username';/i);
+      expect(migration003Sql).toMatch(/Operative recovery requires username in user metadata/i);
+
+      // Enforces synthetic email consistency
+      expect(migration003Sql).toMatch(/expected_synthetic_email := norm_username \|\| '@auth\.credlock\.internal';/i);
+      expect(migration003Sql).toMatch(/IF jwt_email IS NULL OR LOWER\(trim\(jwt_email\)\) != expected_synthetic_email THEN/i);
+
+      // Safe search_path and execution grants
+      expect(migration003Sql).toMatch(/CREATE OR REPLACE FUNCTION public\.ensure_user_profile\(\)[\s\S]+?SET search_path = public/i);
+      expect(migration003Sql).toMatch(/REVOKE ALL ON FUNCTION public\.ensure_user_profile\(\) FROM anon, public;/i);
+      expect(migration003Sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.ensure_user_profile\(\) TO authenticated;/i);
+    });
+
+    it('simplifies protect_profile_privileged_fields() with SECURITY INVOKER and explicit admin bypass (Finding 3)', () => {
       // Find the protect_profile_privileged_fields function definition in migration 003
       const fnMatch = migration003Sql.match(/CREATE OR REPLACE FUNCTION public\.protect_profile_privileged_fields\(\)[\s\S]+?\$\$ LANGUAGE plpgsql([^;]+);/i);
       expect(fnMatch).not.toBeNull();
@@ -254,6 +291,28 @@ describe('CredLock v2.0 — Phase 1.1 Security Hardening: Profile RLS & Column P
         // Must maintain secure search_path
         expect(functionTrailer).toMatch(/SET search_path = public/i);
       }
+
+      // Must cleanly check administrative execution context
+      expect(migration003Sql).toMatch(/IF CURRENT_USER IN \('service_role', 'postgres', 'supabase_admin'\) AND jwt_role IN \('service_role', 'supabase_admin', ''\) THEN/i);
+
+      // Must prohibit modifications to all privileged fields
+      expect(migration003Sql).toMatch(/NEW\.username IS DISTINCT FROM OLD\.username/i);
+      expect(migration003Sql).toMatch(/NEW\.role IS DISTINCT FROM OLD\.role/i);
+      expect(migration003Sql).toMatch(/NEW\.is_active IS DISTINCT FROM OLD\.is_active/i);
+      expect(migration003Sql).toMatch(/NEW\.email IS DISTINCT FROM OLD\.email/i);
+      expect(migration003Sql).toMatch(/NEW\.id IS DISTINCT FROM OLD\.id/i);
+      expect(migration003Sql).toMatch(/NEW\.created_at = OLD\.created_at;/i);
+    });
+
+    it('ensures safe deterministic backfill for legacy or unpopulated profiles (Finding 4)', () => {
+      // Must use a safe DO block to backfill unpopulated usernames
+      expect(migration003Sql).toMatch(/DO \$\$[\s\S]+?FOR r IN SELECT id, email, username FROM public\.profiles WHERE username IS NULL LOOP/i);
+
+      // Must validate existing email format before adopting local-part
+      expect(migration003Sql).toMatch(/LOWER\(r\.email\) LIKE '%@auth\.credlock\.internal'/i);
+
+      // Must fall back to unique deterministic surrogate 'op_' || substr(replace(id, '-', ''), 1, 12)
+      expect(migration003Sql).toMatch(/candidate := 'op_' \|\| substr\(replace\(r\.id::text, '-', ''\), 1, 12\);/i);
     });
 
     it('re-enforces least privilege column grants without username update permissions', () => {
