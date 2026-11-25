@@ -3,6 +3,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
+import { SignUpForm } from './SignUpForm';
 import {
   Shield,
   Lock,
@@ -39,7 +40,6 @@ export function AuthModal({
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [prototypeNotice, setPrototypeNotice] = useState<string | null>(null);
 
   // Reset states when changing views
@@ -253,54 +253,10 @@ export function AuthModal({
         {/* VIEW: REGISTER */}
         {view === 'register' && (
           <div className="space-y-4">
-            <div className="space-y-3">
-              <Input
-                label="Email Address"
-                type="email"
-                placeholder="analyst@domain.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                leftElement={<Mail className="w-4 h-4" />}
-              />
-
-              <Input
-                label="Create Master Password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Choose a high-entropy passphrase..."
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                leftElement={<Lock className="w-4 h-4" />}
-                helperText="Evaluated locally with @zxcvbn-ts heuristics. Never leaves client memory."
-              />
-
-              <Input
-                label="Confirm Master Password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Re-enter master password..."
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                leftElement={<CheckCircle2 className="w-4 h-4" />}
-              />
-
-              <div className="rounded border border-border/80 bg-background-secondary/60 p-3 text-[11px] text-foreground-secondary space-y-1">
-                <span className="font-semibold text-foreground flex items-center gap-1.5">
-                  <Shield className="w-3.5 h-3.5 text-accent" />
-                  Zero-Knowledge Commitment
-                </span>
-                <p>
-                  CredLock cannot recover lost master passwords. Your password derives client-side encryption keys
-                  that safeguard synchronized telemetry.
-                </p>
-              </div>
-            </div>
-
-            <Button
-              variant="primary"
-              className="w-full"
-              onClick={() => handlePrototypeAction('Account Registration')}
-            >
-              Create Account (v2.0 UI Prototype)
-            </Button>
+            <SignUpForm
+              isCompact
+              onNavigateToSignIn={() => switchView('login')}
+            />
 
             <div className="flex items-center justify-between text-xs pt-2 border-t border-border/60">
               <button
@@ -309,13 +265,6 @@ export function AuthModal({
                 className="text-foreground-muted hover:text-foreground"
               >
                 ← Back to Enclave Info
-              </button>
-              <button
-                type="button"
-                onClick={() => switchView('login')}
-                className="text-accent font-medium hover:underline"
-              >
-                Already have an account? Sign In →
               </button>
             </div>
           </div>

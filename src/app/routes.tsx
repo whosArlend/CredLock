@@ -18,6 +18,7 @@ const AnalysisDetailPage = lazy(() => import('@/pages/AnalysisDetailPage').then(
 const BreachHistoryPage = lazy(() => import('@/pages/BreachHistoryPage').then((m) => ({ default: m.BreachHistoryPage })));
 const BreachDetailPage = lazy(() => import('@/pages/BreachDetailPage').then((m) => ({ default: m.BreachDetailPage })));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
+const SignUpPage = lazy(() => import('@/pages/SignUpPage').then((m) => ({ default: m.SignUpPage })));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
 
 export const router = createBrowserRouter([
@@ -40,6 +41,8 @@ export const router = createBrowserRouter([
       { path: 'breach-history', element: <BreachHistoryPage /> },
       { path: 'breach-history/:id', element: <BreachDetailPage /> },
       { path: 'profile', element: <ProfilePage /> },
+      { path: 'signup', element: <SignUpPage /> },
+      { path: 'register', element: <SignUpPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
