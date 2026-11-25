@@ -311,8 +311,8 @@ export function ProfilePage() {
         {/* Project Metadata Chips */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs font-mono pb-3 border-b border-border/60">
           <div className="p-2.5 rounded-lg bg-surface-elevated/40 border border-border">
-            <span className="text-[10px] text-muted uppercase block">ACADEMIC STATUS</span>
-            <span className="font-semibold text-foreground text-xs font-sans">Individual Capstone Project</span>
+            <span className="text-[10px] text-muted uppercase block">PROJECT CLASSIFICATION</span>
+            <span className="font-semibold text-foreground text-xs font-sans">Personal Cybersecurity Project</span>
           </div>
           <div className="p-2.5 rounded-lg bg-surface-elevated/40 border border-border">
             <span className="text-[10px] text-muted uppercase block">BUILD VERSION</span>
