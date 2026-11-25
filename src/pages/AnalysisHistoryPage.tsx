@@ -16,6 +16,7 @@ import {
   Clock,
   AlertTriangle,
   RefreshCw,
+  ShieldAlert,
 } from 'lucide-react';
 
 export function AnalysisHistoryPage() {
@@ -139,6 +140,18 @@ export function AnalysisHistoryPage() {
           <span className="text-border hidden sm:inline">•</span>
           <span className="text-[11px] text-muted-dim">Client Enclave</span>
         </div>
+      </div>
+
+      {/* Shared-Device Privacy Notice */}
+      <div className="px-3.5 py-2.5 rounded-lg bg-surface border border-border/80 flex items-start sm:items-center gap-2.5 text-xs text-muted font-sans">
+        <ShieldAlert className="w-4 h-4 text-accent shrink-0 mt-0.5 sm:mt-0" />
+        <p className="leading-relaxed">
+          <strong className="text-foreground font-semibold">Privacy Notice:</strong> Your history is stored locally in this browser. Logging out does not delete saved history. If you use a shared device,{' '}
+          <Link to="/profile" className="text-accent underline hover:text-accent/80 font-medium">
+            clear local data
+          </Link>{' '}
+          to remove saved history.
+        </p>
       </div>
 
       {/* Loading State */}

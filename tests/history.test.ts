@@ -1067,5 +1067,42 @@ describe('Phase 2.6 — History, Detail & Data Persistence Test Suite', () => {
         );
       }
     });
+
+    it('verifies AnalysisHistoryPage and BreachHistoryPage display shared-device privacy notice', async () => {
+      const fs = await import('node:fs/promises');
+      const path = await import('node:path');
+
+      const analysisSource = await fs.readFile(
+        path.resolve('src/pages/AnalysisHistoryPage.tsx'),
+        'utf8'
+      );
+      const breachSource = await fs.readFile(
+        path.resolve('src/pages/BreachHistoryPage.tsx'),
+        'utf8'
+      );
+
+      for (const [pageName, source] of [
+        ['AnalysisHistoryPage', analysisSource],
+        ['BreachHistoryPage', breachSource],
+      ] as const) {
+        // Notice must communicate local browser storage
+        assert.ok(
+          source.includes('Your history is stored locally in this browser'),
+          `${pageName} must state history is stored locally in this browser`
+        );
+
+        // Notice must clarify logging out does not delete saved history
+        assert.ok(
+          source.includes('Logging out does not delete saved history'),
+          `${pageName} must state logging out does not delete saved history`
+        );
+
+        // Notice must advise shared-device users to clear local data
+        assert.ok(
+          source.includes('If you use a shared device') && source.includes('clear local data'),
+          `${pageName} must advise shared-device users to clear local data`
+        );
+      }
+    });
   });
 });
