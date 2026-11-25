@@ -21,9 +21,45 @@ export const envSchema = z.object({
     .string()
     .min(1, 'SUPABASE_SECRET_KEY cannot be empty')
     .optional(),
+  // Distributed rate-limiting via Upstash Redis REST API
+  UPSTASH_REDIS_REST_URL: z
+    .string()
+    .url('UPSTASH_REDIS_REST_URL must be a valid URL (e.g. https://...upstash.io)')
+    .optional(),
+  UPSTASH_REDIS_REST_TOKEN: z
+    .string()
+    .min(10, 'UPSTASH_REDIS_REST_TOKEN must be a non-empty token string')
+    .optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
+
+/**
+ * Validates distributed rate-limiting environment configuration.
+ * In production, if distributed rate-limiting is required, both URL and TOKEN must be present.
+ */
+export function isDistributedRateLimitConfigured(config: EnvConfig = env): boolean {
+  return Boolean(
+    config.UPSTASH_REDIS_REST_URL &&
+    config.UPSTASH_REDIS_REST_TOKEN &&
+    config.UPSTASH_REDIS_REST_URL.length > 0 &&
+    config.UPSTASH_REDIS_REST_TOKEN.length >= 10
+  );
+}
+
+/**
+ * Asserts production configuration readiness for rate-limiting.
+ * Throws a descriptive configuration error if running in production without distributed Redis credentials.
+ */
+export function validateProductionRateLimitConfig(config: EnvConfig = env): void {
+  if (config.NODE_ENV === 'production' && !isDistributedRateLimitConfigured(config)) {
+    throw new Error(
+      'Production configuration error: UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be configured ' +
+      'in production to provide distributed serverless rate limiting across Vercel instances. ' +
+      'In-memory fallback is strictly restricted to development and test environments.'
+    );
+  }
+}
 
 /**
  * Strict schema specifically for Supabase database operations.

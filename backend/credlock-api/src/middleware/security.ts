@@ -1,8 +1,13 @@
 import * as helmetModule from 'helmet';
 import cors, { type CorsOptions } from 'cors';
-import { rateLimit } from 'express-rate-limit';
-import { env } from '../config/env.js';
+import { rateLimit, type Store } from 'express-rate-limit';
+import {
+  env,
+  isDistributedRateLimitConfigured,
+  validateProductionRateLimitConfig,
+} from '../config/env.js';
 import { errorResponse } from '../utils/response.js';
+import { UpstashRedisStore } from './rateLimitStore.js';
 
 /**
  * Helmet export typing helper.
@@ -58,20 +63,64 @@ export const corsOptions: CorsOptions = {
 export const corsMiddleware = cors(corsOptions);
 
 /**
- * Rate limiting middleware to prevent abuse.
- * Development default: 200 requests per 15 minutes.
+ * Resolves the rate limit store:
+ * - If Upstash Redis credentials are provided, connects to Upstash Redis REST API.
+ * - In production: asserts distributed configuration is present.
+ * - In development/test: falls back gracefully to in-memory store if Redis credentials are not configured.
  */
-export const rateLimitMiddleware = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: env.NODE_ENV === 'test' ? 1000 : 200,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  handler: (_req, res) => {
-    res.status(429).json(
-      errorResponse(
-        'Too many requests from this IP, please try again after 15 minutes.',
-        'RATE_LIMIT_EXCEEDED'
-      )
-    );
-  },
-});
+export function createRateLimitStore(overrideStore?: Store): Store | undefined {
+  if (overrideStore) {
+    return overrideStore;
+  }
+
+  // Validate production requirement: fail-fast rather than silently operating with ineffective local memory
+  validateProductionRateLimitConfig();
+
+  if (isDistributedRateLimitConfigured()) {
+    return new UpstashRedisStore({
+      url: env.UPSTASH_REDIS_REST_URL as string,
+      token: env.UPSTASH_REDIS_REST_TOKEN as string,
+      prefix: 'credlock:rl:',
+      timeoutMs: 4000,
+    });
+  }
+
+  // Default to undefined (express-rate-limit internal MemoryStore) for dev/test
+  return undefined;
+}
+
+/**
+ * Creates configured rate limiting middleware.
+ * Supports injecting a custom store for isolated testing.
+ */
+export function createRateLimitMiddleware(customStore?: Store) {
+  const store = createRateLimitStore(customStore);
+
+  return rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: env.NODE_ENV === 'test' ? 1000 : 200,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    store,
+    validate: {
+      trustProxy: false,
+      xForwardedForHeader: false,
+      unsharedStore: false,
+    },
+    // Error handling on store failure
+    passOnStoreError: env.NODE_ENV !== 'production',
+    handler: (_req, res) => {
+      res.status(429).json(
+        errorResponse(
+          'Too many requests from this IP, please try again after 15 minutes.',
+          'RATE_LIMIT_EXCEEDED'
+        )
+      );
+    },
+  });
+}
+
+/**
+ * Global rate limiting middleware instance.
+ */
+export const rateLimitMiddleware = createRateLimitMiddleware();
