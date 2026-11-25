@@ -20,36 +20,51 @@ healthRouter.get('/', (_req: Request, res: Response) => {
 
 /**
  * GET /api/health/db
- * Database readiness probe.
- * Checks Supabase database connectivity with a lightweight probe.
- * Never exposes secrets, keys, connection strings, or stack traces.
+ * Database readiness probe (Hardened in Phase 6.2.4).
+ * Checks Supabase database connectivity with a minimal availability probe.
+ * Generic availability result: never exposes latency measurements, internal error
+ * details, schema names, connection strings, credentials, or stack traces.
  */
 healthRouter.get('/db', async (_req: Request, res: Response) => {
-  const result = await checkDatabaseConnection();
+  try {
+    const result = await checkDatabaseConnection();
 
-  if (result.connected) {
-    res.status(200).json({
-      success: true,
-      message: 'Database is connected and healthy',
+    if (result.connected) {
+      res.status(200).json({
+        success: true,
+        message: 'Database is connected and healthy',
+        database: {
+          status: 'connected',
+        },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    // Database unavailable - return 503 Service Unavailable with generic envelope
+    res.status(503).json({
+      success: false,
+      error: {
+        code: 'DATABASE_UNAVAILABLE',
+        message: 'Database service is currently unreachable',
+      },
       database: {
-        status: 'connected',
-        latencyMs: result.latencyMs,
+        status: 'disconnected',
       },
       timestamp: new Date().toISOString(),
     });
-    return;
+  } catch {
+    // Failsafe catch to guarantee no internal exceptions or stack traces leak
+    res.status(503).json({
+      success: false,
+      error: {
+        code: 'DATABASE_UNAVAILABLE',
+        message: 'Database service is currently unreachable',
+      },
+      database: {
+        status: 'disconnected',
+      },
+      timestamp: new Date().toISOString(),
+    });
   }
-
-  // Database unavailable - return 503 Service Unavailable without exposing internal secrets
-  res.status(503).json({
-    success: false,
-    error: {
-      code: 'DATABASE_UNAVAILABLE',
-      message: 'Database service is currently unreachable',
-    },
-    database: {
-      status: 'disconnected',
-    },
-    timestamp: new Date().toISOString(),
-  });
 });
