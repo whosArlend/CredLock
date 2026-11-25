@@ -23,6 +23,9 @@ import {
   deleteBreachRecordAsync,
   clearAllHistory,
   clearAllHistoryAsync,
+  clearLocalUserDataAsync,
+  CLEARABLE_LOCAL_STORAGE_KEYS,
+  isProtectedAuthStorageKey,
 } from '../src/services/historyStorage.ts';
 import type { SanitizedAnalysisRecord, SanitizedBreachRecord } from '../src/types/index.ts';
 
@@ -411,6 +414,78 @@ describe('Phase 2.6 — History, Detail & Data Persistence Test Suite', () => {
       const bAfter = await getAllFromStore(STORES.BREACH);
       assert.strictEqual(aAfter.length, 0);
       assert.strictEqual(bAfter.length, 0);
+    });
+  });
+
+  // Test 5: Phase 2 Local Data Safety — Auth Token Preservation
+  describe('5. Local Data Cleanup Safety (Auth Token Preservation)', () => {
+    it('identifies protected Supabase authentication storage keys accurately', () => {
+      assert.strictEqual(isProtectedAuthStorageKey('credlock-auth-token'), true);
+      assert.strictEqual(isProtectedAuthStorageKey('sb-xyz123-auth-token'), true);
+      assert.strictEqual(isProtectedAuthStorageKey('credlock_analysis_history'), false);
+      assert.strictEqual(isProtectedAuthStorageKey('breach_history'), false);
+    });
+
+    it('clears allowlisted history keys and IndexedDB while preserving Supabase auth tokens and unrelated keys', async () => {
+      // Seed in-memory/history caches
+      addAnalysisRecord({
+        id: 'safety-a1',
+        timestamp: new Date().toISOString(),
+        passwordLength: 14,
+        entropyBits: 72,
+        score: 4,
+        hasLowercase: true,
+        hasUppercase: true,
+        hasNumbers: true,
+        hasSymbols: true,
+        crackTimeDisplay: 'centuries',
+      });
+      addBreachRecord({
+        id: 'safety-b1',
+        timestamp: new Date().toISOString(),
+        isBreached: false,
+        breachCount: 0,
+      });
+
+      const store = new Map<string, string>([
+        ['credlock-auth-token', '{"access_token":"secret-jwt","refresh_token":"secret-rt"}'],
+        ['sb-abcdef-auth-token', '{"access_token":"legacy-sb-jwt"}'],
+        ['credlock-ui-theme', 'dark'],
+        ['other-app-key', 'keep-me'],
+        ['credlock_analysis_history', '[]'],
+        ['credlock_breach_history', '[]'],
+        ['analysis_history', '[]'],
+        ['breach_history', '[]'],
+      ]);
+
+      const mockStorage = {
+        removeItem: (key: string) => {
+          store.delete(key);
+        },
+      };
+
+      await clearLocalUserDataAsync(mockStorage);
+
+      // History caches must be cleared
+      assert.strictEqual(getAnalysisRecords().length, 0);
+      assert.strictEqual(getBreachRecords().length, 0);
+
+      // Allowlisted history keys must be removed
+      for (const allowedKey of CLEARABLE_LOCAL_STORAGE_KEYS) {
+        assert.strictEqual(store.has(allowedKey), false, `Expected allowlisted key ${allowedKey} to be removed`);
+      }
+
+      // Auth tokens and unrelated keys MUST be preserved
+      assert.strictEqual(
+        store.get('credlock-auth-token'),
+        '{"access_token":"secret-jwt","refresh_token":"secret-rt"}'
+      );
+      assert.strictEqual(
+        store.get('sb-abcdef-auth-token'),
+        '{"access_token":"legacy-sb-jwt"}'
+      );
+      assert.strictEqual(store.get('credlock-ui-theme'), 'dark');
+      assert.strictEqual(store.get('other-app-key'), 'keep-me');
     });
   });
 });

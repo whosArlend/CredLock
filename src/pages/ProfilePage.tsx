@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
-import { clearAllHistoryAsync } from '@/services/historyStorage';
+import { clearLocalUserDataAsync } from '@/services/historyStorage';
 import { AuthModal } from '@/features/auth';
 import {
   Shield,
@@ -32,19 +32,7 @@ export function ProfilePage() {
   const handleClearLocalData = async () => {
     try {
       setIsClearing(true);
-      await clearAllHistoryAsync();
-
-      // Clean CredLock-scoped keys from localStorage if present
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const keysToRemove: string[] = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && (key.startsWith('credlock') || key.startsWith('analysis') || key.startsWith('breach'))) {
-            keysToRemove.push(key);
-          }
-        }
-        keysToRemove.forEach((k) => localStorage.removeItem(k));
-      }
+      await clearLocalUserDataAsync();
 
       showToast({
         type: 'info',

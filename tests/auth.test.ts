@@ -1,5 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   validateUsername,
   normalizeUsername,
@@ -12,7 +14,6 @@ import {
   signUpWithUsername,
   signInWithUsername,
   signOutUser,
-  fetchUserProfile,
 } from '../src/features/auth/services/authService.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -1126,6 +1127,70 @@ describe('CredLock v2.0 — Phase 2.1: Username-Only Authentication Test Suite',
       });
       assert.strictEqual(res.success, false);
       assert.strictEqual(res.errorCode, '23505');
+    });
+  });
+
+  // ==========================================================================
+  // 13. Route Protection & Auth Guard Configuration (Phase 1 Hardening)
+  // ==========================================================================
+  describe('13. Route Protection & Auth Guard Configuration', () => {
+    const routesSource = fs.readFileSync(
+      path.resolve(process.cwd(), 'src/app/routes.tsx'),
+      'utf8'
+    );
+    const guardSource = fs.readFileSync(
+      path.resolve(process.cwd(), 'src/components/auth/ProtectedRoute.tsx'),
+      'utf8'
+    );
+
+    it('wraps /profile route with ProtectedRoute in src/app/routes.tsx', () => {
+      assert.match(routesSource, /import\s+\{\s*ProtectedRoute\s*\}\s+from\s+['"]@\/components\/auth\/ProtectedRoute['"]/);
+      assert.match(
+        routesSource,
+        /path:\s*'profile'[\s\S]*?<ProtectedRoute>\s*<ProfilePage\s*\/>\s*<\/ProtectedRoute>/
+      );
+    });
+
+    it('keeps public routes and local-first history routes accessible without ProtectedRoute', () => {
+      const unprotectedRoutes = [
+        "path: 'analyzer', element: <AnalyzerPage />",
+        "path: 'generator', element: <GeneratorPage />",
+        "path: 'breach-checker', element: <BreachCheckerPage />",
+        "path: 'breaches', element: <BreachesPage />",
+        "path: 'recommendations', element: <RecommendationsPage />",
+        "path: 'articles', element: <ArticlesPage />",
+        "path: 'analysis-history', element: <AnalysisHistoryPage />",
+        "path: 'analysis-history/:id', element: <AnalysisDetailPage />",
+        "path: 'breach-history', element: <BreachHistoryPage />",
+        "path: 'breach-history/:id', element: <BreachDetailPage />",
+        "path: 'signup', element: <SignUpPage />",
+        "path: 'register', element: <SignUpPage />",
+        "path: 'signin', element: <SignInPage />",
+        "path: 'login', element: <SignInPage />",
+      ];
+
+      for (const routeSnippet of unprotectedRoutes) {
+        assert.ok(
+          routesSource.includes(routeSnippet),
+          `Expected public/local-first route to remain unwrapped: ${routeSnippet}`
+        );
+      }
+    });
+
+    it('recognizes all registered auth routes (/signin, /signup, /login, /register) in ProtectedRoute', () => {
+      assert.match(guardSource, /'\/signin'/);
+      assert.match(guardSource, /'\/signup'/);
+      assert.match(guardSource, /'\/login'/);
+      assert.match(guardSource, /'\/register'/);
+    });
+
+    it('handles loading state, redirects unauthenticated users with from state, and blocks inactive profiles', () => {
+      assert.match(guardSource, /if\s*\(\s*isLoading\s*\)/);
+      assert.match(guardSource, /if\s*\(\s*!isAuthenticated\s*\)/);
+      assert.match(guardSource, /to="\/signin"/);
+      assert.match(guardSource, /state=\{!isAuthRoute \? \{ from: location \} : undefined\}/);
+      assert.match(guardSource, /if\s*\(\s*profile\s*&&\s*profile\.isActive\s*===\s*false\s*\)/);
+      assert.match(guardSource, /Enclave Access Suspended/);
     });
   });
 });

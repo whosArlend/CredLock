@@ -1,6 +1,7 @@
 import { lazy } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 // Route-based code splitting for minimal initial bundle payload
 const HomePage = lazy(() => import('@/pages/HomePage').then((m) => ({ default: m.HomePage })));
@@ -41,7 +42,14 @@ export const router = createBrowserRouter([
       { path: 'analysis-history/:id', element: <AnalysisDetailPage /> },
       { path: 'breach-history', element: <BreachHistoryPage /> },
       { path: 'breach-history/:id', element: <BreachDetailPage /> },
-      { path: 'profile', element: <ProfilePage /> },
+      {
+        path: 'profile',
+        element: (
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        ),
+      },
       { path: 'signup', element: <SignUpPage /> },
       { path: 'register', element: <SignUpPage /> },
       { path: 'signin', element: <SignInPage /> },

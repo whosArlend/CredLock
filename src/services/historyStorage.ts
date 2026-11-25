@@ -328,3 +328,53 @@ export async function clearAllHistoryAsync(): Promise<void> {
     ]);
   }
 }
+
+/**
+ * Explicit allowlist of non-authentication localStorage keys designated for local history cleanup.
+ * Broad prefixes (e.g., 'credlock') are intentionally avoided so Supabase auth tokens
+ * and unrelated preferences are never removed.
+ */
+export const CLEARABLE_LOCAL_STORAGE_KEYS = [
+  'credlock_analysis_history',
+  'credlock_breach_history',
+  'analysis_history',
+  'breach_history',
+] as const;
+
+/**
+ * Protected authentication storage keys that must NEVER be removed by local data cleanup.
+ */
+export const PROTECTED_AUTH_STORAGE_KEYS = ['credlock-auth-token'] as const;
+
+export function isProtectedAuthStorageKey(key: string): boolean {
+  return (
+    (PROTECTED_AUTH_STORAGE_KEYS as readonly string[]).includes(key) ||
+    /^sb-.*-auth-token$/i.test(key)
+  );
+}
+
+/**
+ * Safely clears all local analysis and breach history from IndexedDB and
+ * explicitly allowlisted localStorage keys, strictly preserving Supabase Auth tokens
+ * and unrelated application data.
+ */
+export async function clearLocalUserDataAsync(
+  storage?: Pick<Storage, 'removeItem'> | null
+): Promise<void> {
+  await clearAllHistoryAsync();
+
+  const targetStorage =
+    storage !== undefined
+      ? storage
+      : typeof window !== 'undefined' && window.localStorage
+        ? window.localStorage
+        : null;
+
+  if (targetStorage) {
+    for (const key of CLEARABLE_LOCAL_STORAGE_KEYS) {
+      if (!isProtectedAuthStorageKey(key)) {
+        targetStorage.removeItem(key);
+      }
+    }
+  }
+}
