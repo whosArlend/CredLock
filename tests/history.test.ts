@@ -14,18 +14,28 @@ import {
 } from '../src/services/db.ts';
 import {
   addAnalysisRecord,
+  addAnalysisRecordAsync,
   getAnalysisRecords,
+  getAnalysisRecordsAsync,
   getAnalysisRecordById,
+  getAnalysisRecordByIdAsync,
   deleteAnalysisRecordAsync,
   addBreachRecord,
+  addBreachRecordAsync,
   getBreachRecords,
+  getBreachRecordsAsync,
   getBreachRecordById,
+  getBreachRecordByIdAsync,
   deleteBreachRecordAsync,
   clearAllHistory,
   clearAllHistoryAsync,
+  clearOwnerHistoryAsync,
   clearLocalUserDataAsync,
   CLEARABLE_LOCAL_STORAGE_KEYS,
   isProtectedAuthStorageKey,
+  GUEST_OWNER_ID,
+  resolveHistoryOwnerId,
+  normalizeRecordOwnerId,
 } from '../src/services/historyStorage.ts';
 import type { SanitizedAnalysisRecord, SanitizedBreachRecord } from '../src/types/index.ts';
 
@@ -36,9 +46,9 @@ import type { SanitizedAnalysisRecord, SanitizedBreachRecord } from '../src/type
 describe('Phase 2.6 — History, Detail & Data Persistence Test Suite', () => {
   // Test 1: Database Constants & Schema Configuration
   describe('1. Database Constants & Object Store Names', () => {
-    it('uses the canonical credlock-db database name and version 1', () => {
+    it('uses the canonical credlock-db database name and version 2 (with ownerId schema)', () => {
       assert.strictEqual(DB_NAME, 'credlock-db');
-      assert.strictEqual(DB_VERSION, 1);
+      assert.strictEqual(DB_VERSION, 2);
     });
 
     it('defines distinct object stores for analysis and breach verification', () => {
@@ -486,6 +496,181 @@ describe('Phase 2.6 — History, Detail & Data Persistence Test Suite', () => {
       );
       assert.strictEqual(store.get('credlock-ui-theme'), 'dark');
       assert.strictEqual(store.get('other-app-key'), 'keep-me');
+    });
+  });
+
+  // Test 6: Phase 3 — Owner Isolation Across Guest, User A, and User B
+  describe('6. Phase 3 — History Owner Isolation', () => {
+    const USER_A = '11111111-1111-4111-8111-111111111111';
+    const USER_B = '22222222-2222-4222-8222-222222222222';
+
+    const makeAnalysis = (id: string, score = 3): SanitizedAnalysisRecord => ({
+      id,
+      timestamp: new Date().toISOString(),
+      passwordLength: 14,
+      entropyBits: 70,
+      score,
+      hasLowercase: true,
+      hasUppercase: true,
+      hasNumbers: true,
+      hasSymbols: true,
+      crackTimeDisplay: 'years',
+    });
+
+    const makeBreach = (id: string, isBreached = false): SanitizedBreachRecord => ({
+      id,
+      timestamp: new Date().toISOString(),
+      isBreached,
+      breachCount: isBreached ? 5 : 0,
+    });
+
+    beforeEach(async () => {
+      await clearAllHistoryAsync();
+    });
+
+    afterEach(async () => {
+      await clearAllHistoryAsync();
+    });
+
+    it('resolves owner IDs safely and treats legacy unowned records as guest-owned', () => {
+      assert.strictEqual(resolveHistoryOwnerId(null), GUEST_OWNER_ID);
+      assert.strictEqual(resolveHistoryOwnerId(undefined), GUEST_OWNER_ID);
+      assert.strictEqual(resolveHistoryOwnerId('   '), GUEST_OWNER_ID);
+      assert.strictEqual(resolveHistoryOwnerId(USER_A), USER_A);
+
+      assert.strictEqual(normalizeRecordOwnerId({}), GUEST_OWNER_ID);
+      assert.strictEqual(normalizeRecordOwnerId({ ownerId: undefined }), GUEST_OWNER_ID);
+      assert.strictEqual(normalizeRecordOwnerId({ ownerId: '' }), GUEST_OWNER_ID);
+      assert.strictEqual(normalizeRecordOwnerId({ ownerId: USER_B }), USER_B);
+    });
+
+    it('strictly isolates analysis and breach records between Guest, User A, and User B', async () => {
+      await addAnalysisRecordAsync(makeAnalysis('guest-a1', 1), GUEST_OWNER_ID);
+      await addAnalysisRecordAsync(makeAnalysis('usera-a1', 3), USER_A);
+      await addAnalysisRecordAsync(makeAnalysis('userb-a1', 4), USER_B);
+
+      await addBreachRecordAsync(makeBreach('guest-b1', true), GUEST_OWNER_ID);
+      await addBreachRecordAsync(makeBreach('usera-b1', false), USER_A);
+      await addBreachRecordAsync(makeBreach('userb-b1', true), USER_B);
+
+      // Guest sees only guest records
+      const guestAnalysis = await getAnalysisRecordsAsync(GUEST_OWNER_ID);
+      const guestBreach = await getBreachRecordsAsync(GUEST_OWNER_ID);
+      assert.deepStrictEqual(guestAnalysis.map((r) => r.id), ['guest-a1']);
+      assert.deepStrictEqual(guestBreach.map((r) => r.id), ['guest-b1']);
+
+      // User A sees only User A records (guest history is NOT merged into User A)
+      const userAAnalysis = await getAnalysisRecordsAsync(USER_A);
+      const userABreach = await getBreachRecordsAsync(USER_A);
+      assert.deepStrictEqual(userAAnalysis.map((r) => r.id), ['usera-a1']);
+      assert.deepStrictEqual(userABreach.map((r) => r.id), ['usera-b1']);
+
+      // User B sees only User B records
+      const userBAnalysis = await getAnalysisRecordsAsync(USER_B);
+      const userBBreach = await getBreachRecordsAsync(USER_B);
+      assert.deepStrictEqual(userBAnalysis.map((r) => r.id), ['userb-a1']);
+      assert.deepStrictEqual(userBBreach.map((r) => r.id), ['userb-b1']);
+    });
+
+    it('blocks direct lookup by foreign record ID (returns undefined)', async () => {
+      await addAnalysisRecordAsync(makeAnalysis('usera-secret-a'), USER_A);
+      await addBreachRecordAsync(makeBreach('usera-secret-b', true), USER_A);
+
+      // Same owner succeeds
+      assert.ok(getAnalysisRecordById('usera-secret-a', USER_A));
+      assert.ok(await getAnalysisRecordByIdAsync('usera-secret-a', USER_A));
+      assert.ok(getBreachRecordById('usera-secret-b', USER_A));
+      assert.ok(await getBreachRecordByIdAsync('usera-secret-b', USER_A));
+
+      // Guest and User B receive undefined
+      assert.strictEqual(getAnalysisRecordById('usera-secret-a', GUEST_OWNER_ID), undefined);
+      assert.strictEqual(await getAnalysisRecordByIdAsync('usera-secret-a', GUEST_OWNER_ID), undefined);
+      assert.strictEqual(getAnalysisRecordById('usera-secret-a', USER_B), undefined);
+      assert.strictEqual(await getAnalysisRecordByIdAsync('usera-secret-a', USER_B), undefined);
+
+      assert.strictEqual(getBreachRecordById('usera-secret-b', GUEST_OWNER_ID), undefined);
+      assert.strictEqual(await getBreachRecordByIdAsync('usera-secret-b', GUEST_OWNER_ID), undefined);
+      assert.strictEqual(getBreachRecordById('usera-secret-b', USER_B), undefined);
+      assert.strictEqual(await getBreachRecordByIdAsync('usera-secret-b', USER_B), undefined);
+    });
+
+    it('prevents cross-owner overwrite and enforces owner-scoped deletes', async () => {
+      await addAnalysisRecordAsync(makeAnalysis('shared-id-a', 4), USER_A);
+      await addBreachRecordAsync(makeBreach('shared-id-b', false), USER_A);
+
+      // User B cannot overwrite User A's record by reusing the same ID
+      await assert.rejects(
+        () => addAnalysisRecordAsync(makeAnalysis('shared-id-a', 0), USER_B),
+        /another user/i
+      );
+      await assert.rejects(
+        () => addBreachRecordAsync(makeBreach('shared-id-b', true), USER_B),
+        /another user/i
+      );
+
+      // User B and Guest cannot delete User A's record
+      assert.strictEqual(await deleteAnalysisRecordAsync('shared-id-a', USER_B), false);
+      assert.strictEqual(await deleteAnalysisRecordAsync('shared-id-a', GUEST_OWNER_ID), false);
+      assert.strictEqual(await deleteBreachRecordAsync('shared-id-b', USER_B), false);
+      assert.strictEqual(await deleteBreachRecordAsync('shared-id-b', GUEST_OWNER_ID), false);
+
+      // User A's records remain intact
+      assert.strictEqual((await getAnalysisRecordByIdAsync('shared-id-a', USER_A))?.score, 4);
+      assert.strictEqual((await getBreachRecordByIdAsync('shared-id-b', USER_A))?.isBreached, false);
+
+      // User A can delete their own records
+      assert.strictEqual(await deleteAnalysisRecordAsync('shared-id-a', USER_A), true);
+      assert.strictEqual(await deleteBreachRecordAsync('shared-id-b', USER_A), true);
+      assert.strictEqual(await getAnalysisRecordByIdAsync('shared-id-a', USER_A), undefined);
+      assert.strictEqual(await getBreachRecordByIdAsync('shared-id-b', USER_A), undefined);
+    });
+
+    it('scopes clearOwnerHistoryAsync strictly to the target owner', async () => {
+      await addAnalysisRecordAsync(makeAnalysis('g1'), GUEST_OWNER_ID);
+      await addAnalysisRecordAsync(makeAnalysis('a1'), USER_A);
+      await addAnalysisRecordAsync(makeAnalysis('b1'), USER_B);
+      await addBreachRecordAsync(makeBreach('gb1'), GUEST_OWNER_ID);
+      await addBreachRecordAsync(makeBreach('ab1'), USER_A);
+      await addBreachRecordAsync(makeBreach('bb1'), USER_B);
+
+      await clearOwnerHistoryAsync(USER_A);
+
+      assert.strictEqual((await getAnalysisRecordsAsync(USER_A)).length, 0);
+      assert.strictEqual((await getBreachRecordsAsync(USER_A)).length, 0);
+
+      // Guest and User B remain untouched
+      assert.deepStrictEqual((await getAnalysisRecordsAsync(GUEST_OWNER_ID)).map((r) => r.id), ['g1']);
+      assert.deepStrictEqual((await getBreachRecordsAsync(GUEST_OWNER_ID)).map((r) => r.id), ['gb1']);
+      assert.deepStrictEqual((await getAnalysisRecordsAsync(USER_B)).map((r) => r.id), ['b1']);
+      assert.deepStrictEqual((await getBreachRecordsAsync(USER_B)).map((r) => r.id), ['bb1']);
+    });
+
+    it('keeps user history unavailable in guest scope after logout and restores it when the same user logs back in', async () => {
+      // User A creates records while logged in
+      await addAnalysisRecordAsync(makeAnalysis('a-persist-1'), USER_A);
+      await addBreachRecordAsync(makeBreach('a-persist-2', true), USER_A);
+
+      // User A logs out -> active scope becomes guest
+      assert.strictEqual(getAnalysisRecords(GUEST_OWNER_ID).length, 0);
+      assert.strictEqual(getBreachRecords(GUEST_OWNER_ID).length, 0);
+
+      // User A logs back in -> User A's records are still intact
+      assert.deepStrictEqual(getAnalysisRecords(USER_A).map((r) => r.id), ['a-persist-1']);
+      assert.deepStrictEqual(getBreachRecords(USER_A).map((r) => r.id), ['a-persist-2']);
+    });
+
+    it('treats legacy unowned records in cache as guest-owned and hides them from authenticated users', () => {
+      // Simulate legacy record without ownerId
+      addAnalysisRecord(makeAnalysis('legacy-unowned-a'));
+      addBreachRecord(makeBreach('legacy-unowned-b'));
+
+      // Visible to guest
+      assert.strictEqual(getAnalysisRecords(GUEST_OWNER_ID).some((r) => r.id === 'legacy-unowned-a'), true);
+      assert.strictEqual(getBreachRecords(GUEST_OWNER_ID).some((r) => r.id === 'legacy-unowned-b'), true);
+
+      // Hidden from User A
+      assert.strictEqual(getAnalysisRecords(USER_A).some((r) => r.id === 'legacy-unowned-a'), false);
+      assert.strictEqual(getBreachRecords(USER_A).some((r) => r.id === 'legacy-unowned-b'), false);
     });
   });
 });

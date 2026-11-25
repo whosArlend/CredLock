@@ -5,7 +5,8 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
-import { addBreachRecord } from '@/services/historyStorage';
+import { useAuth } from '@/hooks/useAuth';
+import { addBreachRecord, resolveHistoryOwnerId } from '@/services/historyStorage';
 import {
   checkPasswordBreach,
   BreachCheckError,
@@ -18,6 +19,7 @@ import type { BreachCheckResult, BreachCheckStatus, SanitizedBreachRecord } from
 
 export function BreachCheckerPage() {
   const { showToast } = useToast();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<BreachCheckStatus>('idle');
   const [result, setResult] = useState<BreachCheckResult | null>(null);
@@ -131,6 +133,15 @@ export function BreachCheckerPage() {
   const handleSaveToHistory = () => {
     if (!result || isSaved) return;
 
+    if (isAuthLoading) {
+      showToast({
+        type: 'info',
+        title: 'Session Initializing',
+        message: 'Please wait a moment while your session initializes before archiving.',
+      });
+      return;
+    }
+
     // Strict sanitization: Only save id, timestamp, exposure boolean, and count.
     // Absolutely NO password, password fragments, full hash, prefix, or suffix.
     const sanitizedRecord: SanitizedBreachRecord = {
@@ -140,7 +151,8 @@ export function BreachCheckerPage() {
       breachCount: result.breachCount,
     };
 
-    addBreachRecord(sanitizedRecord);
+    const ownerId = resolveHistoryOwnerId(user?.id);
+    addBreachRecord(sanitizedRecord, ownerId);
     setIsSaved(true);
 
     showToast({

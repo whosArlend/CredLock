@@ -13,7 +13,8 @@
  */
 
 export const DB_NAME = 'credlock-db';
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
+export const LEGACY_DEFAULT_OWNER_ID = 'guest';
 
 export const STORES = {
   ANALYSIS: 'analysis_history',
@@ -46,20 +47,38 @@ export function openCredLockDatabase(): Promise<IDBDatabase> {
     const request = window.indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
+      const openReq = event.target as IDBOpenDBRequest;
+      const db = openReq.result;
+      const upgradeTx = openReq.transaction;
 
       // Object Store 1: Analysis History
+      let analysisStore: IDBObjectStore;
       if (!db.objectStoreNames.contains(STORES.ANALYSIS)) {
-        const analysisStore = db.createObjectStore(STORES.ANALYSIS, { keyPath: 'id' });
+        analysisStore = db.createObjectStore(STORES.ANALYSIS, { keyPath: 'id' });
         analysisStore.createIndex('timestamp', 'timestamp', { unique: false });
         analysisStore.createIndex('score', 'score', { unique: false });
+        analysisStore.createIndex('ownerId', 'ownerId', { unique: false });
+      } else if (upgradeTx) {
+        analysisStore = upgradeTx.objectStore(STORES.ANALYSIS);
+        if (!analysisStore.indexNames.contains('ownerId')) {
+          analysisStore.createIndex('ownerId', 'ownerId', { unique: false });
+        }
+        migrateLegacyStoreOwnership(analysisStore);
       }
 
       // Object Store 2: Breach History
+      let breachStore: IDBObjectStore;
       if (!db.objectStoreNames.contains(STORES.BREACH)) {
-        const breachStore = db.createObjectStore(STORES.BREACH, { keyPath: 'id' });
+        breachStore = db.createObjectStore(STORES.BREACH, { keyPath: 'id' });
         breachStore.createIndex('timestamp', 'timestamp', { unique: false });
         breachStore.createIndex('isBreached', 'isBreached', { unique: false });
+        breachStore.createIndex('ownerId', 'ownerId', { unique: false });
+      } else if (upgradeTx) {
+        breachStore = upgradeTx.objectStore(STORES.BREACH);
+        if (!breachStore.indexNames.contains('ownerId')) {
+          breachStore.createIndex('ownerId', 'ownerId', { unique: false });
+        }
+        migrateLegacyStoreOwnership(breachStore);
       }
     };
 
@@ -76,6 +95,27 @@ export function openCredLockDatabase(): Promise<IDBDatabase> {
       console.warn('[CredLock DB] Database upgrade blocked by another active connection.');
     };
   });
+}
+
+/**
+ * Idempotently assigns legacy records (without ownerId) to the 'guest' scope
+ * inside the atomic IndexedDB versionchange transaction without deleting any records.
+ */
+function migrateLegacyStoreOwnership(store: IDBObjectStore): void {
+  if (typeof store.openCursor !== 'function') return;
+
+  const cursorReq = store.openCursor();
+  cursorReq.onsuccess = () => {
+    const cursor = cursorReq.result;
+    if (!cursor) return;
+
+    const record = cursor.value as { ownerId?: unknown } | undefined;
+    if (record && (typeof record.ownerId !== 'string' || record.ownerId.trim() === '')) {
+      record.ownerId = LEGACY_DEFAULT_OWNER_ID;
+      cursor.update(record);
+    }
+    cursor.continue();
+  };
 }
 
 /**

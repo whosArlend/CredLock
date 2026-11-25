@@ -10,15 +10,18 @@ import {
 } from './db.ts';
 
 /**
- * Storage Repository for Sanitized CredLock Records (Phase 2.6)
+ * Storage Repository for Sanitized CredLock Records (Phase 2.6 + Phase 3 Owner Isolation)
  *
  * Primary storage: IndexedDB ("credlock-db")
  * In-memory cache: Maintained for instant synchronous reads and Node.js testing.
  *
- * Security Guarantee:
- * Under NO circumstances are plaintext passwords, full hashes, prefixes,
- * or suffixes persisted or cached here.
+ * Security Guarantees:
+ * - Under NO circumstances are plaintext passwords, full hashes, prefixes,
+ *   or suffixes persisted or cached here.
+ * - Every record is strictly scoped to an ownerId ('guest' or Supabase user UUID).
  */
+
+export const GUEST_OWNER_ID = 'guest' as const;
 
 let analysisCache: SanitizedAnalysisRecord[] = [];
 let breachCache: SanitizedBreachRecord[] = [];
@@ -39,9 +42,51 @@ function notifyChange(): void {
 }
 
 /**
+ * Resolves an owner identifier from the authenticated user UUID or defaults to 'guest'.
+ */
+export function resolveHistoryOwnerId(userId?: string | null): string {
+  if (typeof userId === 'string' && userId.trim().length > 0) {
+    return userId.trim();
+  }
+  return GUEST_OWNER_ID;
+}
+
+/**
+ * Normalizes a persisted record's ownerId, treating legacy unowned records as 'guest'.
+ */
+export function normalizeRecordOwnerId(record?: { ownerId?: string | null } | null): string {
+  if (record && typeof record.ownerId === 'string' && record.ownerId.trim().length > 0) {
+    return record.ownerId.trim();
+  }
+  return GUEST_OWNER_ID;
+}
+
+function withOwner<T extends { ownerId?: string }>(record: T, ownerId: string): T & { ownerId: string } {
+  return {
+    ...record,
+    ownerId,
+  };
+}
+
+function normalizeLegacyRecord<T extends { ownerId?: string }>(record: T): T & { ownerId: string } {
+  return {
+    ...record,
+    ownerId: normalizeRecordOwnerId(record),
+  };
+}
+
+function findCrossOwnerConflict<T extends { id: string; ownerId?: string }>(
+  cache: T[],
+  id: string,
+  targetOwnerId: string
+): boolean {
+  const existing = cache.find((r) => r.id.toLowerCase() === id.toLowerCase());
+  return Boolean(existing && normalizeRecordOwnerId(existing) !== targetOwnerId);
+}
+
+/**
  * Initializes persistent history from IndexedDB.
- * If in-memory records already exist (e.g. created before DB opened),
- * migrates them to IndexedDB once without duplicates.
+ * Legacy records without ownerId are safely normalized to 'guest' without data loss.
  */
 export async function initHistoryStorage(): Promise<void> {
   if (isInitialized) return;
@@ -54,26 +99,31 @@ export async function initHistoryStorage(): Promise<void> {
     }
 
     try {
-      const [dbAnalysis, dbBreach] = await Promise.all([
+      const [rawAnalysis, rawBreach] = await Promise.all([
         getAllFromStore<SanitizedAnalysisRecord>(STORES.ANALYSIS),
         getAllFromStore<SanitizedBreachRecord>(STORES.BREACH),
       ]);
+
+      const dbAnalysis = rawAnalysis.map(normalizeLegacyRecord);
+      const dbBreach = rawBreach.map(normalizeLegacyRecord);
 
       // One-time session migration: if any in-memory records existed prior to DB init,
       // save them into IndexedDB if not already present
       const existingAnalysisIds = new Set(dbAnalysis.map((r) => r.id.toLowerCase()));
       for (const memRecord of analysisCache) {
         if (!existingAnalysisIds.has(memRecord.id.toLowerCase())) {
-          await putInStore(STORES.ANALYSIS, memRecord);
-          dbAnalysis.push(memRecord);
+          const normalized = normalizeLegacyRecord(memRecord);
+          await putInStore(STORES.ANALYSIS, normalized);
+          dbAnalysis.push(normalized);
         }
       }
 
       const existingBreachIds = new Set(dbBreach.map((r) => r.id.toLowerCase()));
       for (const memRecord of breachCache) {
         if (!existingBreachIds.has(memRecord.id.toLowerCase())) {
-          await putInStore(STORES.BREACH, memRecord);
-          dbBreach.push(memRecord);
+          const normalized = normalizeLegacyRecord(memRecord);
+          await putInStore(STORES.BREACH, normalized);
+          dbBreach.push(normalized);
         }
       }
 
@@ -102,198 +152,389 @@ if (typeof window !== 'undefined') {
 }
 
 /* ==========================================================================
-   Analysis History Operations
+   Analysis History Operations (Owner-Scoped)
    ========================================================================== */
 
 /**
- * Retrieves all sanitized analysis records (synchronous cached snapshot).
+ * Retrieves sanitized analysis records belonging to the specified owner (synchronous snapshot).
  */
-export function getAnalysisRecords(): SanitizedAnalysisRecord[] {
-  return [...analysisCache];
+export function getAnalysisRecords(ownerId: string = GUEST_OWNER_ID): SanitizedAnalysisRecord[] {
+  const resolvedOwner = resolveHistoryOwnerId(ownerId);
+  return analysisCache.filter((r) => normalizeRecordOwnerId(r) === resolvedOwner);
 }
 
 /**
- * Retrieves all sanitized analysis records asynchronously from IndexedDB.
+ * Retrieves sanitized analysis records belonging to the specified owner from IndexedDB.
  */
-export async function getAnalysisRecordsAsync(): Promise<SanitizedAnalysisRecord[]> {
+export async function getAnalysisRecordsAsync(
+  ownerId: string = GUEST_OWNER_ID
+): Promise<SanitizedAnalysisRecord[]> {
+  const resolvedOwner = resolveHistoryOwnerId(ownerId);
   await initHistoryStorage();
   if (isIndexedDBAvailable()) {
     try {
-      const records = await getAllFromStore<SanitizedAnalysisRecord>(STORES.ANALYSIS);
+      const records = (await getAllFromStore<SanitizedAnalysisRecord>(STORES.ANALYSIS)).map(
+        normalizeLegacyRecord
+      );
       analysisCache = records;
-      return [...records];
+      return records.filter((r) => normalizeRecordOwnerId(r) === resolvedOwner);
     } catch (err) {
       console.warn('[CredLock Storage] Error reading analysis records from IndexedDB:', err);
     }
   }
-  return [...analysisCache];
+  return getAnalysisRecords(resolvedOwner);
 }
 
 /**
- * Retrieves a single sanitized analysis record by ID (synchronous cached snapshot).
+ * Retrieves a single sanitized analysis record by ID only if owned by ownerId (synchronous).
  */
-export function getAnalysisRecordById(id: string | undefined): SanitizedAnalysisRecord | undefined {
+export function getAnalysisRecordById(
+  id: string | undefined,
+  ownerId: string = GUEST_OWNER_ID
+): SanitizedAnalysisRecord | undefined {
   if (!id) return undefined;
-  return analysisCache.find((rec) => rec.id.toLowerCase() === id.toLowerCase());
+  const resolvedOwner = resolveHistoryOwnerId(ownerId);
+  const found = analysisCache.find((rec) => rec.id.toLowerCase() === id.toLowerCase());
+  if (!found || normalizeRecordOwnerId(found) !== resolvedOwner) {
+    return undefined;
+  }
+  return found;
 }
 
 /**
- * Retrieves a single sanitized analysis record by ID asynchronously from IndexedDB.
+ * Retrieves a single sanitized analysis record by ID only if owned by ownerId (async).
  */
-export async function getAnalysisRecordByIdAsync(id: string | undefined): Promise<SanitizedAnalysisRecord | undefined> {
+export async function getAnalysisRecordByIdAsync(
+  id: string | undefined,
+  ownerId: string = GUEST_OWNER_ID
+): Promise<SanitizedAnalysisRecord | undefined> {
   if (!id) return undefined;
+  const resolvedOwner = resolveHistoryOwnerId(ownerId);
   await initHistoryStorage();
 
   if (isIndexedDBAvailable()) {
     try {
       const record = await getByIdFromStore<SanitizedAnalysisRecord>(STORES.ANALYSIS, id);
-      if (record) return record;
+      if (record) {
+        const normalized = normalizeLegacyRecord(record);
+        return normalizeRecordOwnerId(normalized) === resolvedOwner ? normalized : undefined;
+      }
     } catch (err) {
       console.warn(`[CredLock Storage] Error reading analysis record ${id} from IndexedDB:`, err);
     }
   }
 
-  return getAnalysisRecordById(id);
+  return getAnalysisRecordById(id, resolvedOwner);
 }
 
 /**
- * Adds an actual evaluated sanitized analysis record.
- * Updates both the in-memory cache and IndexedDB.
+ * Adds an evaluated sanitized analysis record under the specified owner scope.
  */
-export function addAnalysisRecord(record: SanitizedAnalysisRecord): void {
-  // Update in-memory cache immediately
-  analysisCache = [record, ...analysisCache.filter((r) => r.id !== record.id)];
+export function addAnalysisRecord(
+  record: SanitizedAnalysisRecord,
+  ownerId?: string | null
+): void {
+  const resolvedOwner = resolveHistoryOwnerId(ownerId ?? record.ownerId);
+  if (findCrossOwnerConflict(analysisCache, record.id, resolvedOwner)) {
+    return;
+  }
+
+  const ownedRecord = withOwner(record, resolvedOwner);
+  analysisCache = [
+    ownedRecord,
+    ...analysisCache.filter((r) => r.id.toLowerCase() !== ownedRecord.id.toLowerCase()),
+  ];
   notifyChange();
 
-  // Persist to IndexedDB asynchronously
   if (isIndexedDBAvailable()) {
-    putInStore(STORES.ANALYSIS, record).catch((err) => {
-      console.warn('[CredLock Storage] Failed to persist analysis record to IndexedDB:', err);
-    });
+    getByIdFromStore<SanitizedAnalysisRecord>(STORES.ANALYSIS, ownedRecord.id)
+      .then((existing) => {
+        if (existing && normalizeRecordOwnerId(existing) !== resolvedOwner) {
+          return;
+        }
+        return putInStore(STORES.ANALYSIS, ownedRecord);
+      })
+      .catch((err) => {
+        console.warn('[CredLock Storage] Failed to persist analysis record to IndexedDB:', err);
+      });
   }
 }
 
 /**
- * Asynchronous version of addAnalysisRecord awaiting IndexedDB write.
+ * Asynchronous version of addAnalysisRecord awaiting IndexedDB write and enforcing ownership.
  */
-export async function addAnalysisRecordAsync(record: SanitizedAnalysisRecord): Promise<void> {
-  analysisCache = [record, ...analysisCache.filter((r) => r.id !== record.id)];
+export async function addAnalysisRecordAsync(
+  record: SanitizedAnalysisRecord,
+  ownerId?: string | null
+): Promise<void> {
+  const resolvedOwner = resolveHistoryOwnerId(ownerId ?? record.ownerId);
+  if (findCrossOwnerConflict(analysisCache, record.id, resolvedOwner)) {
+    throw new Error('Cannot overwrite an analysis record owned by another user.');
+  }
+
+  if (isIndexedDBAvailable()) {
+    const existing = await getByIdFromStore<SanitizedAnalysisRecord>(STORES.ANALYSIS, record.id);
+    if (existing && normalizeRecordOwnerId(existing) !== resolvedOwner) {
+      throw new Error('Cannot overwrite an analysis record owned by another user.');
+    }
+  }
+
+  const ownedRecord = withOwner(record, resolvedOwner);
+  analysisCache = [
+    ownedRecord,
+    ...analysisCache.filter((r) => r.id.toLowerCase() !== ownedRecord.id.toLowerCase()),
+  ];
   notifyChange();
 
   if (isIndexedDBAvailable()) {
-    await putInStore(STORES.ANALYSIS, record);
+    await putInStore(STORES.ANALYSIS, ownedRecord);
   }
 }
 
 /**
- * Deletes a single analysis record by ID from cache and IndexedDB.
+ * Deletes a single analysis record by ID only if it belongs to the specified owner.
+ * Returns true if deleted, false if not found or owned by another user.
  */
-export async function deleteAnalysisRecordAsync(id: string): Promise<void> {
+export async function deleteAnalysisRecordAsync(
+  id: string,
+  ownerId: string = GUEST_OWNER_ID
+): Promise<boolean> {
+  if (!id) return false;
+  const resolvedOwner = resolveHistoryOwnerId(ownerId);
+
+  const cached = analysisCache.find((r) => r.id.toLowerCase() === id.toLowerCase());
+  if (cached && normalizeRecordOwnerId(cached) !== resolvedOwner) {
+    return false;
+  }
+
+  if (isIndexedDBAvailable()) {
+    const stored = await getByIdFromStore<SanitizedAnalysisRecord>(STORES.ANALYSIS, id);
+    if (stored && normalizeRecordOwnerId(stored) !== resolvedOwner) {
+      return false;
+    }
+    if (!cached && !stored) {
+      return false;
+    }
+    await deleteFromStore(STORES.ANALYSIS, id);
+  } else if (!cached) {
+    return false;
+  }
+
   analysisCache = analysisCache.filter((r) => r.id.toLowerCase() !== id.toLowerCase());
   notifyChange();
-
-  if (isIndexedDBAvailable()) {
-    await deleteFromStore(STORES.ANALYSIS, id);
-  }
+  return true;
 }
 
 /* ==========================================================================
-   Breach History Operations
+   Breach History Operations (Owner-Scoped)
    ========================================================================== */
 
 /**
- * Retrieves all sanitized breach query records (synchronous cached snapshot).
+ * Retrieves sanitized breach query records belonging to the specified owner (synchronous).
  */
-export function getBreachRecords(): SanitizedBreachRecord[] {
-  return [...breachCache];
+export function getBreachRecords(ownerId: string = GUEST_OWNER_ID): SanitizedBreachRecord[] {
+  const resolvedOwner = resolveHistoryOwnerId(ownerId);
+  return breachCache.filter((r) => normalizeRecordOwnerId(r) === resolvedOwner);
 }
 
 /**
- * Retrieves all sanitized breach query records asynchronously from IndexedDB.
+ * Retrieves sanitized breach query records belonging to the specified owner from IndexedDB.
  */
-export async function getBreachRecordsAsync(): Promise<SanitizedBreachRecord[]> {
+export async function getBreachRecordsAsync(
+  ownerId: string = GUEST_OWNER_ID
+): Promise<SanitizedBreachRecord[]> {
+  const resolvedOwner = resolveHistoryOwnerId(ownerId);
   await initHistoryStorage();
   if (isIndexedDBAvailable()) {
     try {
-      const records = await getAllFromStore<SanitizedBreachRecord>(STORES.BREACH);
+      const records = (await getAllFromStore<SanitizedBreachRecord>(STORES.BREACH)).map(
+        normalizeLegacyRecord
+      );
       breachCache = records;
-      return [...records];
+      return records.filter((r) => normalizeRecordOwnerId(r) === resolvedOwner);
     } catch (err) {
       console.warn('[CredLock Storage] Error reading breach records from IndexedDB:', err);
     }
   }
-  return [...breachCache];
+  return getBreachRecords(resolvedOwner);
 }
 
 /**
- * Retrieves a single sanitized breach record by ID (synchronous cached snapshot).
+ * Retrieves a single sanitized breach record by ID only if owned by ownerId (synchronous).
  */
-export function getBreachRecordById(id: string | undefined): SanitizedBreachRecord | undefined {
+export function getBreachRecordById(
+  id: string | undefined,
+  ownerId: string = GUEST_OWNER_ID
+): SanitizedBreachRecord | undefined {
   if (!id) return undefined;
-  return breachCache.find((rec) => rec.id.toLowerCase() === id.toLowerCase());
+  const resolvedOwner = resolveHistoryOwnerId(ownerId);
+  const found = breachCache.find((rec) => rec.id.toLowerCase() === id.toLowerCase());
+  if (!found || normalizeRecordOwnerId(found) !== resolvedOwner) {
+    return undefined;
+  }
+  return found;
 }
 
 /**
- * Retrieves a single sanitized breach record by ID asynchronously from IndexedDB.
+ * Retrieves a single sanitized breach record by ID only if owned by ownerId (async).
  */
-export async function getBreachRecordByIdAsync(id: string | undefined): Promise<SanitizedBreachRecord | undefined> {
+export async function getBreachRecordByIdAsync(
+  id: string | undefined,
+  ownerId: string = GUEST_OWNER_ID
+): Promise<SanitizedBreachRecord | undefined> {
   if (!id) return undefined;
+  const resolvedOwner = resolveHistoryOwnerId(ownerId);
   await initHistoryStorage();
 
   if (isIndexedDBAvailable()) {
     try {
       const record = await getByIdFromStore<SanitizedBreachRecord>(STORES.BREACH, id);
-      if (record) return record;
+      if (record) {
+        const normalized = normalizeLegacyRecord(record);
+        return normalizeRecordOwnerId(normalized) === resolvedOwner ? normalized : undefined;
+      }
     } catch (err) {
       console.warn(`[CredLock Storage] Error reading breach record ${id} from IndexedDB:`, err);
     }
   }
 
-  return getBreachRecordById(id);
+  return getBreachRecordById(id, resolvedOwner);
 }
 
 /**
- * Adds an actual sanitized breach check query result.
- * Updates both the in-memory cache and IndexedDB.
+ * Adds a sanitized breach check query result under the specified owner scope.
  */
-export function addBreachRecord(record: SanitizedBreachRecord): void {
-  breachCache = [record, ...breachCache.filter((r) => r.id !== record.id)];
+export function addBreachRecord(
+  record: SanitizedBreachRecord,
+  ownerId?: string | null
+): void {
+  const resolvedOwner = resolveHistoryOwnerId(ownerId ?? record.ownerId);
+  if (findCrossOwnerConflict(breachCache, record.id, resolvedOwner)) {
+    return;
+  }
+
+  const ownedRecord = withOwner(record, resolvedOwner);
+  breachCache = [
+    ownedRecord,
+    ...breachCache.filter((r) => r.id.toLowerCase() !== ownedRecord.id.toLowerCase()),
+  ];
   notifyChange();
 
   if (isIndexedDBAvailable()) {
-    putInStore(STORES.BREACH, record).catch((err) => {
-      console.warn('[CredLock Storage] Failed to persist breach record to IndexedDB:', err);
-    });
+    getByIdFromStore<SanitizedBreachRecord>(STORES.BREACH, ownedRecord.id)
+      .then((existing) => {
+        if (existing && normalizeRecordOwnerId(existing) !== resolvedOwner) {
+          return;
+        }
+        return putInStore(STORES.BREACH, ownedRecord);
+      })
+      .catch((err) => {
+        console.warn('[CredLock Storage] Failed to persist breach record to IndexedDB:', err);
+      });
   }
 }
 
 /**
- * Asynchronous version of addBreachRecord awaiting IndexedDB write.
+ * Asynchronous version of addBreachRecord awaiting IndexedDB write and enforcing ownership.
  */
-export async function addBreachRecordAsync(record: SanitizedBreachRecord): Promise<void> {
-  breachCache = [record, ...breachCache.filter((r) => r.id !== record.id)];
+export async function addBreachRecordAsync(
+  record: SanitizedBreachRecord,
+  ownerId?: string | null
+): Promise<void> {
+  const resolvedOwner = resolveHistoryOwnerId(ownerId ?? record.ownerId);
+  if (findCrossOwnerConflict(breachCache, record.id, resolvedOwner)) {
+    throw new Error('Cannot overwrite a breach record owned by another user.');
+  }
+
+  if (isIndexedDBAvailable()) {
+    const existing = await getByIdFromStore<SanitizedBreachRecord>(STORES.BREACH, record.id);
+    if (existing && normalizeRecordOwnerId(existing) !== resolvedOwner) {
+      throw new Error('Cannot overwrite a breach record owned by another user.');
+    }
+  }
+
+  const ownedRecord = withOwner(record, resolvedOwner);
+  breachCache = [
+    ownedRecord,
+    ...breachCache.filter((r) => r.id.toLowerCase() !== ownedRecord.id.toLowerCase()),
+  ];
   notifyChange();
 
   if (isIndexedDBAvailable()) {
-    await putInStore(STORES.BREACH, record);
+    await putInStore(STORES.BREACH, ownedRecord);
   }
 }
 
 /**
- * Deletes a single breach record by ID from cache and IndexedDB.
+ * Deletes a single breach record by ID only if it belongs to the specified owner.
+ * Returns true if deleted, false if not found or owned by another user.
  */
-export async function deleteBreachRecordAsync(id: string): Promise<void> {
+export async function deleteBreachRecordAsync(
+  id: string,
+  ownerId: string = GUEST_OWNER_ID
+): Promise<boolean> {
+  if (!id) return false;
+  const resolvedOwner = resolveHistoryOwnerId(ownerId);
+
+  const cached = breachCache.find((r) => r.id.toLowerCase() === id.toLowerCase());
+  if (cached && normalizeRecordOwnerId(cached) !== resolvedOwner) {
+    return false;
+  }
+
+  if (isIndexedDBAvailable()) {
+    const stored = await getByIdFromStore<SanitizedBreachRecord>(STORES.BREACH, id);
+    if (stored && normalizeRecordOwnerId(stored) !== resolvedOwner) {
+      return false;
+    }
+    if (!cached && !stored) {
+      return false;
+    }
+    await deleteFromStore(STORES.BREACH, id);
+  } else if (!cached) {
+    return false;
+  }
+
   breachCache = breachCache.filter((r) => r.id.toLowerCase() !== id.toLowerCase());
   notifyChange();
-
-  if (isIndexedDBAvailable()) {
-    await deleteFromStore(STORES.BREACH, id);
-  }
+  return true;
 }
 
 /* ==========================================================================
-   Full History Clear Operations
+   Owner-Scoped & Full History Clear Operations
    ========================================================================== */
+
+/**
+ * Clears all analysis and breach history belonging ONLY to the specified owner,
+ * preserving records owned by all other users and guest scopes.
+ */
+export async function clearOwnerHistoryAsync(
+  ownerId: string = GUEST_OWNER_ID
+): Promise<void> {
+  const resolvedOwner = resolveHistoryOwnerId(ownerId);
+
+  if (isIndexedDBAvailable()) {
+    const [dbAnalysis, dbBreach] = await Promise.all([
+      getAllFromStore<SanitizedAnalysisRecord>(STORES.ANALYSIS),
+      getAllFromStore<SanitizedBreachRecord>(STORES.BREACH),
+    ]);
+
+    const analysisIdsToDelete = dbAnalysis
+      .filter((r) => normalizeRecordOwnerId(r) === resolvedOwner)
+      .map((r) => r.id);
+    const breachIdsToDelete = dbBreach
+      .filter((r) => normalizeRecordOwnerId(r) === resolvedOwner)
+      .map((r) => r.id);
+
+    await Promise.all([
+      ...analysisIdsToDelete.map((id) => deleteFromStore(STORES.ANALYSIS, id)),
+      ...breachIdsToDelete.map((id) => deleteFromStore(STORES.BREACH, id)),
+    ]);
+  }
+
+  analysisCache = analysisCache.filter((r) => normalizeRecordOwnerId(r) !== resolvedOwner);
+  breachCache = breachCache.filter((r) => normalizeRecordOwnerId(r) !== resolvedOwner);
+  notifyChange();
+}
 
 /**
  * Clears all current in-memory history records and wipes IndexedDB stores.

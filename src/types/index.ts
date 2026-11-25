@@ -2,9 +2,12 @@
  * CredLock Global Types and Sanitized Domain Entities
  */
 
+export const GUEST_OWNER_ID = 'guest' as const;
+
 // Sanitized record for password analysis (ZERO plaintext passwords stored)
 export interface SanitizedAnalysisRecord {
   id: string;               // Cryptographically generated UUID
+  ownerId?: string;         // 'guest' or authenticated Supabase user UUID
   timestamp: string;        // ISO 8601 string
   passwordLength: number;   // Character length only
   entropyBits: number;      // Estimated guess-work difficulty in bits: log2(guesses)
@@ -22,6 +25,7 @@ export interface SanitizedAnalysisRecord {
 // Notice: ZERO plaintext passwords, full hashes, prefixes, or suffixes are ever persisted.
 export interface SanitizedBreachRecord {
   id: string;               // Cryptographically generated UUID
+  ownerId?: string;         // 'guest' or authenticated Supabase user UUID
   timestamp: string;        // ISO 8601 string
   isBreached: boolean;      // Exposure status
   breachCount: number;      // Frequency of exposure found in breaches

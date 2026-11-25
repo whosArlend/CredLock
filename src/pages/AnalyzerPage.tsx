@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
 import { History, Save, Sparkles, Shield, Cpu, Lock } from 'lucide-react';
 import {
   analyzePassword,
@@ -11,7 +12,7 @@ import {
   initZxcvbn,
   isZxcvbnLoaded,
 } from '@/services/passwordAnalyzer';
-import { addAnalysisRecord } from '@/services/historyStorage';
+import { addAnalysisRecord, resolveHistoryOwnerId } from '@/services/historyStorage';
 import { PasswordInput } from '@/features/analyzer/components/PasswordInput';
 import { StrengthMeter } from '@/features/analyzer/components/StrengthMeter';
 import { CharacterCompositionBadges } from '@/features/analyzer/components/CharacterCompositionBadges';
@@ -26,6 +27,7 @@ export function AnalyzerPage() {
   const [password, setPassword] = useState(prefill);
   const [zxcvbnLoaded, setZxcvbnLoaded] = useState(() => isZxcvbnLoaded());
   const { showToast } = useToast();
+  const { user, isLoading: isAuthLoading } = useAuth();
 
   useEffect(() => {
     if (location.state && (location.state as { prefillPassword?: string }).prefillPassword) {
@@ -52,8 +54,18 @@ export function AnalyzerPage() {
   const handleSaveToHistory = () => {
     if (isEmpty) return;
 
+    if (isAuthLoading) {
+      showToast({
+        type: 'info',
+        title: 'Session Initializing',
+        message: 'Please wait a moment while your session initializes before archiving.',
+      });
+      return;
+    }
+
+    const ownerId = resolveHistoryOwnerId(user?.id);
     const sanitizedRecord = createSanitizedAnalysisRecord(analysisResult);
-    addAnalysisRecord(sanitizedRecord);
+    addAnalysisRecord(sanitizedRecord, ownerId);
 
     showToast({
       type: 'success',
