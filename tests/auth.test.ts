@@ -96,6 +96,67 @@ describe('CredLock v2.0 — Phase 2.1: Username-Only Authentication Test Suite',
         assert.match(res.error || '', /reserved/i);
       }
     });
+
+    it('rejects all 21 reserved usernames in mixed-case variations', () => {
+      const mixedCaseVariants = [
+        'AdMiN',
+        'Administrator',
+        'ROOT',
+        'SyStEm',
+        'CredLock',
+        'SuPPoRt',
+        'SecUrIty',
+        'OPERATOR',
+        'OpErAtIvE',
+        'Enclave',
+        'Analyst',
+        'API',
+        'AUTH',
+        'GUEST',
+        'Anonymous',
+        'Moderator',
+        'SuperUser',
+        'Master',
+        'TEST',
+        'NULL',
+        'Undefined',
+      ];
+
+      for (const variant of mixedCaseVariants) {
+        const res = validateUsername(variant);
+        assert.strictEqual(res.isValid, false, `Expected mixed-case variant "${variant}" to be rejected`);
+        assert.match(res.error || '', /reserved/i);
+      }
+    });
+
+    it('rejects reserved usernames surrounded by whitespace after trimming', () => {
+      const res = validateUsername('   admin   ');
+      assert.strictEqual(res.isValid, false);
+      assert.match(res.error || '', /reserved/i);
+    });
+
+    it('allows valid operative usernames that contain reserved substrings as prefixes/suffixes', () => {
+      const validSubstrings = [
+        'admin_ops',
+        'root_access',
+        'security_lead',
+        'credlock_agent',
+        'tester_01',
+        'analyst_99',
+        'operator_station',
+        'operative_x',
+        'api_gateway',
+        'guest_user',
+        'master_key',
+        'superusers',
+      ];
+
+      for (const username of validSubstrings) {
+        const res = validateUsername(username);
+        assert.strictEqual(res.isValid, true, `Expected "${username}" to be valid despite containing reserved substring`);
+        assert.strictEqual(res.error, undefined);
+      }
+    });
   });
 
   // ==========================================================================

@@ -213,6 +213,49 @@ describe('CredLock v2.0 — Phase 1.1 Security Hardening: Profile RLS & Column P
       expect(migration003Sql).toMatch(/DROP FUNCTION IF EXISTS public\.handle_user_email_change\(\);/i);
     });
 
+    it('enforces database-level reserved username list in CHECK constraint (Finding 1)', () => {
+      const reservedList = [
+        'admin', 'administrator', 'root', 'system', 'credlock',
+        'support', 'security', 'operator', 'operative', 'enclave',
+        'analyst', 'api', 'auth', 'guest', 'anonymous',
+        'moderator', 'superuser', 'master', 'test', 'null', 'undefined',
+      ];
+
+      // Verify constraint definition checks LOWER(username) NOT IN (...)
+      expect(migration003Sql).toMatch(/LOWER\(username\)\s+NOT\s+IN/i);
+
+      for (const word of reservedList) {
+        const pattern = new RegExp(`'${word}'`, 'i');
+        expect(migration003Sql).toMatch(pattern);
+      }
+    });
+
+    it('enforces database-level reserved username check inside handle_new_user() (Finding 1)', () => {
+      expect(migration003Sql).toMatch(/IF LOWER\(resolved_username\) IN \(/i);
+      expect(migration003Sql).toMatch(/RAISE EXCEPTION 'Operative username "%" is reserved by system policy\.'/i);
+      expect(migration003Sql).toMatch(/USING ERRCODE = '23514'/i);
+    });
+
+    it('handles unique_violation safely by failing on username collision to prevent orphaned auth records (Finding 2)', () => {
+      // Must check if user ID already exists (idempotent profile recovery)
+      expect(migration003Sql).toMatch(/IF EXISTS \(SELECT 1 FROM public\.profiles WHERE id = NEW\.id\) THEN/i);
+      // For username uniqueness collision, MUST re-raise 23505 exception to abort auth.users transaction
+      expect(migration003Sql).toMatch(/RAISE EXCEPTION 'Operative username "%" is already taken\.', resolved_username USING ERRCODE = '23505';/i);
+    });
+
+    it('omits SECURITY DEFINER from protect_profile_privileged_fields() so CURRENT_USER evaluates to caller (Finding 3)', () => {
+      // Find the protect_profile_privileged_fields function definition in migration 003
+      const fnMatch = migration003Sql.match(/CREATE OR REPLACE FUNCTION public\.protect_profile_privileged_fields\(\)[\s\S]+?\$\$ LANGUAGE plpgsql([^;]+);/i);
+      expect(fnMatch).not.toBeNull();
+      if (fnMatch) {
+        const functionTrailer = fnMatch[1];
+        // Must NOT contain SECURITY DEFINER
+        expect(functionTrailer).not.toMatch(/SECURITY DEFINER/i);
+        // Must maintain secure search_path
+        expect(functionTrailer).toMatch(/SET search_path = public/i);
+      }
+    });
+
     it('re-enforces least privilege column grants without username update permissions', () => {
       const grantRegex = /GRANT UPDATE \(([^)]+)\) ON TABLE public\.profiles TO authenticated;/i;
       const match = migration003Sql.match(grantRegex);

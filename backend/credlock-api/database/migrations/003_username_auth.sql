@@ -35,12 +35,19 @@ ALTER TABLE public.profiles ALTER COLUMN username SET NOT NULL;
 --    - Must begin and end with alphanumeric character
 --    - No consecutive underscores (__) or consecutive hyphens (--)
 --    - No '@' or '.' characters
+--    - Excludes reserved administrative/system keywords (case-insensitive)
 ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS chk_profiles_username_format;
 ALTER TABLE public.profiles ADD CONSTRAINT chk_profiles_username_format CHECK (
     length(username) >= 3 AND length(username) <= 24 AND
     username ~ '^[a-zA-Z0-9][a-zA-Z0-9_-]{1,22}[a-zA-Z0-9]$' AND
     username !~ '(__|--)' AND
-    username !~ '[@.]'
+    username !~ '[@.]' AND
+    LOWER(username) NOT IN (
+        'admin', 'administrator', 'root', 'system', 'credlock',
+        'support', 'security', 'operator', 'operative', 'enclave',
+        'analyst', 'api', 'auth', 'guest', 'anonymous',
+        'moderator', 'superuser', 'master', 'test', 'null', 'undefined'
+    )
 );
 
 -- 5. Case-insensitive unique index
@@ -74,6 +81,16 @@ BEGIN
         'Operative'
     );
 
+    -- Enforce database-level check against reserved usernames
+    IF LOWER(resolved_username) IN (
+        'admin', 'administrator', 'root', 'system', 'credlock',
+        'support', 'security', 'operator', 'operative', 'enclave',
+        'analyst', 'api', 'auth', 'guest', 'anonymous',
+        'moderator', 'superuser', 'master', 'test', 'null', 'undefined'
+    ) THEN
+        RAISE EXCEPTION 'Operative username "%" is reserved by system policy.' USING ERRCODE = '23514';
+    END IF;
+
     INSERT INTO public.profiles (
         id,
         username,
@@ -102,13 +119,19 @@ BEGIN
     RETURN NEW;
 EXCEPTION
     WHEN unique_violation THEN
-        -- If profile already exists by id, update timestamp and preserve username
-        UPDATE public.profiles
-        SET updated_at = TIMEZONE('utc'::TEXT, NOW())
-        WHERE id = NEW.id;
-        RETURN NEW;
+        -- If profile already exists by id (idempotent retry/self-healing), update timestamp and succeed
+        IF EXISTS (SELECT 1 FROM public.profiles WHERE id = NEW.id) THEN
+            UPDATE public.profiles
+            SET updated_at = TIMEZONE('utc'::TEXT, NOW())
+            WHERE id = NEW.id;
+            RETURN NEW;
+        ELSE
+            -- The uniqueness violation is on the username (idx_profiles_username_lower).
+            -- Fail transactionally so Supabase Auth rolls back auth.users insertion.
+            RAISE EXCEPTION 'Operative username "%" is already taken.', resolved_username USING ERRCODE = '23505';
+        END IF;
     WHEN OTHERS THEN
-        RAISE EXCEPTION 'User profile initialization failed during registration.' USING ERRCODE = 'P0001';
+        RAISE EXCEPTION 'User profile initialization failed during registration: %', SQLERRM USING ERRCODE = 'P0001';
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
@@ -120,11 +143,20 @@ CREATE TRIGGER on_auth_user_created
     EXECUTE FUNCTION public.handle_new_user();
 
 -- 8. Update protect_profile_privileged_fields() trigger function
---    Strictly enforces immutability of: username, role, is_active, id, created_at
+--    Strictly enforces immutability of: username, role, is_active, id, created_at.
+--    NOTE: Omits SECURITY DEFINER so that CURRENT_USER evaluates to the invoking role
+--    (e.g., 'authenticated') rather than the function owner ('postgres'/'supabase_admin').
 CREATE OR REPLACE FUNCTION public.protect_profile_privileged_fields()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF (CURRENT_USER NOT IN ('service_role', 'postgres', 'supabase_admin')) THEN
+    IF (
+        CURRENT_USER NOT IN ('service_role', 'postgres', 'supabase_admin')
+        OR COALESCE(current_setting('request.jwt.claim.role', true), '') NOT IN ('service_role', 'supabase_admin', '')
+    ) THEN
+        IF (CURRENT_USER IN ('service_role', 'postgres', 'supabase_admin') AND COALESCE(current_setting('request.jwt.claim.role', true), '') = 'service_role') THEN
+            RETURN NEW;
+        END IF;
+
         IF NEW.username IS DISTINCT FROM OLD.username THEN
             RAISE EXCEPTION 'Modifying profile username is prohibited' USING ERRCODE = '42501';
         END IF;
@@ -143,7 +175,7 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 DROP TRIGGER IF EXISTS trigger_protect_profile_privileged_fields ON public.profiles;
 CREATE TRIGGER trigger_protect_profile_privileged_fields
