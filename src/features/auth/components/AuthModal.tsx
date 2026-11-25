@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { SignUpForm } from './SignUpForm';
+import { SignInForm } from './SignInForm';
 import {
   Shield,
   Lock,
@@ -14,8 +15,6 @@ import {
   Cloud,
   Info,
   RefreshCw,
-  Eye,
-  EyeOff,
 } from 'lucide-react';
 
 export type AuthView =
@@ -37,9 +36,7 @@ export function AuthModal({
   initialView = 'session-info',
 }: AuthModalProps) {
   const [view, setView] = useState<AuthView>(initialView);
-  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [prototypeNotice, setPrototypeNotice] = useState<string | null>(null);
 
   // Reset states when changing views
@@ -173,63 +170,14 @@ export function AuthModal({
         {/* VIEW: LOGIN */}
         {view === 'login' && (
           <div className="space-y-4">
-            <div className="space-y-3">
-              <Input
-                label="Email Address"
-                type="email"
-                placeholder="analyst@domain.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                leftElement={<Mail className="w-4 h-4" />}
-              />
-
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <label className="font-medium text-foreground-secondary">Master Account Password</label>
-                  <button
-                    type="button"
-                    onClick={() => switchView('forgot-password')}
-                    className="text-accent hover:underline text-[11px]"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-                <div className="relative flex items-center">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter master password..."
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full h-10 px-3.5 bg-background-secondary text-foreground placeholder:text-foreground-dim text-sm rounded-md border border-border focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 text-foreground-muted hover:text-foreground p-1"
-                    aria-label="Toggle password visibility"
-                  >
-                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-              </div>
-
-              <label className="flex items-center gap-2 cursor-pointer text-xs text-foreground-secondary pt-1">
-                <input
-                  type="checkbox"
-                  defaultChecked
-                  className="rounded border-border bg-background-secondary text-accent focus:ring-accent h-3.5 w-3.5"
-                />
-                <span>Remember this authorized enclave browser</span>
-              </label>
-            </div>
-
-            <Button
-              variant="primary"
-              className="w-full"
-              onClick={() => handlePrototypeAction('Sign In Request')}
-            >
-              Sign In (v2.0 UI Prototype)
-            </Button>
+            <SignInForm
+              isCompact
+              onSuccess={() => {
+                onClose();
+              }}
+              onNavigateToSignUp={() => switchView('register')}
+              onForgotPassword={() => switchView('forgot-password')}
+            />
 
             <div className="flex items-center justify-between text-xs pt-2 border-t border-border/60">
               <button
@@ -238,13 +186,6 @@ export function AuthModal({
                 className="text-foreground-muted hover:text-foreground"
               >
                 ← Back to Enclave Info
-              </button>
-              <button
-                type="button"
-                onClick={() => switchView('register')}
-                className="text-accent font-medium hover:underline"
-              >
-                Need an account? Register →
               </button>
             </div>
           </div>

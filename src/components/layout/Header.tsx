@@ -1,15 +1,62 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Lock, User } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import {
+  Lock,
+  User,
+  LogOut,
+  ChevronDown,
+  Shield,
+} from 'lucide-react';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Container } from './Container';
 import { NAV_ITEMS, isItemActive } from './navUtils';
 import { AuthModal } from '@/features/auth';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 export function Header() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, profile, isAuthenticated, signOut } = useAuth();
+
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authModalView] = useState<'login' | 'register' | 'session-info'>('login');
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close account dropdown on outside click or escape
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
+        setIsAccountMenuOpen(false);
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsAccountMenuOpen(false);
+      }
+    }
+    if (isAccountMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isAccountMenuOpen]);
+
+  // Derive display initials and name
+  const displayName = profile?.displayName || user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Operative';
+  const displayEmail = user?.email || profile?.email || 'enclave@credlock.local';
+  const initials = (displayName.slice(0, 2) || 'OP').toUpperCase();
+  const roleLabel = (profile?.role || 'user').toUpperCase();
+
+  const handleSignOut = async () => {
+    setIsAccountMenuOpen(false);
+    await signOut();
+    navigate('/');
+  };
 
   return (
     <>
@@ -37,12 +84,12 @@ export function Header() {
                   CredLock
                 </span>
                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-elevated text-muted border border-border hidden sm:inline-block">
-                  v1.0.0
+                  v2.0
                 </span>
               </div>
             </Link>
 
-            {/* Desktop Primary Navigation (hidden on mobile/tablet, visible on lg+) */}
+            {/* Desktop Primary Navigation */}
             <nav
               role="navigation"
               aria-label="Desktop Primary Navigation"
@@ -70,7 +117,7 @@ export function Header() {
               })}
             </nav>
 
-            {/* Right: Security Indicator & v2.0 Authentication Trigger */}
+            {/* Right: Security Indicator & Account Navigation */}
             <div className="flex items-center gap-2 shrink-0">
               {/* Desktop Status Pill */}
               <div className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-full bg-surface-elevated/60 border border-border text-[11px] font-mono text-muted">
@@ -92,30 +139,113 @@ export function Header() {
                 </button>
               </Tooltip>
 
-              {/* v2.0 Authentication / Cloud Sync Trigger */}
-              <button
-                type="button"
-                onClick={() => setIsAuthOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-medium bg-background-elevated hover:bg-[#25292E] text-foreground border border-border hover:border-border-strong transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent group"
-                aria-label="CredLock v2.0 Account & Cloud Sync Preview"
-              >
-                <User className="w-3.5 h-3.5 text-accent group-hover:scale-105 transition-transform" />
-                <span className="hidden sm:inline">Sign In</span>
-                <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-accent/10 text-accent border border-accent/30 hidden lg:inline">
-                  v2.0
-                </span>
-              </button>
+              {/* AUTHENTICATION CONTROLS */}
+              {isAuthenticated ? (
+                /* Authenticated User Menu */
+                <div className="relative" ref={accountMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsAccountMenuOpen((prev) => !prev)}
+                    aria-expanded={isAccountMenuOpen}
+                    aria-haspopup="true"
+                    className="flex items-center gap-2 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-xs font-medium bg-background-elevated hover:bg-[#25292E] text-foreground border border-border hover:border-border-strong transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent group"
+                  >
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/20 border border-accent/40 text-accent text-[10px] font-mono font-bold">
+                      {initials}
+                    </div>
+                    <span className="hidden sm:inline font-sans text-xs max-w-[120px] truncate text-foreground font-medium">
+                      {displayName}
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        'w-3.5 h-3.5 text-muted transition-transform duration-150',
+                        isAccountMenuOpen && 'rotate-180 text-foreground'
+                      )}
+                    />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {isAccountMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-64 rounded-xl bg-surface-elevated border border-border-strong shadow-plate-tactical p-2 space-y-1 animate-in fade-in zoom-in-95 z-50 text-left font-sans">
+                      {/* Identity Card */}
+                      <div className="p-2.5 rounded-lg bg-background-base/60 border border-border/60 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-mono font-bold text-foreground truncate">
+                            {displayName}
+                          </span>
+                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-accent/10 text-accent border border-accent/30 font-semibold">
+                            {roleLabel}
+                          </span>
+                        </div>
+                        <p className="text-[11px] font-mono text-muted truncate">
+                          {displayEmail}
+                        </p>
+                        <div className="flex items-center gap-1.5 pt-1 text-[10px] font-mono text-emerald-400">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>Identity Enclave Active</span>
+                        </div>
+                      </div>
+
+                      {/* Menu Links */}
+                      <div className="pt-1 space-y-0.5">
+                        <Link
+                          to="/profile"
+                          onClick={() => setIsAccountMenuOpen(false)}
+                          className="flex items-center gap-2 px-2.5 py-2 text-xs text-foreground-secondary hover:text-foreground hover:bg-surface-elevated/80 rounded-lg transition-colors"
+                        >
+                          <Shield className="w-3.5 h-3.5 text-accent" />
+                          <span>Enclave Dossier & Arch</span>
+                        </Link>
+                      </div>
+
+                      {/* Sign Out Action */}
+                      <div className="pt-1 border-t border-border/70">
+                        <button
+                          type="button"
+                          onClick={handleSignOut}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors text-left"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Terminate Enclave Session</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Guest State: Sign In & Sign Up Affordances */
+                <div className="flex items-center gap-1.5">
+                  <Link
+                    to="/signin"
+                    className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-medium bg-background-elevated hover:bg-[#25292E] text-foreground border border-border hover:border-border-strong transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent group"
+                    aria-label="Sign In to CredLock"
+                  >
+                    <User className="w-3.5 h-3.5 text-accent group-hover:scale-105 transition-transform" />
+                    <span>Sign In</span>
+                  </Link>
+
+                  <Link
+                    to="/signup"
+                    className="hidden sm:flex items-center gap-1 px-2.5 py-1 sm:py-1.5 rounded-lg text-xs font-medium bg-accent/10 hover:bg-accent/20 text-accent border border-accent/30 hover:border-accent/50 transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                    aria-label="Create CredLock Account"
+                  >
+                    <span>Sign Up</span>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </Container>
       </header>
 
-      {/* Interactive v2.0 Authentication UI Prototype Dialog */}
+      {/* AuthModal instance for modal-triggered auth */}
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
-        initialView="session-info"
+        initialView={authModalView}
       />
     </>
   );
 }
+
+export default Header;

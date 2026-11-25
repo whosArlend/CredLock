@@ -10,7 +10,7 @@ export function SignUpPage() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] pt-6 pb-28 sm:py-12 flex flex-col justify-center animate-in fade-in duration-200">
+    <div className="min-h-[calc(100vh-4rem)] pt-6 pb-36 sm:py-12 flex flex-col justify-center animate-in fade-in duration-200">
       <Container size="compact">
         <div className="space-y-6">
           {/* Breadcrumb / Back Link */}
