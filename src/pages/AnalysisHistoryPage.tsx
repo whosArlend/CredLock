@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
 import { useAnalysisHistory } from '@/hooks/useHistory';
 import {
   History,
@@ -18,9 +19,12 @@ import {
 } from 'lucide-react';
 
 export function AnalysisHistoryPage() {
+  const { user, profile, isAuthenticated } = useAuth();
   const { records, isLoading, error, refresh, deleteRecord } = useAnalysisHistory();
   const { showToast } = useToast();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const operativeUsername = profile?.username || (user?.user_metadata?.username as string) || null;
 
   const handleDeleteItem = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
@@ -114,11 +118,23 @@ export function AnalysisHistoryPage() {
             Evaluation Ledger // analysis_history
           </h2>
         </div>
-        <div className="flex items-center gap-3 text-xs font-mono text-muted">
+        <div className="flex flex-wrap items-center gap-2.5 text-xs font-mono text-muted">
+          {isAuthenticated ? (
+            <Badge variant="amber" size="sm" dot>
+              Scope: {operativeUsername ? `@${operativeUsername}` : 'Authenticated Session'}
+            </Badge>
+          ) : (
+            <Badge variant="neutral" size="sm" dot>
+              Scope: Guest Session
+            </Badge>
+          )}
           {!isLoading && records.length > 0 && (
-            <span>
-              <strong className="text-foreground">{records.length}</strong> {records.length === 1 ? 'record' : 'records'} logged
-            </span>
+            <>
+              <span className="text-border hidden sm:inline">•</span>
+              <span>
+                <strong className="text-foreground">{records.length}</strong> {records.length === 1 ? 'record' : 'records'} logged
+              </span>
+            </>
           )}
           <span className="text-border hidden sm:inline">•</span>
           <span className="text-[11px] text-muted-dim">Client Enclave</span>

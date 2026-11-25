@@ -1024,5 +1024,48 @@ describe('Phase 2.6 — History, Detail & Data Persistence Test Suite', () => {
       onOwnerChange('guest');
       assert.strictEqual(stateRecords.length, 0, 'User B records cleared immediately on logout/switch to Guest');
     });
+
+    it('verifies AnalysisHistoryPage and BreachHistoryPage render privacy scope indicators', async () => {
+      const fs = await import('node:fs/promises');
+      const path = await import('node:path');
+
+      const analysisSource = await fs.readFile(
+        path.resolve('src/pages/AnalysisHistoryPage.tsx'),
+        'utf8'
+      );
+      const breachSource = await fs.readFile(
+        path.resolve('src/pages/BreachHistoryPage.tsx'),
+        'utf8'
+      );
+
+      for (const [pageName, source] of [
+        ['AnalysisHistoryPage', analysisSource],
+        ['BreachHistoryPage', breachSource],
+      ] as const) {
+        // Must import useAuth
+        assert.ok(
+          /import\s+\{[^}]*useAuth[^}]*\}\s+from\s+['"]@\/hooks\/useAuth['"]/.test(source),
+          `${pageName} must import useAuth`
+        );
+
+        // Must derive operativeUsername
+        assert.ok(
+          /operativeUsername\s*=\s*profile\?\.username/.test(source),
+          `${pageName} must extract username from profile or user_metadata`
+        );
+
+        // Must render Scope: Guest Session when not authenticated
+        assert.ok(
+          source.includes('Scope: Guest Session'),
+          `${pageName} must render Scope: Guest Session for unauthenticated users`
+        );
+
+        // Must render Scope: @username when authenticated
+        assert.ok(
+          source.includes('Scope: {operativeUsername ? `@${operativeUsername}` : \'Authenticated Session\'}'),
+          `${pageName} must render Scope: @username with Authenticated Session fallback`
+        );
+      }
+    });
   });
 });
