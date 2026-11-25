@@ -10,7 +10,7 @@ This service provides verified cybersecurity threat intelligence, breach inciden
 
 - **Production Base URL:** `https://credlock-api.vercel.app`
 - **Development Base URL:** `http://localhost:4000`
-- **Release Version:** `v1.0.0` (Root response: `version: "1.0.0"`, Route prefix: `/api/v1/*`) — see [CHANGELOG.md](../../CHANGELOG.md)
+- **Release Version:** `v2.0.0` (Root response: `version: "2.0.0"`, Route prefix: `/api/v1/*`) — see [CHANGELOG.md](../../CHANGELOG.md)
 - **Hosting Target:** Vercel Serverless Functions (`@vercel/node`)
 - **Database:** Supabase Managed PostgreSQL
 

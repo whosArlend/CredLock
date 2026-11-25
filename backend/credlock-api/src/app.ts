@@ -40,7 +40,7 @@ export function createApp(): Application {
     res.status(200).json({
       success: true,
       name: 'CredLock Security Intelligence API',
-      version: '1.0.0',
+      version: '2.0.0',
       status: 'operational',
       endpoints: {
         health: '/api/health',

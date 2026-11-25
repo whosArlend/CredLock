@@ -1,6 +1,6 @@
 {
   "name": "credlock-api",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "description": "CredLock Security Intelligence API Backend",
   "type": "module",

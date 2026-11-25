@@ -4,7 +4,6 @@ import {
   ApiClient,
   ApiClientError,
   DEFAULT_API_BASE_URL,
-  DEFAULT_REQUEST_TIMEOUT_MS,
   normalizeApiUrl,
   getCredLockApiBaseUrl,
 } from '../src/services/api/index.ts';

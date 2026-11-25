@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.0] - 2026-11-25
+
+### Added
+
+#### Identity Enclave & Owner Isolation (Phases 1–5)
+- **Username-Only Authentication**: Client-side authentication via Supabase Auth requiring only a username and master passphrase (zero email/phone number collection).
+- **PostgreSQL Least Privilege & RLS**: Enforced strict Row Level Security policies and column-level privileges on user profiles.
+- **Dynamic Profile Enclave Indicator**: Real-time identification of active session identity (`@username` authenticated session vs Guest mode) with account-scoped storage details.
+- **Owner-Scoped Local Storage Isolation**: Partitioned browser IndexedDB storage (`credlock-db`) by user ID, ensuring audit history remains strictly isolated between accounts and guest mode on shared devices.
+- **History Privacy Scope Badges**: Dedicated visual scope indicators (`Scope: @username` or `Scope: Guest Session`) across Analysis History and Breach History views.
+- **Shared-Device Privacy Notices**: Persistent contextual warnings reminding users that local history persists past logout on shared machines unless explicitly purged.
+- **Data Sovereignty Warning Clarity**: Enhanced confirmation dialog explaining local scope, deletion impact, and authentication session preservation.
+
+#### Backend Security Hardening (Phase 6)
+- **Distributed Serverless Rate Limiting (BE-01)**: Implemented distributed rate-limiting store backed by Upstash Redis REST API using native `fetch` (zero external dependencies) with atomic pipeline execution (`INCR`, `PEXPIRE NX`, `PTTL`).
+- **Supabase Least-Privilege API Client (BE-02)**: Switched backend API queries to use Supabase anonymous key subject to Row Level Security, eliminating unrestricted service role admin key usage.
+- **Strict Slug Parameter Validation (BE-03)**: Centralized regex validation (`^[a-z0-9]+(?:-[a-z0-9]+)*$`, 1–100 chars) preventing SQL injection, path traversal, and malicious input before repository queries.
+- **Hardened Health Diagnostics (BE-04)**: Omitted database query latency metrics from public `/api/health/db` responses to prevent infrastructure profiling and side-channel timing analysis.
+
+#### Repository & Architecture Accuracy
+- **Centralized Versioning**: Introduced single source of truth for application versions across UI banners, metadata, PWA manifest, and backend discovery endpoints.
+- **Defensible Privacy Declarations**: Fully aligned About and Profile pages with the actual implemented architecture, clarifying local IndexedDB boundaries and distinguishing current capabilities from future research roadmaps.
+
+---
+
 ## [1.0.0] - 2026-11-20
 
 ### Added

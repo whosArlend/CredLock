@@ -8,8 +8,6 @@ import {
   Shield,
   Lock,
   KeyRound,
-  Smartphone,
-  Cloud,
   Info,
 } from 'lucide-react';
 
@@ -52,7 +50,7 @@ export function AuthModal({
           </span>
         </div>
       }
-      description="CredLock v2.0 Username-Only Identity Enclave"
+      description="CredLock v2.0.0 Username-Only Identity Enclave"
     >
       <div className="space-y-5 text-left font-sans">
         {/* Architectural Privacy Banner */}
@@ -94,24 +92,24 @@ export function AuthModal({
 
             <div className="space-y-2">
               <h4 className="text-xs font-semibold text-foreground tracking-tight uppercase tracking-wider text-[11px] text-foreground-muted">
-                v2.0 Account Capabilities
+                v2.0 Account Enclave Features
               </h4>
               <div className="space-y-2 text-xs">
                 <div className="flex items-start gap-2.5 p-2.5 rounded-lg border border-border/70 bg-background-secondary/40">
-                  <Cloud className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                  <Shield className="w-4 h-4 text-accent shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-foreground block">Cross-Device Synchronized Telemetry</strong>
+                    <strong className="text-foreground block">Owner-Scoped Local Audit Isolation</strong>
                     <span className="text-foreground-secondary">
-                      Access your sanitized password audit scores and breach checks across devices with cryptographic isolation.
+                      Audit history is stored strictly in this browser’s IndexedDB and isolated to your account ID so other users cannot inspect your records.
                     </span>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5 p-2.5 rounded-lg border border-border/70 bg-background-secondary/40">
-                  <Smartphone className="w-4 h-4 text-status-info shrink-0 mt-0.5" />
+                  <Lock className="w-4 h-4 text-status-success shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-foreground block">Device Authorization</strong>
+                    <strong className="text-foreground block">Zero-Knowledge History Invariant</strong>
                     <span className="text-foreground-secondary">
-                      Inspect active sessions and terminate unneeded browser authorizations with token revocation.
+                      Passwords and full hashes are NEVER transmitted, hashed, or stored on remote cloud databases. Authentication maintains session state without storing credentials.
                     </span>
                   </div>
                 </div>

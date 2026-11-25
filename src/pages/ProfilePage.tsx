@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { clearLocalUserDataAsync } from '@/services/historyStorage';
 import { AuthModal } from '@/features/auth';
+import { APP_ENCLAVE_BADGE, APP_BUILD_LABEL } from '@/constants/version';
 import {
   Shield,
   Layers,
@@ -19,7 +20,6 @@ import {
   Lock,
   Cpu,
   ChevronDown,
-  Cloud,
   User,
   ArrowRight,
 } from 'lucide-react';
@@ -62,7 +62,7 @@ export function ProfilePage() {
       <PageHeader
         title="About CredLock"
         description="Client-side security architecture, verified technology stack, and local data sovereignty."
-        badge={<Badge variant="neutral" size="sm">v1.0.0 // Client Enclave</Badge>}
+        badge={<Badge variant="neutral" size="sm">{APP_ENCLAVE_BADGE}</Badge>}
       />
 
       {/* 1. Project Overview & Identity Banner */}
@@ -237,20 +237,20 @@ export function ProfilePage() {
         </div>
       </div>
 
-      {/* 4. v2.0 Architecture Preview — User Accounts & Cloud Sync */}
+      {/* 4. Authenticated Enclave & Local Storage Architecture */}
       <div className="rounded-xl bg-enclave-plate/90 border border-accent/40 shadow-plate-tactical p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/60">
           <div className="flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-accent/10 border border-accent/30 text-accent">
-              <Cloud className="w-4 h-4" />
+              <Shield className="w-4 h-4" />
             </div>
             <div>
               <h3 className="text-sm font-bold text-foreground font-sans flex items-center gap-2">
-                CredLock v2.0 Cloud Sync & Account Enclave
-                <Badge variant="amber" size="sm">Architecture Preview</Badge>
+                CredLock v2.0 Authenticated Enclave & Storage Architecture
+                <Badge variant="amber" size="sm">Production Architecture</Badge>
               </h3>
               <p className="text-xs text-muted font-sans">
-                Cross-device synchronized audit history and authenticated device session management.
+                Supabase-authenticated user identity with browser-local, owner-isolated IndexedDB audit history.
               </p>
             </div>
           </div>
@@ -262,45 +262,45 @@ export function ProfilePage() {
             rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
             className="self-start sm:self-auto shrink-0"
           >
-            Launch Auth Preview
+            {isAuthenticated ? 'View Session Info' : 'Account Access'}
           </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
           <div className="p-3 rounded-lg bg-background-secondary/60 border border-border/70 space-y-1">
-            <span className="text-[10px] font-mono text-muted uppercase block">CURRENT STATE</span>
+            <span className="text-[10px] font-mono text-muted uppercase block">IDENTITY & ENCLAVE SCOPE</span>
             {isAuthenticated ? (
               <>
                 <span className="font-bold text-foreground block font-sans">
                   Authenticated Enclave {operativeUsername ? `(@${operativeUsername})` : ''}
                 </span>
                 <span className="text-muted text-[11px]">
-                  Audit history stored strictly in this browser’s IndexedDB (<code className="font-mono text-foreground font-semibold">credlock-db</code>) and owner-scoped to your account.
+                  Active Supabase session. Audit history stored strictly in this browser’s IndexedDB (<code className="font-mono text-foreground font-semibold">credlock-db</code>) and owner-scoped to your account.
                 </span>
               </>
             ) : (
               <>
                 <span className="font-bold text-foreground block font-sans">Local Enclave (Guest Mode)</span>
                 <span className="text-muted text-[11px]">
-                  Audit history stored strictly in this browser’s IndexedDB (<code className="font-mono text-foreground font-semibold">credlock-db</code>) under local guest scope.
+                  Unauthenticated local session. Audit history stored strictly in this browser’s IndexedDB (<code className="font-mono text-foreground font-semibold">credlock-db</code>) under local guest scope.
                 </span>
               </>
             )}
           </div>
 
           <div className="p-3 rounded-lg bg-background-secondary/60 border border-border/70 space-y-1">
-            <span className="text-[10px] font-mono text-accent uppercase block">v2.0 CLOUD SYNC</span>
-            <span className="font-bold text-foreground block font-sans">Cross-Device Pairing</span>
+            <span className="text-[10px] font-mono text-accent uppercase block">LOCAL OWNER ISOLATION</span>
+            <span className="font-bold text-foreground block font-sans">Strict Device Boundaries</span>
             <span className="text-muted text-[11px]">
-              Supabase Auth user sessions with end-to-end encrypted safe audit history synchronization.
+              Audit history is partitioned locally by account ID in IndexedDB. Logging out or switching users isolates records without sending data to cloud storage.
             </span>
           </div>
 
           <div className="p-3 rounded-lg bg-background-secondary/60 border border-border/70 space-y-1">
-            <span className="text-[10px] font-mono text-status-success uppercase block">ZERO-KNOWLEDGE COMMITMENT</span>
-            <span className="font-bold text-foreground block font-sans">No Password Storage</span>
+            <span className="text-[10px] font-mono text-muted-dim uppercase block">FUTURE ROADMAP</span>
+            <span className="font-bold text-foreground block font-sans">Planned E2E Cloud Sync</span>
             <span className="text-muted text-[11px]">
-              Passwords will NEVER be transmitted, hashed, or stored on remote cloud databases.
+              Future research phase: opt-in, zero-knowledge encrypted vault synchronization across paired devices. Currently, all audit logs remain strictly 100% local.
             </span>
           </div>
         </div>
@@ -316,7 +316,7 @@ export function ProfilePage() {
           </div>
           <div className="p-2.5 rounded-lg bg-surface-elevated/40 border border-border">
             <span className="text-[10px] text-muted uppercase block">BUILD VERSION</span>
-            <span className="font-semibold text-foreground text-xs font-sans">v1.0.0 (Production)</span>
+            <span className="font-semibold text-foreground text-xs font-sans">{APP_BUILD_LABEL}</span>
           </div>
           <div className="p-2.5 rounded-lg bg-surface-elevated/40 border border-border">
             <span className="text-[10px] text-muted uppercase block">CLIENT ARCHITECTURE</span>
