@@ -166,46 +166,52 @@ export function Header() {
 
                   {/* Dropdown Menu */}
                   {isAccountMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-64 rounded-xl bg-surface-elevated border border-border-strong shadow-plate-tactical p-2 space-y-1 animate-in fade-in zoom-in-95 z-50 text-left font-sans">
+                    <div
+                      role="menu"
+                      aria-label="Account menu"
+                      className="absolute right-0 mt-2 w-64 rounded-xl bg-background-surface border border-border-strong shadow-elevated p-2 space-y-1.5 z-50 text-left font-sans"
+                    >
                       {/* Identity Card */}
-                      <div className="p-2.5 rounded-lg bg-background-base/60 border border-border/60 space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-mono font-bold text-foreground truncate">
+                      <div className="p-3 rounded-lg bg-background-secondary border border-border space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-mono font-bold text-foreground truncate">
                             {displayName}
                           </span>
-                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-accent/10 text-accent border border-accent/30 font-semibold">
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-accent/15 text-accent border border-accent/30 font-semibold shrink-0">
                             {roleLabel}
                           </span>
                         </div>
-                        <p className="text-[11px] font-mono text-muted truncate">
+                        <p className="text-[11px] font-mono text-foreground-muted truncate">
                           @{operativeUsername}
                         </p>
-                        <div className="flex items-center gap-1.5 pt-1 text-[10px] font-mono text-emerald-400">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <div className="flex items-center gap-1.5 pt-0.5 text-[10px] font-mono text-status-success">
+                          <span className="w-1.5 h-1.5 rounded-full bg-status-success animate-pulse" aria-hidden="true" />
                           <span>Identity Enclave Active</span>
                         </div>
                       </div>
 
                       {/* Menu Links */}
-                      <div className="pt-1 space-y-0.5">
+                      <div className="pt-0.5 space-y-0.5">
                         <Link
                           to="/profile"
+                          role="menuitem"
                           onClick={() => setIsAccountMenuOpen(false)}
-                          className="flex items-center gap-2 px-2.5 py-2 text-xs text-foreground-secondary hover:text-foreground hover:bg-surface-elevated/80 rounded-lg transition-colors"
+                          className="flex items-center gap-2.5 px-2.5 py-2 text-xs font-medium text-foreground-secondary hover:text-foreground hover:bg-background-elevated rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
                         >
-                          <Shield className="w-3.5 h-3.5 text-accent" />
+                          <Shield className="w-3.5 h-3.5 text-accent shrink-0" />
                           <span>Enclave Dossier & Arch</span>
                         </Link>
                       </div>
 
                       {/* Sign Out Action */}
-                      <div className="pt-1 border-t border-border/70">
+                      <div className="pt-1.5 border-t border-border">
                         <button
                           type="button"
+                          role="menuitem"
                           onClick={handleSignOut}
-                          className="w-full flex items-center gap-2 px-2.5 py-2 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors text-left"
+                          className="w-full flex items-center gap-2.5 px-2.5 py-2 text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-400"
                         >
-                          <LogOut className="w-3.5 h-3.5" />
+                          <LogOut className="w-3.5 h-3.5 shrink-0" />
                           <span>Terminate Enclave Session</span>
                         </button>
                       </div>
