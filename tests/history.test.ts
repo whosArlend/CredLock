@@ -919,4 +919,110 @@ describe('Phase 2.6 — History, Detail & Data Persistence Test Suite', () => {
       assert.deepStrictEqual(reloadedBreach.map((r) => r.id), ['stale-b1']);
     });
   });
+
+  // Test 11: Phase 4.4 History State Transition & Epoch Safety (Static & Logic Tests)
+  describe('11. Phase 4.4 History State Transition & Epoch Safety Verification', () => {
+    it('verifies useHistory source implementation enforces epoch guard and eager wipe on owner change', async () => {
+      const fs = await import('node:fs/promises');
+      const path = await import('node:path');
+      const useHistoryPath = path.resolve('src/hooks/useHistory.ts');
+      const content = await fs.readFile(useHistoryPath, 'utf8');
+
+      // 1. Must track requestEpochRef and currentOwnerRef
+      assert.ok(
+        content.includes('requestEpochRef = useRef<number>(0)'),
+        'useHistory must track request epoch counter'
+      );
+      assert.ok(
+        content.includes('currentOwnerRef = useRef<string>(ownerId)'),
+        'useHistory must track currentOwnerRef'
+      );
+
+      // 2. Must eagerly clear records when ownerId changes
+      assert.ok(
+        content.includes('currentOwnerRef.current !== ownerId'),
+        'useHistory must detect ownerId transitions'
+      );
+      assert.ok(
+        content.includes('setRecords([])'),
+        'useHistory must immediately clear records on owner transition'
+      );
+      assert.ok(
+        content.includes('setRecord(undefined)'),
+        'useHistory detail hooks must immediately clear record on owner or ID transition'
+      );
+
+      // 3. Must check currentEpoch === requestEpochRef.current before setting data
+      assert.ok(
+        content.includes('if (currentEpoch === requestEpochRef.current) {\n        setRecords(data);'),
+        'useHistory must guard against stale async fetches overwriting records'
+      );
+      assert.ok(
+        content.includes('if (currentEpoch === requestEpochRef.current) {\n        setRecord(data);'),
+        'useHistory detail hooks must guard against stale async fetches overwriting detail record'
+      );
+
+      // 4. Must hold loading when isAuthLoading is true and NOT fetch guest records
+      assert.ok(
+        content.includes('if (isAuthLoading) {\n      setIsLoading(true);\n      return;\n    }'),
+        'useHistory must check isAuthLoading and prevent premature Guest fetch during auth resolution'
+      );
+    });
+
+    it('simulates owner transition sequence and guarantees stale responses are discarded', async () => {
+      // Logic simulation of request epoch and race condition
+      let requestEpoch = 0;
+      let currentOwner = 'guest';
+      let stateRecords: Array<{ id: string; ownerId: string }> = [];
+
+      // Helper simulating owner change in hook
+      const onOwnerChange = (newOwner: string) => {
+        if (currentOwner !== newOwner) {
+          currentOwner = newOwner;
+          requestEpoch += 1;
+          stateRecords = []; // Eager clear
+        }
+      };
+
+      // Helper simulating async fetch with epoch check
+      const simulateFetch = async (targetOwner: string, delayMs: number, data: Array<{ id: string; ownerId: string }>) => {
+        const fetchEpoch = ++requestEpoch;
+        await new Promise((r) => setTimeout(r, delayMs));
+        if (fetchEpoch === requestEpoch) {
+          stateRecords = data;
+        }
+      };
+
+      // 1. Initial Guest load
+      const guestData = [{ id: 'g-1', ownerId: 'guest' }];
+      await simulateFetch('guest', 5, guestData);
+      assert.strictEqual(stateRecords.length, 1);
+      assert.strictEqual(stateRecords[0].ownerId, 'guest');
+
+      // 2. Transition Guest -> User A: immediately clears records
+      onOwnerChange('user-a');
+      assert.strictEqual(stateRecords.length, 0, 'Guest records cleared immediately on switch to User A');
+
+      // 3. Simulate slow User A fetch started, but user quickly logs out to Guest or switches to User B
+      const userAData = [{ id: 'a-1', ownerId: 'user-a' }];
+      const slowUserAPromise = simulateFetch('user-a', 50, userAData);
+
+      // Rapidly switch to User B before User A finishes
+      onOwnerChange('user-b');
+      assert.strictEqual(stateRecords.length, 0, 'Records remain empty on switch to User B');
+
+      const userBData = [{ id: 'b-1', ownerId: 'user-b' }];
+      const userBPromise = simulateFetch('user-b', 10, userBData);
+
+      await Promise.all([slowUserAPromise, userBPromise]);
+
+      // State MUST contain User B records, NOT overwritten by slow User A response
+      assert.strictEqual(stateRecords.length, 1);
+      assert.strictEqual(stateRecords[0].ownerId, 'user-b');
+
+      // 4. Transition User B -> Guest: immediately clears records
+      onOwnerChange('guest');
+      assert.strictEqual(stateRecords.length, 0, 'User B records cleared immediately on logout/switch to Guest');
+    });
+  });
 });

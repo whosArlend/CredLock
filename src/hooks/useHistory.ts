@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { SanitizedAnalysisRecord, SanitizedBreachRecord } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -23,24 +23,51 @@ export function useAnalysisHistory() {
   const ownerId = resolveHistoryOwnerId(user?.id);
 
   const [records, setRecords] = useState<SanitizedAnalysisRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Request epoch counter and current owner tracking ref
+  const requestEpochRef = useRef<number>(0);
+  const currentOwnerRef = useRef<string>(ownerId);
+
+  // Eager transition safety: whenever ownerId changes, immediately wipe records and enter loading state.
+  useEffect(() => {
+    if (currentOwnerRef.current !== ownerId) {
+      currentOwnerRef.current = ownerId;
+      requestEpochRef.current += 1;
+      setRecords([]);
+      setIsLoading(true);
+      setError(null);
+    }
+  }, [ownerId]);
+
   const fetchRecords = useCallback(async () => {
+    // If auth state is still resolving, hold loading state and do NOT fetch guest records yet
     if (isAuthLoading) {
       setIsLoading(true);
       return;
     }
 
+    const currentEpoch = ++requestEpochRef.current;
+    const targetOwner = ownerId;
+
     try {
       setIsLoading(true);
       setError(null);
-      const data = await getAnalysisRecordsAsync(ownerId);
-      setRecords(data);
+      const data = await getAnalysisRecordsAsync(targetOwner);
+
+      // Guard against stale async fetches from previous owners or superseded requests
+      if (currentEpoch === requestEpochRef.current) {
+        setRecords(data);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load analysis history from storage.');
+      if (currentEpoch === requestEpochRef.current) {
+        setError(err instanceof Error ? err.message : 'Failed to load analysis history from storage.');
+      }
     } finally {
-      setIsLoading(false);
+      if (currentEpoch === requestEpochRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [ownerId, isAuthLoading]);
 
@@ -86,8 +113,24 @@ export function useAnalysisDetail(id: string | undefined) {
   const ownerId = resolveHistoryOwnerId(user?.id);
 
   const [record, setRecord] = useState<SanitizedAnalysisRecord | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  const requestEpochRef = useRef<number>(0);
+  const currentOwnerRef = useRef<string>(ownerId);
+  const currentIdRef = useRef<string | undefined>(id);
+
+  // Eager transition safety: whenever ownerId or id changes, immediately wipe record
+  useEffect(() => {
+    if (currentOwnerRef.current !== ownerId || currentIdRef.current !== id) {
+      currentOwnerRef.current = ownerId;
+      currentIdRef.current = id;
+      requestEpochRef.current += 1;
+      setRecord(undefined);
+      setIsLoading(true);
+      setError(null);
+    }
+  }, [ownerId, id]);
 
   const fetchRecord = useCallback(async () => {
     if (isAuthLoading) {
@@ -100,15 +143,27 @@ export function useAnalysisDetail(id: string | undefined) {
       setIsLoading(false);
       return;
     }
+
+    const currentEpoch = ++requestEpochRef.current;
+    const targetOwner = ownerId;
+    const targetId = id;
+
     try {
       setIsLoading(true);
       setError(null);
-      const data = await getAnalysisRecordByIdAsync(id, ownerId);
-      setRecord(data);
+      const data = await getAnalysisRecordByIdAsync(targetId, targetOwner);
+
+      if (currentEpoch === requestEpochRef.current) {
+        setRecord(data);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load analysis detail.');
+      if (currentEpoch === requestEpochRef.current) {
+        setError(err instanceof Error ? err.message : 'Failed to load analysis detail.');
+      }
     } finally {
-      setIsLoading(false);
+      if (currentEpoch === requestEpochRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [id, ownerId, isAuthLoading]);
 
@@ -151,8 +206,22 @@ export function useBreachHistory() {
   const ownerId = resolveHistoryOwnerId(user?.id);
 
   const [records, setRecords] = useState<SanitizedBreachRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  const requestEpochRef = useRef<number>(0);
+  const currentOwnerRef = useRef<string>(ownerId);
+
+  // Eager transition safety: whenever ownerId changes, immediately wipe records and enter loading state.
+  useEffect(() => {
+    if (currentOwnerRef.current !== ownerId) {
+      currentOwnerRef.current = ownerId;
+      requestEpochRef.current += 1;
+      setRecords([]);
+      setIsLoading(true);
+      setError(null);
+    }
+  }, [ownerId]);
 
   const fetchRecords = useCallback(async () => {
     if (isAuthLoading) {
@@ -160,15 +229,25 @@ export function useBreachHistory() {
       return;
     }
 
+    const currentEpoch = ++requestEpochRef.current;
+    const targetOwner = ownerId;
+
     try {
       setIsLoading(true);
       setError(null);
-      const data = await getBreachRecordsAsync(ownerId);
-      setRecords(data);
+      const data = await getBreachRecordsAsync(targetOwner);
+
+      if (currentEpoch === requestEpochRef.current) {
+        setRecords(data);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load breach check history.');
+      if (currentEpoch === requestEpochRef.current) {
+        setError(err instanceof Error ? err.message : 'Failed to load breach check history.');
+      }
     } finally {
-      setIsLoading(false);
+      if (currentEpoch === requestEpochRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [ownerId, isAuthLoading]);
 
@@ -214,8 +293,24 @@ export function useBreachDetail(id: string | undefined) {
   const ownerId = resolveHistoryOwnerId(user?.id);
 
   const [record, setRecord] = useState<SanitizedBreachRecord | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  const requestEpochRef = useRef<number>(0);
+  const currentOwnerRef = useRef<string>(ownerId);
+  const currentIdRef = useRef<string | undefined>(id);
+
+  // Eager transition safety: whenever ownerId or id changes, immediately wipe record
+  useEffect(() => {
+    if (currentOwnerRef.current !== ownerId || currentIdRef.current !== id) {
+      currentOwnerRef.current = ownerId;
+      currentIdRef.current = id;
+      requestEpochRef.current += 1;
+      setRecord(undefined);
+      setIsLoading(true);
+      setError(null);
+    }
+  }, [ownerId, id]);
 
   const fetchRecord = useCallback(async () => {
     if (isAuthLoading) {
@@ -228,15 +323,27 @@ export function useBreachDetail(id: string | undefined) {
       setIsLoading(false);
       return;
     }
+
+    const currentEpoch = ++requestEpochRef.current;
+    const targetOwner = ownerId;
+    const targetId = id;
+
     try {
       setIsLoading(true);
       setError(null);
-      const data = await getBreachRecordByIdAsync(id, ownerId);
-      setRecord(data);
+      const data = await getBreachRecordByIdAsync(targetId, targetOwner);
+
+      if (currentEpoch === requestEpochRef.current) {
+        setRecord(data);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load breach record detail.');
+      if (currentEpoch === requestEpochRef.current) {
+        setError(err instanceof Error ? err.message : 'Failed to load breach record detail.');
+      }
     } finally {
-      setIsLoading(false);
+      if (currentEpoch === requestEpochRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [id, ownerId, isAuthLoading]);
 
