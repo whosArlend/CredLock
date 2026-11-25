@@ -340,7 +340,7 @@ export function ProfilePage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-lg bg-background-base/60 border border-border">
               <div>
                 <span className="font-semibold text-foreground text-xs block">Flush Saved Local Records</span>
-                <span className="text-muted text-[11px]">Deletes all sanitized analysis and breach query records from IndexedDB (<code className="font-mono text-foreground font-semibold">credlock-db</code>).</span>
+                <span className="text-muted text-[11px]">Deletes all local analysis and breach history from IndexedDB across all scopes on this device. Active login session is preserved.</span>
               </div>
               <Button
                 variant="danger"
@@ -356,12 +356,15 @@ export function ProfilePage() {
             <div className="p-4 rounded-xl bg-status-danger/10 border border-status-danger/30 space-y-3">
               <div className="flex items-start gap-2.5">
                 <AlertTriangle className="w-5 h-5 text-status-danger shrink-0 mt-0.5" />
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                   <h4 className="text-xs font-bold text-foreground">
-                    Confirm Complete Local Data Wipe?
+                    Confirm Local Device Data Wipe?
                   </h4>
                   <p className="text-[11px] text-muted leading-relaxed font-sans">
-                    This permanently removes all analysis history and breach query records from IndexedDB on this device. This operation cannot be undone.
+                    Permanently removes all local analysis history and breach query records stored in this browser across all owner scopes (including Guest and authenticated accounts).
+                  </p>
+                  <p className="text-[11px] text-muted leading-relaxed font-sans">
+                    <strong className="text-foreground">Authentication Preservation:</strong> Your active login session remains intact and is not logged out. This operation is strictly local to this device and does not delete server-side account or database records.
                   </p>
                 </div>
               </div>

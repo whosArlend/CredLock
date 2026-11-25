@@ -1294,5 +1294,33 @@ describe('CredLock v2.0 — Phase 2.1: Username-Only Authentication Test Suite',
       assert.match(profileSource, /Local Enclave \(Guest Mode\)/);
       assert.match(profileSource, /under local guest scope/);
     });
+
+    it('verifies Clear Local Data confirmation dialog copy communicates scope and session preservation', () => {
+      const profileSource = fs.readFileSync(
+        path.resolve(process.cwd(), 'src/pages/ProfilePage.tsx'),
+        'utf8'
+      );
+
+      // Must explicitly communicate wipe affects all owner scopes on the browser/device
+      assert.match(
+        profileSource,
+        /across all owner scopes \(including Guest and authenticated accounts\)/,
+        'Dialog must explicitly mention multi-owner deletion scope on the device'
+      );
+
+      // Must explicitly clarify that active authentication session remains intact
+      assert.match(
+        profileSource,
+        /Authentication Preservation:\s*<\/strong>\s*Your active login session remains intact/,
+        'Dialog must state authentication is preserved'
+      );
+
+      // Must explicitly state that server-side account or database records are not deleted
+      assert.match(
+        profileSource,
+        /does not delete server-side account or database records/,
+        'Dialog must clarify server records are untouched'
+      );
+    });
   });
 });
