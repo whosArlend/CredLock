@@ -4,6 +4,7 @@ import {
   getRecommendationDetailController,
 } from '../../controllers/recommendationController.js';
 import { validateRecommendationQuery } from '../../validators/recommendationValidator.js';
+import { validateSlugParam } from '../../validators/slugValidator.js';
 
 export const recommendationsRouter = Router();
 
@@ -21,4 +22,4 @@ recommendationsRouter.get(
  * GET /api/v1/recommendations/:slug
  * Public detail of one published security recommendation.
  */
-recommendationsRouter.get('/:slug', getRecommendationDetailController);
+recommendationsRouter.get('/:slug', validateSlugParam, getRecommendationDetailController);

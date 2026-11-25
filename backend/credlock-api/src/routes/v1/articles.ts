@@ -4,6 +4,7 @@ import {
   getArticleDetailController,
 } from '../../controllers/articleController.js';
 import { validateArticleQuery } from '../../validators/articleValidator.js';
+import { validateSlugParam } from '../../validators/slugValidator.js';
 
 export const articlesRouter = Router();
 
@@ -21,4 +22,4 @@ articlesRouter.get(
  * GET /api/v1/articles/:slug
  * Public detail of one published security article.
  */
-articlesRouter.get('/:slug', getArticleDetailController);
+articlesRouter.get('/:slug', validateSlugParam, getArticleDetailController);
