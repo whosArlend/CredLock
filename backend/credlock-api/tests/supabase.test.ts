@@ -3,6 +3,7 @@ import { validateSupabaseEnv } from '../src/config/env.js';
 import {
   checkDatabaseConnection,
   setSupabaseClient,
+  resolveSupabaseApiKey,
 } from '../src/config/supabase.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -12,21 +13,53 @@ describe('Supabase Configuration & Client Module', () => {
     setSupabaseClient(null);
   });
 
-  describe('validateSupabaseEnv', () => {
-    it('succeeds with valid URL and secret key (sb_secret_...) format', () => {
-      const validConfig = {
+  describe('validateSupabaseEnv & Least Privilege Resolution', () => {
+    it('succeeds with valid URL and public anon key (SUPABASE_ANON_KEY)', () => {
+      const anonConfig = {
+        SUPABASE_URL: 'https://sampleproject.supabase.co',
+        SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.public_anon_sample_key',
+      };
+
+      const result = validateSupabaseEnv(anonConfig);
+      expect(result.SUPABASE_URL).toBe(anonConfig.SUPABASE_URL);
+      expect(result.SUPABASE_ANON_KEY).toBe(anonConfig.SUPABASE_ANON_KEY);
+
+      const resolved = resolveSupabaseApiKey(result);
+      expect(resolved.key).toBe(anonConfig.SUPABASE_ANON_KEY);
+      expect(resolved.isLeastPrivilege).toBe(true);
+    });
+
+    it('prioritizes SUPABASE_ANON_KEY over SUPABASE_SECRET_KEY when both are present', () => {
+      const dualConfig = {
+        SUPABASE_URL: 'https://sampleproject.supabase.co',
+        SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.public_anon_sample_key',
+        SUPABASE_SECRET_KEY: 'sb_secret_sample_mock_token_for_backend_access',
+      };
+
+      const result = validateSupabaseEnv(dualConfig);
+      const resolved = resolveSupabaseApiKey(result);
+      expect(resolved.key).toBe(dualConfig.SUPABASE_ANON_KEY);
+      expect(resolved.isLeastPrivilege).toBe(true);
+    });
+
+    it('falls back to SUPABASE_SECRET_KEY for backward compatibility if anon key is absent', () => {
+      const fallbackConfig = {
         SUPABASE_URL: 'https://sampleproject.supabase.co',
         SUPABASE_SECRET_KEY: 'sb_secret_sample_mock_token_for_backend_access',
       };
 
-      const result = validateSupabaseEnv(validConfig);
-      expect(result.SUPABASE_URL).toBe(validConfig.SUPABASE_URL);
-      expect(result.SUPABASE_SECRET_KEY).toBe(validConfig.SUPABASE_SECRET_KEY);
+      const result = validateSupabaseEnv(fallbackConfig);
+      expect(result.SUPABASE_URL).toBe(fallbackConfig.SUPABASE_URL);
+      expect(result.SUPABASE_SECRET_KEY).toBe(fallbackConfig.SUPABASE_SECRET_KEY);
+
+      const resolved = resolveSupabaseApiKey(result);
+      expect(resolved.key).toBe(fallbackConfig.SUPABASE_SECRET_KEY);
+      expect(resolved.isLeastPrivilege).toBe(false);
     });
 
     it('throws error when SUPABASE_URL is missing', () => {
       const invalidConfig = {
-        SUPABASE_SECRET_KEY: 'sb_secret_sample_mock_token_for_backend_access',
+        SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.public_anon_sample_key',
       };
 
       expect(() => validateSupabaseEnv(invalidConfig)).toThrow();
@@ -35,16 +68,24 @@ describe('Supabase Configuration & Client Module', () => {
     it('throws error when SUPABASE_URL is not a valid URL', () => {
       const invalidConfig = {
         SUPABASE_URL: 'not-a-valid-url-format',
-        SUPABASE_SECRET_KEY: 'sb_secret_sample_mock_token_for_backend_access',
+        SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.public_anon_sample_key',
       };
 
       expect(() => validateSupabaseEnv(invalidConfig)).toThrow();
     });
 
-    it('throws error when SUPABASE_SECRET_KEY is missing or too short', () => {
+    it('throws error when neither SUPABASE_ANON_KEY nor SUPABASE_SECRET_KEY is provided', () => {
       const invalidConfig = {
         SUPABASE_URL: 'https://sampleproject.supabase.co',
-        SUPABASE_SECRET_KEY: 'short',
+      };
+
+      expect(() => validateSupabaseEnv(invalidConfig)).toThrow();
+    });
+
+    it('throws error when provided credential key is too short', () => {
+      const invalidConfig = {
+        SUPABASE_URL: 'https://sampleproject.supabase.co',
+        SUPABASE_ANON_KEY: 'short',
       };
 
       expect(() => validateSupabaseEnv(invalidConfig)).toThrow();

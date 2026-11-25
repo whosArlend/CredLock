@@ -4,14 +4,45 @@ import { validateSupabaseEnv } from './env.js';
 let cachedClient: SupabaseClient | null = null;
 
 /**
+ * Resolves the Supabase client API key adhering to the Principle of Least Privilege:
+ * 1. Prioritizes SUPABASE_ANON_KEY (public read-only access subject to PostgreSQL RLS).
+ * 2. Falls back to SUPABASE_SECRET_KEY for backward-compatibility if anon key is not set.
+ */
+export function resolveSupabaseApiKey(config: ReturnType<typeof validateSupabaseEnv>): {
+  key: string;
+  isLeastPrivilege: boolean;
+} {
+  if (config.SUPABASE_ANON_KEY && config.SUPABASE_ANON_KEY.length >= 10) {
+    return {
+      key: config.SUPABASE_ANON_KEY,
+      isLeastPrivilege: true,
+    };
+  }
+
+  return {
+    key: config.SUPABASE_SECRET_KEY as string,
+    isLeastPrivilege: false,
+  };
+}
+
+/**
  * Creates or retrieves the cached Supabase client instance.
- * Uses the server-side SUPABASE_SECRET_KEY (elevated/admin credentials).
- * Never expose this client or its credentials to the frontend.
+ * Employs the public anon key (least privilege) whenever configured,
+ * ensuring database reads are naturally restricted by Row Level Security (RLS).
  */
 export function getSupabaseClient(): SupabaseClient {
   if (!cachedClient) {
     const config = validateSupabaseEnv();
-    cachedClient = createClient(config.SUPABASE_URL, config.SUPABASE_SECRET_KEY, {
+    const { key, isLeastPrivilege } = resolveSupabaseApiKey(config);
+
+    if (!isLeastPrivilege && process.env.NODE_ENV !== 'test') {
+      console.warn(
+        '[Security Notice] CredLock API is using SUPABASE_SECRET_KEY (admin credentials). ' +
+        'Configure SUPABASE_ANON_KEY to enforce the Principle of Least Privilege with Row Level Security.'
+      );
+    }
+
+    cachedClient = createClient(config.SUPABASE_URL, key, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
