@@ -27,6 +27,7 @@ let analysisCache: SanitizedAnalysisRecord[] = [];
 let breachCache: SanitizedBreachRecord[] = [];
 let isInitialized = false;
 let initPromise: Promise<void> | null = null;
+let cacheGeneration = 0;
 
 // Event emitted on window to synchronize reactive hooks across components
 export const HISTORY_CHANGE_EVENT = 'credlock:history-updated';
@@ -87,14 +88,20 @@ function findCrossOwnerConflict<T extends { id: string; ownerId?: string }>(
 /**
  * Initializes persistent history from IndexedDB.
  * Legacy records without ownerId are safely normalized to 'guest' without data loss.
+ * Uses cacheGeneration to prevent an in-flight initialization from repopulating
+ * stale data after resetHistoryMemoryCache() is called.
  */
 export async function initHistoryStorage(): Promise<void> {
   if (isInitialized) return;
   if (initPromise) return initPromise;
 
+  const startGen = cacheGeneration;
+
   initPromise = (async () => {
     if (!isIndexedDBAvailable()) {
-      isInitialized = true;
+      if (cacheGeneration === startGen) {
+        isInitialized = true;
+      }
       return;
     }
 
@@ -103,6 +110,10 @@ export async function initHistoryStorage(): Promise<void> {
         getAllFromStore<SanitizedAnalysisRecord>(STORES.ANALYSIS),
         getAllFromStore<SanitizedBreachRecord>(STORES.BREACH),
       ]);
+
+      if (cacheGeneration !== startGen) {
+        return;
+      }
 
       const dbAnalysis = rawAnalysis.map(normalizeLegacyRecord);
       const dbBreach = rawBreach.map(normalizeLegacyRecord);
@@ -114,6 +125,7 @@ export async function initHistoryStorage(): Promise<void> {
         if (!existingAnalysisIds.has(memRecord.id.toLowerCase())) {
           const normalized = normalizeLegacyRecord(memRecord);
           await putInStore(STORES.ANALYSIS, normalized);
+          if (cacheGeneration !== startGen) return;
           dbAnalysis.push(normalized);
         }
       }
@@ -123,6 +135,7 @@ export async function initHistoryStorage(): Promise<void> {
         if (!existingBreachIds.has(memRecord.id.toLowerCase())) {
           const normalized = normalizeLegacyRecord(memRecord);
           await putInStore(STORES.BREACH, normalized);
+          if (cacheGeneration !== startGen) return;
           dbBreach.push(normalized);
         }
       }
@@ -131,17 +144,38 @@ export async function initHistoryStorage(): Promise<void> {
       dbAnalysis.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       dbBreach.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
+      if (cacheGeneration !== startGen) {
+        return;
+      }
+
       analysisCache = dbAnalysis;
       breachCache = dbBreach;
       isInitialized = true;
       notifyChange();
     } catch (err) {
+      if (cacheGeneration !== startGen) {
+        return;
+      }
       console.warn('[CredLock Storage] Failed to initialize from IndexedDB, falling back to session cache:', err);
       isInitialized = true;
     }
   })();
 
   return initPromise;
+}
+
+/**
+ * Safely resets all in-memory history caches and initialization state without
+ * deleting IndexedDB records, clearing localStorage, or altering Supabase Auth.
+ * Increments cacheGeneration so any in-flight initialization cannot repopulate stale cache.
+ */
+export function resetHistoryMemoryCache(): void {
+  cacheGeneration += 1;
+  analysisCache = [];
+  breachCache = [];
+  isInitialized = false;
+  initPromise = null;
+  notifyChange();
 }
 
 // Auto-initialize in browser environment
@@ -170,12 +204,19 @@ export async function getAnalysisRecordsAsync(
   ownerId: string = GUEST_OWNER_ID
 ): Promise<SanitizedAnalysisRecord[]> {
   const resolvedOwner = resolveHistoryOwnerId(ownerId);
+  const startGen = cacheGeneration;
   await initHistoryStorage();
+  if (cacheGeneration !== startGen) {
+    return [];
+  }
   if (isIndexedDBAvailable()) {
     try {
       const records = (await getAllFromStore<SanitizedAnalysisRecord>(STORES.ANALYSIS)).map(
         normalizeLegacyRecord
       );
+      if (cacheGeneration !== startGen) {
+        return [];
+      }
       analysisCache = records;
       return records.filter((r) => normalizeRecordOwnerId(r) === resolvedOwner);
     } catch (err) {
@@ -344,12 +385,19 @@ export async function getBreachRecordsAsync(
   ownerId: string = GUEST_OWNER_ID
 ): Promise<SanitizedBreachRecord[]> {
   const resolvedOwner = resolveHistoryOwnerId(ownerId);
+  const startGen = cacheGeneration;
   await initHistoryStorage();
+  if (cacheGeneration !== startGen) {
+    return [];
+  }
   if (isIndexedDBAvailable()) {
     try {
       const records = (await getAllFromStore<SanitizedBreachRecord>(STORES.BREACH)).map(
         normalizeLegacyRecord
       );
+      if (cacheGeneration !== startGen) {
+        return [];
+      }
       breachCache = records;
       return records.filter((r) => normalizeRecordOwnerId(r) === resolvedOwner);
     } catch (err) {

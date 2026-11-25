@@ -36,6 +36,8 @@ import {
   GUEST_OWNER_ID,
   resolveHistoryOwnerId,
   normalizeRecordOwnerId,
+  initHistoryStorage,
+  resetHistoryMemoryCache,
 } from '../src/services/historyStorage.ts';
 import type { SanitizedAnalysisRecord, SanitizedBreachRecord } from '../src/types/index.ts';
 
@@ -671,6 +673,250 @@ describe('Phase 2.6 — History, Detail & Data Persistence Test Suite', () => {
       // Hidden from User A
       assert.strictEqual(getAnalysisRecords(USER_A).some((r) => r.id === 'legacy-unowned-a'), false);
       assert.strictEqual(getBreachRecords(USER_A).some((r) => r.id === 'legacy-unowned-b'), false);
+    });
+  });
+
+  // Test 7: Phase 4.2 — In-Memory History Cache Cleanup
+  describe('7. Phase 4.2 — In-Memory Cache Reset & Race Prevention', () => {
+    const USER_A = '11111111-1111-4111-8111-111111111111';
+    const USER_B = '22222222-2222-4222-8222-222222222222';
+    let mockStores: Record<string, Map<string, unknown>> = {};
+    let getAllDelayMs = 0;
+
+    beforeEach(() => {
+      resetHistoryMemoryCache();
+      getAllDelayMs = 0;
+      mockStores = {
+        [STORES.ANALYSIS]: new Map(),
+        [STORES.BREACH]: new Map(),
+      };
+
+      const mockDB: unknown = {
+        objectStoreNames: {
+          contains: (name: string) => name in mockStores,
+        },
+        createObjectStore: (name: string) => {
+          mockStores[name] = new Map();
+          return { createIndex: () => {} };
+        },
+        transaction: (storeName: string) => {
+          const targetMap = mockStores[storeName] || new Map();
+          const tx = {
+            objectStore: () => ({
+              getAll: () => {
+                const req: { result?: unknown[]; onsuccess?: () => void; onerror?: () => void } = {
+                  result: Array.from(targetMap.values()),
+                };
+                setTimeout(() => {
+                  req.onsuccess?.();
+                  setTimeout(() => tx.oncomplete?.(), 0);
+                }, getAllDelayMs);
+                return req;
+              },
+              get: (key: string) => {
+                const req: { result?: unknown; onsuccess?: () => void; onerror?: () => void } = {
+                  result: targetMap.get(key),
+                };
+                setTimeout(() => {
+                  req.onsuccess?.();
+                  setTimeout(() => tx.oncomplete?.(), 0);
+                }, 0);
+                return req;
+              },
+              put: (item: { id: string }) => {
+                targetMap.set(item.id, item);
+                const req: { onsuccess?: () => void; onerror?: () => void } = {};
+                setTimeout(() => {
+                  req.onsuccess?.();
+                  setTimeout(() => tx.oncomplete?.(), 0);
+                }, 0);
+                return req;
+              },
+              delete: (key: string) => {
+                targetMap.delete(key);
+                const req: { onsuccess?: () => void; onerror?: () => void } = {};
+                setTimeout(() => {
+                  req.onsuccess?.();
+                  setTimeout(() => tx.oncomplete?.(), 0);
+                }, 0);
+                return req;
+              },
+              clear: () => {
+                targetMap.clear();
+                const req: { onsuccess?: () => void; onerror?: () => void } = {};
+                setTimeout(() => {
+                  req.onsuccess?.();
+                  setTimeout(() => tx.oncomplete?.(), 0);
+                }, 0);
+                return req;
+              },
+            }),
+            oncomplete: undefined as (() => void) | undefined,
+            onerror: undefined as (() => void) | undefined,
+            onabort: undefined as (() => void) | undefined,
+          };
+          return tx;
+        },
+        close: () => {},
+      };
+
+      (globalThis as Record<string, unknown>).window = {
+        indexedDB: {
+          open: () => {
+            const req: {
+              result: unknown;
+              onsuccess?: () => void;
+              onerror?: () => void;
+              onupgradeneeded?: (e: unknown) => void;
+            } = { result: mockDB };
+            setTimeout(() => {
+              req.onsuccess?.();
+            }, 0);
+            return req;
+          },
+        },
+      };
+    });
+
+    afterEach(() => {
+      resetHistoryMemoryCache();
+      delete (globalThis as Record<string, unknown>).window;
+    });
+
+    it('resets in-memory analysis and breach caches while preserving persistent IndexedDB records', async () => {
+      await addAnalysisRecordAsync(
+        {
+          id: 'mem-a-guest',
+          timestamp: '2026-11-25T10:00:00.000Z',
+          passwordLength: 12,
+          entropyBits: 60,
+          score: 3,
+          hasLowercase: true,
+          hasUppercase: true,
+          hasNumbers: true,
+          hasSymbols: false,
+          crackTimeDisplay: 'days',
+        },
+        GUEST_OWNER_ID
+      );
+      await addAnalysisRecordAsync(
+        {
+          id: 'mem-a-usera',
+          timestamp: '2026-11-25T10:05:00.000Z',
+          passwordLength: 16,
+          entropyBits: 85,
+          score: 4,
+          hasLowercase: true,
+          hasUppercase: true,
+          hasNumbers: true,
+          hasSymbols: true,
+          crackTimeDisplay: 'centuries',
+        },
+        USER_A
+      );
+      await addBreachRecordAsync(
+        {
+          id: 'mem-b-guest',
+          timestamp: '2026-11-25T10:01:00.000Z',
+          isBreached: false,
+          breachCount: 0,
+        },
+        GUEST_OWNER_ID
+      );
+      await addBreachRecordAsync(
+        {
+          id: 'mem-b-usera',
+          timestamp: '2026-11-25T10:06:00.000Z',
+          isBreached: true,
+          breachCount: 3,
+        },
+        USER_A
+      );
+
+      // Verify caches are populated
+      assert.strictEqual(getAnalysisRecords(GUEST_OWNER_ID).length, 1);
+      assert.strictEqual(getAnalysisRecords(USER_A).length, 1);
+      assert.strictEqual(getBreachRecords(GUEST_OWNER_ID).length, 1);
+      assert.strictEqual(getBreachRecords(USER_A).length, 1);
+
+      // Reset memory cache ONLY
+      resetHistoryMemoryCache();
+
+      // Synchronous in-memory caches must be completely empty for all owners
+      assert.strictEqual(getAnalysisRecords(GUEST_OWNER_ID).length, 0);
+      assert.strictEqual(getAnalysisRecords(USER_A).length, 0);
+      assert.strictEqual(getAnalysisRecords(USER_B).length, 0);
+      assert.strictEqual(getBreachRecords(GUEST_OWNER_ID).length, 0);
+      assert.strictEqual(getBreachRecords(USER_A).length, 0);
+      assert.strictEqual(getBreachRecords(USER_B).length, 0);
+
+      // Persistent IndexedDB stores must still contain all records intact
+      assert.strictEqual(mockStores[STORES.ANALYSIS].size, 2);
+      assert.strictEqual(mockStores[STORES.BREACH].size, 2);
+
+      // Reinitialization & async reload must restore Guest and User A records cleanly
+      await initHistoryStorage();
+      assert.deepStrictEqual(
+        (await getAnalysisRecordsAsync(GUEST_OWNER_ID)).map((r) => r.id),
+        ['mem-a-guest']
+      );
+      assert.deepStrictEqual(
+        (await getAnalysisRecordsAsync(USER_A)).map((r) => r.id),
+        ['mem-a-usera']
+      );
+      assert.deepStrictEqual(
+        (await getBreachRecordsAsync(GUEST_OWNER_ID)).map((r) => r.id),
+        ['mem-b-guest']
+      );
+      assert.deepStrictEqual(
+        (await getBreachRecordsAsync(USER_A)).map((r) => r.id),
+        ['mem-b-usera']
+      );
+    });
+
+    it('prevents an in-flight stale initialization from repopulating cache after resetHistoryMemoryCache()', async () => {
+      // Seed persistent IndexedDB directly (simulating prior session records)
+      mockStores[STORES.ANALYSIS].set('stale-a1', {
+        id: 'stale-a1',
+        ownerId: USER_A,
+        timestamp: '2026-11-25T11:00:00.000Z',
+        passwordLength: 14,
+        entropyBits: 72,
+        score: 4,
+        hasLowercase: true,
+        hasUppercase: true,
+        hasNumbers: true,
+        hasSymbols: true,
+        crackTimeDisplay: 'centuries',
+      });
+      mockStores[STORES.BREACH].set('stale-b1', {
+        id: 'stale-b1',
+        ownerId: USER_A,
+        timestamp: '2026-11-25T11:01:00.000Z',
+        isBreached: true,
+        breachCount: 7,
+      });
+
+      // Simulate slow IndexedDB getAll
+      getAllDelayMs = 30;
+      const inFlightInit = initHistoryStorage();
+
+      // Reset cache while initialization is still in-flight
+      resetHistoryMemoryCache();
+
+      // Wait for the stale initialization promise to finish
+      await inFlightInit;
+
+      // Stale initialization MUST NOT have repopulated the in-memory caches
+      assert.strictEqual(getAnalysisRecords(USER_A).length, 0);
+      assert.strictEqual(getBreachRecords(USER_A).length, 0);
+
+      // Subsequent fresh reload still works cleanly
+      getAllDelayMs = 0;
+      const reloadedAnalysis = await getAnalysisRecordsAsync(USER_A);
+      const reloadedBreach = await getBreachRecordsAsync(USER_A);
+      assert.deepStrictEqual(reloadedAnalysis.map((r) => r.id), ['stale-a1']);
+      assert.deepStrictEqual(reloadedBreach.map((r) => r.id), ['stale-b1']);
     });
   });
 });
