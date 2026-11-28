@@ -2,14 +2,14 @@
 
 **Client-Side Password Security & Privacy Environment**
 
-[![Version](https://img.shields.io/badge/Release-v2.0.0-amber.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Release-v2.1.0-amber.svg)](CHANGELOG.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg?logo=typescript)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19.0-61DAFB.svg?logo=react)](https://react.dev/)
 [![Express](https://img.shields.io/badge/Express-5.0-black.svg?logo=express)](https://expressjs.com/)
 [![Vite](https://img.shields.io/badge/Vite-6.0-646CFF.svg?logo=vite)](https://vitejs.dev/)
 [![Supabase](https://img.shields.io/badge/Supabase-Auth%20%26%20PostgreSQL-3ECF8E.svg?logo=supabase)](https://supabase.com/)
 [![Upstash Redis](https://img.shields.io/badge/Upstash-Redis%20Rate%20Limiter-00E599.svg?logo=redis)](https://upstash.com/)
-[![Tests](https://img.shields.io/badge/Tests-448%20Passed-brightgreen.svg)](#10-automated-testing--verification)
+[![Tests](https://img.shields.io/badge/Tests-466%20Passed-brightgreen.svg)](#10-automated-testing--verification)
 
 CredLock is a privacy-first, client-side cybersecurity Progressive Web Application (PWA) designed for high-assurance password strength analysis, cryptographically uniform credential generation, k-Anonymity breach detection, and verified threat intelligence.
 
@@ -19,25 +19,27 @@ CredLock strictly separates local client-side credential processing from remote 
 
 ## 1. Project Status & Live Production Endpoints
 
-CredLock v2.0.0 is successfully deployed and production-verified:
+CredLock v2.1.0 is successfully deployed and production-verified:
 
-- **Current Release:** **CredLock v2.0.0** — consult [CHANGELOG.md](CHANGELOG.md) for full release history.
+- **Current Release:** **CredLock v2.1.0** — consult [CHANGELOG.md](CHANGELOG.md) for full release history.
 - **Frontend PWA:** Deployed on Vercel
 - **Live Backend API (Production):** [`https://credlock-api.vercel.app`](https://credlock-api.vercel.app)
 - **API Liveness Probe:** [`https://credlock-api.vercel.app/api/health`](https://credlock-api.vercel.app/api/health)
 - **API Database Readiness Probe:** [`https://credlock-api.vercel.app/api/health/db`](https://credlock-api.vercel.app/api/health/db)
-- **Automated Verification:** **448 / 448 automated tests passed** (262 frontend tests, 186 backend tests).
+- **Automated Verification:** **466 / 466 automated tests passed** (280 frontend tests, 186 backend tests).
 - **TypeScript & Linting:** 0 compiler errors, 0 ESLint warnings across both frontend and backend codebases.
 
 ---
 
 ## 2. Core Capabilities
 
-### 🛡️ 01 — Password Strength Analyzer
+### 🛡️ 01 — Multi-Method Password Strength Analyzer
 - **Local In-Memory Evaluation**: Evaluates passwords entirely within the browser client; zero network transmission.
-- **Heuristic Scoring via `@zxcvbn-ts`**: Analyzes entropy-related metrics, dictionary matches, spatial keyboard walks, sequential runs, repeat characters, and l33t speak substitutions.
-- **Multi-Scenario Crack Time Modeling**: Estimates search difficulty across four standardized threat scenarios: Online Throttled (100/hr), Online Unthrottled (10/sec), Offline Slow Hash (10,000/sec), and Offline Fast Hash (10,000,000,000/sec).
-- **Mathematical Distinction**: Clearly separates theoretical character-pool entropy ($L \times \log_2(R)$) from empirical guess difficulty ($\log_2(\text{guesses})$).
+- **Selectable Analysis Workbenches**:
+  1. **Zxcvbn Analysis (Baseline)**: Pattern-aware dictionary matching, spatial keyboard walks, sequential runs, repeat characters, and l33t speak substitutions with 4 threat crack-time scenarios.
+  2. **Keyspace Entropy Analysis**: Computes theoretical Shannon-style keyspace entropy ($H = L \times \log_2(R)$) with explicit disclosures regarding uniform-randomness assumptions.
+  3. **Markov Chain Sequence Analysis (Experimental)**: 1st-order probabilistic character transition model computing surprisal ($S = -\log_2 P$), average surprisal ($\overline{S} = S / L$), sequence perplexity ($2^{\overline{S}}$), and predictability index (0–100) using a transparent heuristic digraph/walk baseline model with Laplace smoothing floor ($10^{-4}$).
+  4. **Compare All Methods**: Simultaneous side-by-side execution with automatic divergence synthesis explaining discrepancies (e.g. why `Password123!` has high keyspace entropy but poor dictionary & Markov resistance).
 
 ### 🔑 02 — Cryptographically Secure Generator
 - **Web Crypto CSPRNG**: Exclusively utilizes `window.crypto.getRandomValues()`; strictly prohibits insecure pseudo-random fallback (`Math.random()`).

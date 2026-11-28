@@ -1,5 +1,8 @@
 import type { ZxcvbnFactory as ZxcvbnFactoryType, ZxcvbnResult } from '@zxcvbn-ts/core';
 import type { SanitizedAnalysisRecord } from '@/types';
+import type { AnalysisMethod } from './analyzer/types.ts';
+
+export * from './analyzer/index.ts';
 
 // Lazily initialized zxcvbn instance and singleton loader promise
 let zxcvbnInstance: InstanceType<typeof ZxcvbnFactoryType> | null = null;
@@ -366,7 +369,12 @@ export async function analyzePasswordAsync(password: string): Promise<PasswordAn
  * Under no circumstances does this function retain the plaintext password.
  */
 export function createSanitizedAnalysisRecord(
-  result: PasswordAnalysisResult
+  result: PasswordAnalysisResult,
+  options?: {
+    method?: AnalysisMethod;
+    theoreticalEntropyBits?: number;
+    markovSurprisalBits?: number;
+  }
 ): SanitizedAnalysisRecord {
   return {
     id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `ana-${Date.now()}`,
@@ -381,5 +389,8 @@ export function createSanitizedAnalysisRecord(
     crackTimeDisplay: result.crackTimes.offlineSlowHash,
     strengthLabel: result.scoreLabel,
     warning: result.feedback.warning,
+    analysisMethod: options?.method ?? 'zxcvbn',
+    theoreticalEntropyBits: options?.theoreticalEntropyBits,
+    markovSurprisalBits: options?.markovSurprisalBits,
   };
 }

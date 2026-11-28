@@ -19,6 +19,9 @@ export interface SanitizedAnalysisRecord {
   crackTimeDisplay: string; // Human-readable crack time under standard offline slow hashing
   strengthLabel?: string;   // "Very Weak" | "Weak" | "Fair" | "Strong" | "Very Strong"
   warning?: string | null;  // Actionable feedback warning from estimator
+  analysisMethod?: 'zxcvbn' | 'entropy' | 'markov' | 'compare'; // Analysis method selected
+  theoreticalEntropyBits?: number; // H = L * log2(R) theoretical keyspace
+  markovSurprisalBits?: number;    // Average surprisal bits per character
 }
 
 // Sanitized record for breach checks (k-anonymity results)

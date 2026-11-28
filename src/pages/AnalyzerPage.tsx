@@ -11,7 +11,11 @@ import {
   createSanitizedAnalysisRecord,
   initZxcvbn,
   isZxcvbnLoaded,
+  analyzeEntropy,
+  analyzeMarkov,
+  compareAllMethods,
 } from '@/services/passwordAnalyzer';
+import type { AnalysisMethod } from '@/services/analyzer/types';
 import { addAnalysisRecord, resolveHistoryOwnerId } from '@/services/historyStorage';
 import { PasswordInput } from '@/features/analyzer/components/PasswordInput';
 import { StrengthMeter } from '@/features/analyzer/components/StrengthMeter';
@@ -19,12 +23,17 @@ import { CharacterCompositionBadges } from '@/features/analyzer/components/Chara
 import { CrackTimeScenarios } from '@/features/analyzer/components/CrackTimeScenarios';
 import { FeedbackCard } from '@/features/analyzer/components/FeedbackCard';
 import { PrivacyNoticeCard } from '@/features/analyzer/components/PrivacyNoticeCard';
+import { MethodSelector } from '@/features/analyzer/components/MethodSelector';
+import { EntropyView } from '@/features/analyzer/components/EntropyView';
+import { MarkovView } from '@/features/analyzer/components/MarkovView';
+import { ComparisonView } from '@/features/analyzer/components/ComparisonView';
 
 export function AnalyzerPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const prefill = (location.state as { prefillPassword?: string } | null)?.prefillPassword || '';
   const [password, setPassword] = useState(prefill);
+  const [selectedMethod, setSelectedMethod] = useState<AnalysisMethod>('zxcvbn');
   const [zxcvbnLoaded, setZxcvbnLoaded] = useState(() => isZxcvbnLoaded());
   const { showToast } = useToast();
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -41,10 +50,30 @@ export function AnalyzerPage() {
     }
   }, [zxcvbnLoaded]);
 
+  // Baseline Zxcvbn analysis
   const analysisResult = useMemo(
     () => analyzePassword(password),
     [password, zxcvbnLoaded]
   );
+
+  // Theoretical Keyspace Entropy analysis
+  const entropyResult = useMemo(
+    () => (password.length > 0 ? analyzeEntropy(password) : null),
+    [password]
+  );
+
+  // Markov Chain sequence analysis
+  const markovResult = useMemo(
+    () => (password.length > 0 ? analyzeMarkov(password) : null),
+    [password]
+  );
+
+  // Multi-method comparison synthesis
+  const comparisonResult = useMemo(
+    () => (password.length > 0 ? compareAllMethods(password) : null),
+    [password, analysisResult]
+  );
+
   const isEmpty = password.length === 0;
 
   const handleClear = () => {
@@ -64,13 +93,17 @@ export function AnalyzerPage() {
     }
 
     const ownerId = resolveHistoryOwnerId(user?.id);
-    const sanitizedRecord = createSanitizedAnalysisRecord(analysisResult);
+    const sanitizedRecord = createSanitizedAnalysisRecord(analysisResult, {
+      method: selectedMethod,
+      theoreticalEntropyBits: entropyResult?.theoreticalEntropyBits,
+      markovSurprisalBits: markovResult?.averageSurprisalBits,
+    });
     addAnalysisRecord(sanitizedRecord, ownerId);
 
     showToast({
       type: 'success',
       title: 'Analysis Record Archived',
-      message: `Sanitized dossier #${sanitizedRecord.id.slice(0, 8)} saved to local IndexedDB. Zero passwords recorded.`,
+      message: `Sanitized dossier #${sanitizedRecord.id.slice(0, 8)} (${selectedMethod.toUpperCase()}) saved to local IndexedDB. Zero passwords recorded.`,
     });
   };
 
@@ -78,8 +111,8 @@ export function AnalyzerPage() {
     <div className="space-y-6 animate-in fade-in duration-200">
       <PageHeader
         title="Password Strength Analyzer"
-        description="Comprehensive client-side evaluation of keyspace entropy, brute-force crack difficulty, and pattern vulnerabilities."
-        badge={<Badge variant="emerald" size="sm" dot>Local Enclave // Active</Badge>}
+        description="Multi-method client-side evaluation of pattern vulnerabilities, theoretical keyspace entropy, and Markov transition surprisal."
+        badge={<Badge variant="emerald" size="sm" dot>Local Enclave // v2.1 Active</Badge>}
         actions={
           <Link to="/analysis-history">
             <Button variant="secondary" size="sm" leftIcon={<History className="w-4 h-4 text-accent" />}>
@@ -89,38 +122,164 @@ export function AnalyzerPage() {
         }
       />
 
-      {/* 2-Column Responsive Diagnostic Workbench */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Input, Gauge & Metrics (6 cols on desktop) */}
-        <div className="lg:col-span-6 space-y-5">
-          {/* Password Input Terminal */}
-          <div className="p-5 rounded-2xl bg-enclave-plate border border-border-strong shadow-card-tactical">
-            <PasswordInput
-              value={password}
-              onChange={setPassword}
-              onClear={handleClear}
+      {/* Analysis Method Segmented Selector */}
+      <MethodSelector
+        selectedMethod={selectedMethod}
+        onSelectMethod={setSelectedMethod}
+      />
+
+      {/* Conditional Rendering by Selected Method */}
+      {selectedMethod === 'zxcvbn' && (
+        /* 2-Column Responsive Diagnostic Workbench (Baseline Zxcvbn) */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Input, Gauge & Metrics (6 cols on desktop) */}
+          <div className="lg:col-span-6 space-y-5">
+            {/* Password Input Terminal */}
+            <div className="p-5 rounded-2xl bg-enclave-plate border border-border-strong shadow-card-tactical">
+              <PasswordInput
+                value={password}
+                onChange={setPassword}
+                onClear={handleClear}
+              />
+            </div>
+
+            {/* Strength Gauge & Estimator Metrics */}
+            <StrengthMeter
+              score={analysisResult.score}
+              isEmpty={isEmpty}
+              crackDifficultyBits={analysisResult.crackDifficultyBits}
+              guesses={analysisResult.guesses}
+              calculationTimeMs={analysisResult.calculationTimeMs}
             />
+
+            {/* Character Diversity Badges */}
+            <CharacterCompositionBadges composition={analysisResult.composition} />
+
+            {/* Actions Toolbar */}
+            {!isEmpty && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-enclave-plate border border-border-strong shadow-sm">
+                <div className="text-xs text-foreground-secondary font-sans text-left">
+                  <span>Archive evaluation to persistent local audit storage?</span>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    leftIcon={<Save className="w-4 h-4" />}
+                    onClick={handleSaveToHistory}
+                    className="w-full sm:w-auto font-mono text-xs"
+                  >
+                    Save Dossier
+                  </Button>
+                  <Link to="/analysis-history" className="w-full sm:w-auto">
+                    <Button variant="secondary" size="sm" className="w-full sm:w-auto font-mono text-xs">
+                      Inspect Ledger
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {/* Privacy Notice Card */}
+            <PrivacyNoticeCard />
           </div>
 
-          {/* Strength Gauge & Estimator Metrics */}
-          <StrengthMeter
-            score={analysisResult.score}
-            isEmpty={isEmpty}
-            crackDifficultyBits={analysisResult.crackDifficultyBits}
-            guesses={analysisResult.guesses}
-            calculationTimeMs={analysisResult.calculationTimeMs}
-          />
+          {/* Right Column: Feedback & Crack Scenarios (6 cols on desktop) */}
+          <div className="lg:col-span-6 space-y-5">
+            {!isEmpty ? (
+              <>
+                {/* Feedback & Detected Patterns */}
+                <FeedbackCard
+                  warning={analysisResult.feedback.warning}
+                  suggestions={analysisResult.feedback.suggestions}
+                  patterns={analysisResult.patternsDetected}
+                  isEmpty={isEmpty}
+                />
 
-          {/* Character Diversity Badges */}
-          <CharacterCompositionBadges composition={analysisResult.composition} />
+                {/* Attack Scenario Crack Times */}
+                <CrackTimeScenarios
+                  crackTimes={analysisResult.crackTimes}
+                  isEmpty={isEmpty}
+                />
+              </>
+            ) : (
+              /* Empty State: Standby Guidance Panel */
+              <div className="p-6 rounded-2xl bg-enclave-plate border border-border-strong space-y-5 text-left shadow-plate-tactical">
+                <div className="flex items-center justify-between pb-3 border-b border-border/80">
+                  <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-wider text-accent">
+                    <Shield className="w-4 h-4" />
+                    <span>Evaluation Engine Armed</span>
+                  </div>
+                  <Badge variant="neutral" size="sm">zxcvbn 4.2 Local</Badge>
+                </div>
 
-          {/* Actions Toolbar */}
-          {!isEmpty && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-enclave-plate border border-border-strong shadow-sm">
-              <div className="text-xs text-foreground-secondary font-sans text-left">
-                <span>Archive evaluation to persistent local audit storage?</span>
+                <p className="text-xs sm:text-sm text-foreground-secondary leading-relaxed font-sans">
+                  CredLock computes real-time cryptographic metrics without transmitting data over the network. Input a candidate password to inspect:
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div className="p-3.5 rounded-xl bg-enclave-card border border-border-strong space-y-1">
+                    <span className="font-mono text-accent text-xs font-bold flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Keyspace Entropy
+                    </span>
+                    <p className="text-[11px] text-foreground-muted leading-relaxed font-sans">
+                      Log2 keyspace calculations and raw guess-work estimations under optimized attacker models.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-enclave-card border border-border-strong space-y-1">
+                    <span className="font-mono text-status-success text-xs font-bold flex items-center gap-1.5">
+                      <Cpu className="w-3.5 h-3.5" />
+                      4 Threat Scenarios
+                    </span>
+                    <p className="text-[11px] text-foreground-muted leading-relaxed font-sans">
+                      Crack resistance against unthrottled web APIs, modern GPU clusters, and slow adaptive hashes.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-enclave-card border border-border-strong space-y-1">
+                    <span className="font-mono text-status-info text-xs font-bold flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5" />
+                      Pattern Analysis
+                    </span>
+                    <p className="text-[11px] text-foreground-muted leading-relaxed font-sans">
+                      Recognition of dictionary keywords, spatial keyboard sequences, leetspeak, and repetition.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-enclave-card border border-border-strong space-y-1">
+                    <span className="font-mono text-status-danger text-xs font-bold flex items-center gap-1.5">
+                      <History className="w-3.5 h-3.5" />
+                      Zero Plaintext Logs
+                    </span>
+                    <p className="text-[11px] text-foreground-muted leading-relaxed font-sans">
+                      Passwords live only in transient browser RAM. IndexedDB saves only sanitized structural metrics.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-2 w-full sm:w-auto">
+            )}
+          </div>
+        </div>
+      )}
+
+      {selectedMethod === 'entropy' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-5 space-y-5">
+            <div className="p-5 rounded-2xl bg-enclave-plate border border-border-strong shadow-card-tactical">
+              <PasswordInput
+                value={password}
+                onChange={setPassword}
+                onClear={handleClear}
+              />
+            </div>
+            <CharacterCompositionBadges composition={analysisResult.composition} />
+            {!isEmpty && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-enclave-plate border border-border-strong shadow-sm">
+                <div className="text-xs text-foreground-secondary font-sans text-left">
+                  <span>Archive theoretical entropy dossier?</span>
+                </div>
                 <Button
                   variant="primary"
                   size="sm"
@@ -130,97 +289,80 @@ export function AnalyzerPage() {
                 >
                   Save Dossier
                 </Button>
-                <Link to="/analysis-history" className="w-full sm:w-auto">
-                  <Button variant="secondary" size="sm" className="w-full sm:w-auto font-mono text-xs">
-                    Inspect Ledger
-                  </Button>
-                </Link>
               </div>
-            </div>
-          )}
+            )}
+            <PrivacyNoticeCard />
+          </div>
 
-          {/* Privacy Notice Card */}
-          <PrivacyNoticeCard />
+          <div className="lg:col-span-7">
+            <EntropyView password={password} />
+          </div>
         </div>
+      )}
 
-        {/* Right Column: Feedback & Crack Scenarios (6 cols on desktop) */}
-        <div className="lg:col-span-6 space-y-5">
-          {!isEmpty ? (
-            <>
-              {/* Feedback & Detected Patterns */}
-              <FeedbackCard
-                warning={analysisResult.feedback.warning}
-                suggestions={analysisResult.feedback.suggestions}
-                patterns={analysisResult.patternsDetected}
-                isEmpty={isEmpty}
+      {selectedMethod === 'markov' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-5 space-y-5">
+            <div className="p-5 rounded-2xl bg-enclave-plate border border-border-strong shadow-card-tactical">
+              <PasswordInput
+                value={password}
+                onChange={setPassword}
+                onClear={handleClear}
               />
-
-              {/* Attack Scenario Crack Times */}
-              <CrackTimeScenarios
-                crackTimes={analysisResult.crackTimes}
-                isEmpty={isEmpty}
-              />
-            </>
-          ) : (
-            /* Empty State: Standby Guidance Panel */
-            <div className="p-6 rounded-2xl bg-enclave-plate border border-border-strong space-y-5 text-left shadow-plate-tactical">
-              <div className="flex items-center justify-between pb-3 border-b border-border/80">
-                <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-wider text-accent">
-                  <Shield className="w-4 h-4" />
-                  <span>Evaluation Engine Armed</span>
-                </div>
-                <Badge variant="neutral" size="sm">zxcvbn 4.2 Local</Badge>
-              </div>
-
-              <p className="text-xs sm:text-sm text-foreground-secondary leading-relaxed font-sans">
-                CredLock computes real-time cryptographic metrics without transmitting data over the network. Input a candidate password to inspect:
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div className="p-3.5 rounded-xl bg-enclave-card border border-border-strong space-y-1">
-                  <span className="font-mono text-accent text-xs font-bold flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Keyspace Entropy
-                  </span>
-                  <p className="text-[11px] text-foreground-muted leading-relaxed font-sans">
-                    Log2 keyspace calculations and raw guess-work estimations under optimized attacker models.
-                  </p>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-enclave-card border border-border-strong space-y-1">
-                  <span className="font-mono text-status-success text-xs font-bold flex items-center gap-1.5">
-                    <Cpu className="w-3.5 h-3.5" />
-                    4 Threat Scenarios
-                  </span>
-                  <p className="text-[11px] text-foreground-muted leading-relaxed font-sans">
-                    Crack resistance against unthrottled web APIs, modern GPU clusters, and slow adaptive hashes.
-                  </p>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-enclave-card border border-border-strong space-y-1">
-                  <span className="font-mono text-status-info text-xs font-bold flex items-center gap-1.5">
-                    <Lock className="w-3.5 h-3.5" />
-                    Pattern Analysis
-                  </span>
-                  <p className="text-[11px] text-foreground-muted leading-relaxed font-sans">
-                    Recognition of dictionary keywords, spatial keyboard sequences, leetspeak, and repetition.
-                  </p>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-enclave-card border border-border-strong space-y-1">
-                  <span className="font-mono text-status-danger text-xs font-bold flex items-center gap-1.5">
-                    <History className="w-3.5 h-3.5" />
-                    Zero Plaintext Logs
-                  </span>
-                  <p className="text-[11px] text-foreground-muted leading-relaxed font-sans">
-                    Passwords live only in transient browser RAM. IndexedDB saves only sanitized structural metrics.
-                  </p>
-                </div>
-              </div>
             </div>
-          )}
+            <CharacterCompositionBadges composition={analysisResult.composition} />
+            {!isEmpty && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-enclave-plate border border-border-strong shadow-sm">
+                <div className="text-xs text-foreground-secondary font-sans text-left">
+                  <span>Archive Markov sequence dossier?</span>
+                </div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Save className="w-4 h-4" />}
+                  onClick={handleSaveToHistory}
+                  className="w-full sm:w-auto font-mono text-xs"
+                >
+                  Save Dossier
+                </Button>
+              </div>
+            )}
+            <PrivacyNoticeCard />
+          </div>
+
+          <div className="lg:col-span-7">
+            <MarkovView result={markovResult} passwordLength={password.length} />
+          </div>
         </div>
-      </div>
+      )}
+
+      {selectedMethod === 'compare' && (
+        <div className="space-y-6">
+          <div className="p-5 rounded-2xl bg-enclave-plate border border-border-strong shadow-card-tactical max-w-xl mx-auto">
+            <PasswordInput
+              value={password}
+              onChange={setPassword}
+              onClear={handleClear}
+            />
+            {!isEmpty && (
+              <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/30">
+                <span className="text-xs text-foreground-secondary">Save combined comparative dossier</span>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Save className="w-4 h-4" />}
+                  onClick={handleSaveToHistory}
+                  className="font-mono text-xs"
+                >
+                  Save Dossier
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <ComparisonView result={comparisonResult} passwordLength={password.length} />
+        </div>
+      )}
     </div>
   );
 }

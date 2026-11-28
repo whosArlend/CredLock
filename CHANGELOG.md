@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.0] - 2026-11-28
+
+### Added
+
+#### Multi-Method Password Analysis & Sequence Modeling
+- **Method Selector Segmented Interface**: Introduced a tactical 4-mode analysis workbench (`Zxcvbn`, `Keyspace Entropy`, `Markov Chain (Experimental)`, and `Compare All`).
+- **Theoretical Keyspace Entropy Engine**: Calculates theoretical Shannon-style entropy $H = L \times \log_2(R)$ across detected character categories ($26+26+10+33$), explicitly highlighting the uniform-randomness assumption and contrasting it with human selection bias.
+- **1st-Order Markov Chain Sequence Estimator (Experimental)**:
+  - Probabilistic character transition analysis using base-2 log-probabilities ($\log_2 P$) to prevent underflow.
+  - Metrics include total surprisal bits ($-\log_2 P$), average surprisal ($\overline{S} = -\log_2 P / L$ bits/char), sequence perplexity ($2^{\overline{S}}$), and a normalized predictability index (0–100).
+  - Diagnostic breakdown identifying top predictable transitions and unusual/surprising character sequences.
+  - Fully transparent heuristic baseline model incorporating English digraph frequencies, keyboard walks, and decimal sequences with Laplace smoothing for unseen pairs.
+  - Transparent academic caveats: clearly labeled as an experimental heuristic rather than a validated empirical crack model, with zero reliance on unvetted leak corpora.
+- **Multi-Method Comparative Synthesis**:
+  - Simultaneous evaluation across all three methodologies in a side-by-side dashboard.
+  - Automated divergence detection highlighting when passwords appear strong under theoretical keyspace ($H$) but fail pattern or sequence checks (e.g. `Password123!`).
+  - Side-by-side methodological matrix contrasting core assumptions, threat models, and recommended application contexts.
+- **Enhanced Sanitized Dossier Archiving**:
+  - Extended local IndexedDB audit ledger records to capture selected method, theoretical entropy, and Markov surprisal metrics.
+  - Invariant maintained: zero plaintext passwords or character sequences are ever saved or transmitted.
+
+---
+
 ## [2.0.0] - 2026-11-25
 
 ### Added
